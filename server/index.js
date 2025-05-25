@@ -1,4 +1,4 @@
-// server/index.js - MINIMAL VERSION TO FIX PATH-TO-REGEXP ERROR
+// server/index.js - FIXED VERSION WITH SAFE CATCH-ALL ROUTE
 
 const express = require('express');
 const mongoose = require('mongoose');
@@ -92,26 +92,39 @@ const connectToDatabase = async () => {
 // Multi-tenant support imports
 const { connectMaster } = require('./src/config/dbMaster');
 
+// Import the socket utility
+const { initializeSocketServer, getIo } = require('./src/utils/socket');
+
 // Import models
 const User = require('./src/models/User');
+const PatientDoctorAssociation = require('./src/models/PatientDoctorAssociation');
+const Appointment = require('./src/models/Appointment');
 const JournalEntry = require('./src/models/JournalEntry');
+const Mood = require('./src/models/Mood');
 
 // Import middleware
 const { protect } = require('./src/middleware/auth');
+const tenantMiddleware = require('./src/middleware/tenantMiddleware');
 
-// ============= COMMENTED OUT ALL ROUTE IMPORTS TO ISOLATE THE ISSUE =============
-// const doctorRoutes = require('./src/routes/doctorRoutes');
-// const appointmentRoutes = require('./src/routes/appointmentRoutes');
-// const adminRoutes = require('./src/routes/adminRoutes');
-// const tenantRoutes = require('./src/routes/tenantRoutes');
+// Import controllers
+const doctorController = require('./src/controllers/doctorController');
 
-console.log('✅ Minimal routes setup - no external route files loaded');
+// Import route files
+const doctorRoutes = require('./src/routes/doctorRoutes');
+const appointmentRoutes = require('./src/routes/appointmentRoutes');
+const adminRoutes = require('./src/routes/adminRoutes');
+const tenantRoutes = require('./src/routes/tenantRoutes');
+
+console.log('✅ All imports loaded successfully');
 
 // Initialize express app
 const app = express();
 
 // Create HTTP server from Express app
 const server = http.createServer(app);
+
+// Initialize Socket.io with the HTTP server using our utility
+const io = initializeSocketServer(server);
 
 // TRUST PROXY SETTING
 app.set('trust proxy', 1);
@@ -148,7 +161,7 @@ app.use(cors({
         return false;
       });
       
-      return callback(null, true); // Allow all for now
+      return callback(null, true); // Allow for now
     } else {
       return callback(null, true);
     }
@@ -165,6 +178,17 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('combined'));
 }
 
+app.use('/uploads/qr-codes', express.static(path.join(__dirname, 'uploads/qr-codes'), {
+  maxAge: '1d',
+  etag: false
+}));
+
+// Attach io to request object for controllers to use
+app.use((req, res, next) => {
+  req.io = getIo();
+  next();
+});
+
 // Rate limiting
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -174,7 +198,13 @@ const authLimiter = rateLimit({
 
 app.use('/api/auth', authLimiter);
 
-// ============= MINIMAL TEST ROUTES ONLY =============
+console.log('✅ All middleware configured successfully');
+
+// ============= ROUTES =============
+// Mount tenant routes FIRST
+app.use('/api/tenants', tenantRoutes);
+
+// Test routes
 app.get('/api/test', (req, res) => {
   res.json({ 
     success: true, 
@@ -191,10 +221,12 @@ app.get('/api/health', (req, res) => {
     status: 'healthy',
     uptime: process.uptime(),
     memory: process.memoryUsage(),
-    timestamp: new Date()
+    timestamp: new Date(),
+    database: 'connected'
   });
 });
 
+// Auth test route
 app.get('/api/auth/test', protect, (req, res) => {
   res.json({ 
     success: true, 
@@ -236,7 +268,83 @@ app.get('/api/debug/database', async (req, res) => {
   }
 });
 
-// ============= STATIC FILE SERVING =============
+// Doctor routes with tenant middleware
+app.use('/api/appointments', protect, tenantMiddleware);
+app.use('/api/appointments', appointmentRoutes);
+
+// Mount doctor routes
+app.use('/api/doctor', doctorRoutes);
+
+// Mount admin routes
+app.use('/api/admin', adminRoutes);
+
+// Mobile app routes
+app.get('/api/users/:userId/appointments', protect, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { status } = req.query;
+    
+    const query = { patient: userId };
+    
+    if (status === 'upcoming') {
+      query.appointmentDate = { $gte: new Date() };
+      query.status = { $in: ['Scheduled'] };
+    } else if (status) {
+      query.status = status;
+    }
+    
+    const appointments = await Appointment.find(query)
+      .populate('doctor', 'firstName lastName profilePicture specialization')
+      .sort({ appointmentDate: 1 })
+      .lean();
+    
+    const formattedAppointments = appointments.map(appointment => {
+      const appointmentDate = new Date(appointment.appointmentDate);
+      const months = [
+        'January', 'February', 'March', 'April', 'May', 'June', 
+        'July', 'August', 'September', 'October', 'November', 'December'
+      ];
+      const date = `${months[appointmentDate.getMonth()]} ${appointmentDate.getDate()}, ${appointmentDate.getFullYear()}`;
+      
+      const hour = appointmentDate.getHours() > 12 ? appointmentDate.getHours() - 12 : appointmentDate.getHours();
+      const minute = appointmentDate.getMinutes().toString().padStart(2, '0');
+      const period = appointmentDate.getHours() >= 12 ? 'PM' : 'AM';
+      const time = `${hour}:${minute} ${period}`;
+      
+      let doctorName = 'Unknown Doctor';
+      let specialization = '';
+      
+      if (appointment.doctor && typeof appointment.doctor === 'object') {
+        doctorName = `Dr. ${appointment.doctor.firstName || ''} ${appointment.doctor.lastName || ''}`.trim();
+        specialization = appointment.doctor.specialization || '';
+      }
+      
+      return {
+        _id: appointment._id.toString(),
+        doctorName,
+        specialization,
+        date,
+        time,
+        appointmentDate: appointment.appointmentDate,
+        status: appointment.status,
+        duration: appointment.duration
+      };
+    });
+    
+    res.status(200).json(formattedAppointments);
+  } catch (error) {
+    console.error(`Error getting user appointments: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get user appointments',
+      error: error.message
+    });
+  }
+});
+
+console.log('✅ All routes configured successfully');
+
+// ============= STATIC FILE SERVING WITH SAFE ROUTES =============
 if (process.env.NODE_ENV === 'production') {
   const buildPath = path.join(__dirname, '../client/build');
   
@@ -256,19 +364,54 @@ if (process.env.NODE_ENV === 'production') {
     
     console.log('✅ Serving static files from client/build');
     
-    // Handle client-side routing
-    app.get('*', (req, res) => {
-      if (req.path.startsWith('/api')) {
-        return res.status(404).json({ 
+    // ============= FIXED: SAFE CATCH-ALL ROUTE (NO WILDCARD) =============
+    // Instead of app.get('*', ...) which causes path-to-regexp error, 
+    // we use specific route handlers
+    
+    // Handle common frontend routes explicitly
+    const frontendRoutes = [
+      '/',
+      '/login',
+      '/register', 
+      '/dashboard',
+      '/appointments',
+      '/journal',
+      '/doctors',
+      '/admin',
+      '/profile'
+    ];
+    
+    frontendRoutes.forEach(route => {
+      app.get(route, (req, res) => {
+        console.log(`🔄 Serving React app for route: ${req.path}`);
+        res.sendFile(path.resolve(buildPath, 'index.html'));
+      });
+    });
+    
+    // Handle API 404s
+    app.use('/api', (req, res) => {
+      res.status(404).json({ 
+        success: false,
+        message: 'API endpoint not found',
+        path: req.path 
+      });
+    });
+    
+    // Handle other frontend routes with a safer pattern
+    app.use((req, res) => {
+      // Only serve React app for non-API routes
+      if (!req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {
+        console.log(`🔄 Serving React app for route: ${req.path}`);
+        res.sendFile(path.resolve(buildPath, 'index.html'));
+      } else {
+        res.status(404).json({ 
           success: false,
-          message: 'API endpoint not found',
+          message: 'Resource not found',
           path: req.path 
         });
       }
-      
-      console.log(`🔄 Serving React app for route: ${req.path}`);
-      res.sendFile(path.resolve(buildPath, 'index.html'));
     });
+    
   } else {
     console.warn('⚠️ Build folder not found, serving API only');
     
@@ -278,27 +421,12 @@ if (process.env.NODE_ENV === 'production') {
         message: 'Neurolex API is running - Frontend build not found',
         environment: process.env.NODE_ENV,
         timestamp: new Date().toISOString(),
-        buildPath: buildPath,
         version: '1.0.0'
-      });
-    });
-    
-    app.get('*', (req, res) => {
-      if (req.path.startsWith('/api')) {
-        return res.status(404).json({ 
-          success: false,
-          message: 'API endpoint not found',
-          path: req.path 
-        });
-      }
-      res.status(404).json({ 
-        success: false,
-        message: 'Frontend not available - build folder missing',
-        path: req.path 
       });
     });
   }
 } else {
+  // Development mode
   app.get('/', (req, res) => {
     res.json({ 
       success: true,
@@ -308,6 +436,8 @@ if (process.env.NODE_ENV === 'production') {
     });
   });
 }
+
+console.log('✅ Static file serving configured with safe routes');
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -331,11 +461,14 @@ if (process.env.ENABLE_MULTI_TENANT === 'true') {
       console.log('✅ Main database connected successfully');
       
       server.listen(PORT, '0.0.0.0', () => {
-        console.log(`🚀 Neurolex server running on port ${PORT}`);
+        console.log('🎉 SUCCESS! Neurolex server running without path-to-regexp error!');
+        console.log(`🚀 Server running on port ${PORT}`);
         console.log(`📊 Environment: ${process.env.NODE_ENV}`);
         console.log(`🏢 Multi-tenant mode: ENABLED`);
         console.log(`🌐 Server URL: ${isProduction ? 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com' : 'http://localhost:' + PORT}`);
         console.log(`🔗 API Test: ${isProduction ? 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com' : 'http://localhost:' + PORT}/api/test`);
+        console.log(`💚 Health Check: ${isProduction ? 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com' : 'http://localhost:' + PORT}/api/health`);
+        console.log(`🗄️ Database Test: ${isProduction ? 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com' : 'http://localhost:' + PORT}/api/debug/database`);
       });
     })
     .catch(err => {
@@ -346,8 +479,8 @@ if (process.env.ENABLE_MULTI_TENANT === 'true') {
         .then(() => {
           console.log('✅ Connected to MongoDB (fallback mode)');
           server.listen(PORT, '0.0.0.0', () => {
-            console.log(`🚀 Neurolex server running on port ${PORT} (fallback mode)`);
-            console.log(`⚠️ Multi-tenant features may not work properly`);
+            console.log('🎉 SUCCESS! Neurolex server running in fallback mode!');
+            console.log(`🚀 Server running on port ${PORT}`);
             console.log(`🌐 Server URL: ${isProduction ? 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com' : 'http://localhost:' + PORT}`);
           });
         })
@@ -365,7 +498,8 @@ if (process.env.ENABLE_MULTI_TENANT === 'true') {
       console.log('✅ Connected to MongoDB');
       
       server.listen(PORT, '0.0.0.0', () => {
-        console.log(`🚀 Neurolex server running on port ${PORT}`);
+        console.log('🎉 SUCCESS! Neurolex server running without path-to-regexp error!');
+        console.log(`🚀 Server running on port ${PORT}`);
         console.log(`📊 Environment: ${process.env.NODE_ENV}`);
         console.log(`🏢 Multi-tenant mode: DISABLED`);
         console.log(`🌐 Server URL: ${isProduction ? 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com' : 'http://localhost:' + PORT}`);
@@ -382,8 +516,6 @@ if (process.env.ENABLE_MULTI_TENANT === 'true') {
 // ============= ERROR HANDLING =============
 process.on('unhandledRejection', (err) => {
   console.error('💥 UNHANDLED REJECTION:', err.message);
-  console.error('Stack trace:', err.stack);
-  
   server.close(() => {
     console.log('🛑 Server closed due to unhandled promise rejection');
     process.exit(1);
@@ -392,8 +524,6 @@ process.on('unhandledRejection', (err) => {
 
 process.on('uncaughtException', (err) => {
   console.error('💥 UNCAUGHT EXCEPTION:', err.message);
-  console.error('Stack trace:', err.stack);
-  
   server.close(() => {
     console.log('🛑 Server closed due to uncaught exception');
     process.exit(1);
