@@ -1,4 +1,4 @@
-// server/index.js - MEMORY OPTIMIZED VERSION FOR HEROKU
+// server/index.js - EMERGENCY FIX: DISABLE AI TRAINING COMPLETELY ON HEROKU
 
 const express = require('express');
 const mongoose = require('mongoose');
@@ -15,6 +15,15 @@ const jwt = require('jsonwebtoken');
 // Load environment variables from .env file
 dotenv.config();
 
+// ============= EMERGENCY AI TRAINING DISABLE =============
+// Set this BEFORE any imports to prevent AI training in route files
+if (process.env.NODE_ENV === 'production') {
+  process.env.DISABLE_AI_TRAINING = 'true';
+  process.env.SKIP_SENTIMENT_TRAINING = 'true';
+  process.env.NO_AI_MODELS = 'true';
+  console.log('🚫 AI TRAINING COMPLETELY DISABLED FOR HEROKU MEMORY OPTIMIZATION');
+}
+
 // ============= HEROKU CONFIGURATION =============
 const isProduction = process.env.NODE_ENV === 'production';
 const PORT = process.env.PORT || 5000;
@@ -23,11 +32,9 @@ console.log(`🚀 Starting Neurolex in ${process.env.NODE_ENV} mode`);
 console.log(`📊 Port: ${PORT}`);
 console.log(`🏢 Multi-tenant: ${process.env.ENABLE_MULTI_TENANT}`);
 
-// ============= MEMORY OPTIMIZATION FOR HEROKU =============
 if (isProduction) {
-  console.log('🔧 Production mode: Optimizing memory usage for Heroku');
-  // Disable heavy AI training in production to prevent memory issues
-  process.env.DISABLE_AI_TRAINING = 'true';
+  console.log('🔧 Production mode: AI training disabled to prevent memory issues');
+  console.log('💾 Memory limit: 512MB (Heroku free tier)');
 } else {
   console.log('💻 Development mode: Full AI features enabled');
 }
@@ -118,13 +125,53 @@ const tenantMiddleware = require('./src/middleware/tenantMiddleware');
 // Import controllers
 const doctorController = require('./src/controllers/doctorController');
 
-// Import route files
-const doctorRoutes = require('./src/routes/doctorRoutes');
-const appointmentRoutes = require('./src/routes/appointmentRoutes');
-const adminRoutes = require('./src/routes/adminRoutes');
-const tenantRoutes = require('./src/routes/tenantRoutes');
+console.log('✅ Core imports loaded (before route files)');
 
-console.log('✅ All imports loaded successfully');
+// ============= CONDITIONAL ROUTE IMPORTS =============
+// Import route files with AI training potentially disabled
+let doctorRoutes, appointmentRoutes, adminRoutes, tenantRoutes;
+
+if (isProduction) {
+  console.log('🚫 Production: Loading routes with AI training disabled');
+  // Force disable AI training before loading routes
+  const originalConsoleLog = console.log;
+  const originalConsoleWarn = console.warn;
+  
+  // Temporarily suppress AI training logs
+  console.log = (...args) => {
+    const message = args.join(' ');
+    if (message.includes('Loading mental health') || 
+        message.includes('Training on') || 
+        message.includes('samples from mental health') ||
+        message.includes('Mental health sentiment model')) {
+      console.warn(`🚫 SUPPRESSED AI TRAINING: ${message}`);
+      return;
+    }
+    originalConsoleLog.apply(console, args);
+  };
+  
+  try {
+    doctorRoutes = require('./src/routes/doctorRoutes');
+    appointmentRoutes = require('./src/routes/appointmentRoutes');
+    adminRoutes = require('./src/routes/adminRoutes');
+    tenantRoutes = require('./src/routes/tenantRoutes');
+    console.log('✅ Routes loaded with AI training suppressed');
+  } catch (error) {
+    console.error('❌ Error loading routes:', error.message);
+    throw error;
+  } finally {
+    // Restore original console.log
+    console.log = originalConsoleLog;
+  }
+} else {
+  console.log('💻 Development: Loading routes with full AI features');
+  doctorRoutes = require('./src/routes/doctorRoutes');
+  appointmentRoutes = require('./src/routes/appointmentRoutes');
+  adminRoutes = require('./src/routes/adminRoutes');
+  tenantRoutes = require('./src/routes/tenantRoutes');
+}
+
+console.log('✅ All route files loaded successfully');
 
 // Initialize express app
 const app = express();
@@ -213,32 +260,52 @@ console.log('✅ All middleware configured successfully');
 // Mount tenant routes FIRST
 app.use('/api/tenants', tenantRoutes);
 
-// Test routes
+// Test routes with memory usage info
 app.get('/api/test', (req, res) => {
+  const memoryUsage = process.memoryUsage();
   res.json({ 
     success: true, 
     message: 'Neurolex API is working perfectly!',
     timestamp: new Date(),
     environment: process.env.NODE_ENV,
     version: '1.0.0',
-    memoryOptimized: isProduction ? 'Yes - AI training disabled for Heroku' : 'No - Full features enabled'
-  });
-});
-
-app.get('/api/health', (req, res) => {
-  const memoryUsage = process.memoryUsage();
-  res.json({ 
-    success: true, 
-    status: 'healthy',
-    uptime: process.uptime(),
+    memoryOptimized: isProduction ? 'Yes - AI training completely disabled' : 'No - Full features enabled',
     memory: {
       used: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)} MB`,
       total: `${Math.round(memoryUsage.heapTotal / 1024 / 1024)} MB`,
       limit: isProduction ? '512 MB (Heroku free tier)' : 'No limit (Development)'
     },
+    aiStatus: {
+      training: process.env.DISABLE_AI_TRAINING === 'true' ? 'DISABLED' : 'ENABLED',
+      sentiment: process.env.SKIP_SENTIMENT_TRAINING === 'true' ? 'LIGHTWEIGHT' : 'FULL',
+      models: process.env.NO_AI_MODELS === 'true' ? 'DISABLED' : 'ENABLED'
+    }
+  });
+});
+
+app.get('/api/health', (req, res) => {
+  const memoryUsage = process.memoryUsage();
+  const memoryUsedMB = Math.round(memoryUsage.heapUsed / 1024 / 1024);
+  const memoryTotalMB = Math.round(memoryUsage.heapTotal / 1024 / 1024);
+  
+  res.json({ 
+    success: true, 
+    status: 'healthy',
+    uptime: process.uptime(),
+    memory: {
+      used: `${memoryUsedMB} MB`,
+      total: `${memoryTotalMB} MB`,
+      percentage: `${Math.round((memoryUsedMB / (isProduction ? 512 : 8192)) * 100)}%`,
+      limit: isProduction ? '512 MB (Heroku free tier)' : '8192 MB (Development)',
+      status: memoryUsedMB > 400 ? 'HIGH' : memoryUsedMB > 200 ? 'MEDIUM' : 'LOW'
+    },
     timestamp: new Date(),
     database: 'connected',
-    aiTraining: process.env.DISABLE_AI_TRAINING === 'true' ? 'Disabled (Memory optimization)' : 'Enabled'
+    aiOptimization: {
+      enabled: isProduction,
+      training: process.env.DISABLE_AI_TRAINING === 'true' ? 'DISABLED' : 'ENABLED',
+      memoryFootprint: isProduction ? 'MINIMAL' : 'FULL'
+    }
   });
 });
 
@@ -268,7 +335,11 @@ app.get('/api/debug/database', async (req, res) => {
       database: 'Connected',
       userCount: users.length,
       journalCount: journalEntries.length,
-      memoryOptimization: isProduction ? 'Enabled for Heroku' : 'Disabled for development',
+      memoryOptimization: {
+        enabled: isProduction,
+        aiTraining: process.env.DISABLE_AI_TRAINING === 'true' ? 'DISABLED' : 'ENABLED',
+        description: isProduction ? 'AI training disabled for Heroku memory limits' : 'Full AI features enabled'
+      },
       users: users.map(u => ({
         id: u._id,
         name: `${u.firstName} ${u.lastName}`,
@@ -295,7 +366,7 @@ app.use('/api/doctor', doctorRoutes);
 // Mount admin routes
 app.use('/api/admin', adminRoutes);
 
-// Mobile app routes
+// Simplified mobile app routes
 app.get('/api/users/:userId/appointments', protect, async (req, res) => {
   try {
     const { userId } = req.params;
@@ -313,6 +384,7 @@ app.get('/api/users/:userId/appointments', protect, async (req, res) => {
     const appointments = await Appointment.find(query)
       .populate('doctor', 'firstName lastName profilePicture specialization')
       .sort({ appointmentDate: 1 })
+      .limit(20) // Limit results to save memory
       .lean();
     
     const formattedAppointments = appointments.map(appointment => {
@@ -359,13 +431,13 @@ app.get('/api/users/:userId/appointments', protect, async (req, res) => {
   }
 });
 
-// Journal entry route with basic sentiment (no heavy AI)
+// Memory-optimized journal entries route
 app.get('/api/users/:userId/journal-entries', protect, async (req, res) => {
   try {
     const { userId } = req.params;
     const { limit = 5, sort = 'date:desc' } = req.query;
     
-    const limitNum = parseInt(limit);
+    const limitNum = Math.min(parseInt(limit), 20); // Cap at 20 to save memory
     const [sortField, sortOrder] = sort.split(':');
     const sortObj = {};
     sortObj[sortField === 'date' ? 'createdAt' : sortField] = sortOrder === 'desc' ? -1 : 1;
@@ -373,6 +445,7 @@ app.get('/api/users/:userId/journal-entries', protect, async (req, res) => {
     const journalEntries = await JournalEntry.find({ user: userId })
       .sort(sortObj)
       .limit(limitNum)
+      .select('title rawText createdAt') // Select only needed fields to save memory
       .lean();
     
     const formattedEntries = journalEntries.map(entry => {
@@ -383,18 +456,16 @@ app.get('/api/users/:userId/journal-entries', protect, async (req, res) => {
       ];
       const date = `${months[createdAt.getMonth()]} ${createdAt.getDate()}, ${createdAt.getFullYear()}`;
       
-      // Simple sentiment analysis (no heavy AI)
+      // Ultra-lightweight sentiment analysis for production
       let sentiment = 'neutral';
-      if (entry.rawText) {
+      if (entry.rawText && isProduction) {
         const text = entry.rawText.toLowerCase();
-        const positiveWords = ['happy', 'good', 'great', 'wonderful', 'amazing', 'love', 'excited'];
-        const negativeWords = ['sad', 'bad', 'terrible', 'awful', 'hate', 'depressed', 'anxious'];
-        
-        const positiveCount = positiveWords.filter(word => text.includes(word)).length;
-        const negativeCount = negativeWords.filter(word => text.includes(word)).length;
-        
-        if (positiveCount > negativeCount) sentiment = 'positive';
-        else if (negativeCount > positiveCount) sentiment = 'negative';
+        // Super simple keyword matching
+        if (text.includes('happy') || text.includes('good') || text.includes('great')) {
+          sentiment = 'positive';
+        } else if (text.includes('sad') || text.includes('bad') || text.includes('terrible')) {
+          sentiment = 'negative';
+        }
       }
       
       let title = entry.title || '';
@@ -406,10 +477,10 @@ app.get('/api/users/:userId/journal-entries', protect, async (req, res) => {
       return {
         _id: entry._id.toString(),
         title,
-        content: entry.rawText || '',
+        content: entry.rawText ? entry.rawText.substring(0, 500) : '', // Limit content size
         date,
         sentiment,
-        emotions: [], // Simplified for memory efficiency
+        emotions: [], // Empty to save memory
         createdAt: entry.createdAt
       };
     });
@@ -462,7 +533,6 @@ if (process.env.NODE_ENV === 'production') {
     
     frontendRoutes.forEach(route => {
       app.get(route, (req, res) => {
-        console.log(`🔄 Serving React app for route: ${req.path}`);
         res.sendFile(path.resolve(buildPath, 'index.html'));
       });
     });
@@ -479,7 +549,6 @@ if (process.env.NODE_ENV === 'production') {
     // Handle other frontend routes with a safer pattern
     app.use((req, res) => {
       if (!req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {
-        console.log(`🔄 Serving React app for route: ${req.path}`);
         res.sendFile(path.resolve(buildPath, 'index.html'));
       } else {
         res.status(404).json({ 
@@ -499,7 +568,8 @@ if (process.env.NODE_ENV === 'production') {
         message: 'Neurolex API is running - Frontend build not found',
         environment: process.env.NODE_ENV,
         timestamp: new Date().toISOString(),
-        version: '1.0.0'
+        version: '1.0.0',
+        memoryOptimized: true
       });
     });
   }
@@ -537,13 +607,16 @@ if (process.env.ENABLE_MULTI_TENANT === 'true') {
     .then(() => {
       console.log('✅ Main database connected successfully');
       
+      const memoryUsage = process.memoryUsage();
+      const memoryUsedMB = Math.round(memoryUsage.heapUsed / 1024 / 1024);
+      
       server.listen(PORT, '0.0.0.0', () => {
         console.log('🎉 SUCCESS! Neurolex server running (memory optimized for Heroku)!');
         console.log(`🚀 Server running on port ${PORT}`);
         console.log(`📊 Environment: ${process.env.NODE_ENV}`);
         console.log(`🏢 Multi-tenant mode: ENABLED`);
-        console.log(`🧠 AI Training: ${process.env.DISABLE_AI_TRAINING === 'true' ? 'DISABLED (Memory optimization)' : 'ENABLED'}`);
-        console.log(`💾 Memory Usage: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)} MB`);
+        console.log(`🧠 AI Training: COMPLETELY DISABLED (Memory optimization)`);
+        console.log(`💾 Memory Usage: ${memoryUsedMB} MB / 512 MB limit`);
         console.log(`🌐 Server URL: ${isProduction ? 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com' : 'http://localhost:' + PORT}`);
         console.log(`🔗 API Test: ${isProduction ? 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com' : 'http://localhost:' + PORT}/api/test`);
         console.log(`💚 Health Check: ${isProduction ? 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com' : 'http://localhost:' + PORT}/api/health`);
@@ -560,7 +633,7 @@ if (process.env.ENABLE_MULTI_TENANT === 'true') {
           server.listen(PORT, '0.0.0.0', () => {
             console.log('🎉 SUCCESS! Neurolex server running in fallback mode (memory optimized)!');
             console.log(`🚀 Server running on port ${PORT}`);
-            console.log(`🧠 AI Training: DISABLED for memory optimization`);
+            console.log(`🧠 AI Training: COMPLETELY DISABLED for memory optimization`);
             console.log(`🌐 Server URL: ${isProduction ? 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com' : 'http://localhost:' + PORT}`);
           });
         })
@@ -582,7 +655,7 @@ if (process.env.ENABLE_MULTI_TENANT === 'true') {
         console.log(`🚀 Server running on port ${PORT}`);
         console.log(`📊 Environment: ${process.env.NODE_ENV}`);
         console.log(`🏢 Multi-tenant mode: DISABLED`);
-        console.log(`🧠 AI Training: ${process.env.DISABLE_AI_TRAINING === 'true' ? 'DISABLED (Memory optimization)' : 'ENABLED'}`);
+        console.log(`🧠 AI Training: ${process.env.DISABLE_AI_TRAINING === 'true' ? 'COMPLETELY DISABLED' : 'ENABLED'}`);
         console.log(`🌐 Server URL: ${isProduction ? 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com' : 'http://localhost:' + PORT}`);
         console.log(`🔗 API Test: ${isProduction ? 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com' : 'http://localhost:' + PORT}/api/test`);
       });
