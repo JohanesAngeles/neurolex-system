@@ -1,0 +1,525 @@
+/* Journal Form CSS */
+
+/* Container Layout - Similar to Dashboard */
+.dashboard-container {
+  display: flex;
+  width: 100%;
+  height: calc(100vh - 40px);
+  box-sizing: border-box;
+}
+
+.dashboard-content-area {
+  flex: 1;
+  height: 100%;
+  width: 1000%;  
+  box-sizing: border-box;
+}
+
+.dashboard-content-container {
+  background-color: transparent;
+  border: 1px solid #A7D7C5; 
+  border-radius: 12px;
+  padding: 30px;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+/* Journal Form Specific Container */
+.journal-form-container {
+  max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100% - 60px);
+}
+
+/* Journal Header */
+.journal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+}
+
+.back-button {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  margin-right: 10px;
+  padding: 5px;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.back-button:hover {
+  background-color: rgba(167, 215, 197, 0.2);
+}
+
+.back-icon {
+  line-height: 1;
+}
+
+.journal-title {
+  font-size: 1.25rem;
+  font-weight: bold;
+  margin: 0;
+  font-family: 'Poppins', sans-serif;
+  color: #333;
+}
+
+.journal-subtitle {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #666;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.date-badge {
+  display: flex;
+  align-items: center;
+  background-color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid #A7D7C5;
+}
+
+.calendar-icon {
+  font-size: 14px;
+  margin-right: 5px;
+}
+
+.date-text {
+  font-size: 0.85rem;
+  color: #666;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+/* Alert Styles */
+.error-alert, .success-alert {
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.error-alert {
+  background-color: #fee2e2;
+  border: 1px solid #ef4444;
+  color: #b91c1c;
+}
+
+.success-alert {
+  background-color: #dcfce7;
+  border: 1px solid #22c55e;
+  color: #15803d;
+}
+
+.alert-title {
+  font-weight: bold;
+  margin-bottom: 5px;
+  display: block;
+}
+
+/* Progress Container */
+.progress-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.progress-container::after {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 2px;
+  background-color: #488c73;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  z-index: 0;
+}
+
+.progress-item {
+  border-radius: 50%;
+  background-color: white;
+  z-index: 1;
+  padding: 2px;
+  position: relative;
+}
+
+.progress-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: #ddd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 18px;
+}
+
+.progress-item.active .progress-icon {
+  background-color: #488c73;
+  color: white;
+}
+
+.progress-item.completed .progress-icon {
+  background-color: #76ae96;
+  color: white;
+}
+
+/* Form Paper */
+.form-paper {
+  padding: 24px;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  background-color: #f8fbf9;
+  margin-bottom: 20px;
+  flex: 1;
+}
+
+/* Form Section Styles */
+.section-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-top: 0;
+  margin-bottom: 8px;
+  color: #333;
+  font-family: 'Poppins', sans-serif;
+}
+
+.section-subtitle {
+  font-size: 0.9rem;
+  color: #666;
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.form-section {
+  margin-bottom: 24px;
+}
+
+.question-title {
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin-top: 0;
+  margin-bottom: 8px;
+  color: #333;
+  font-family: 'Poppins', sans-serif;
+}
+
+.question-subtitle {
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 0;
+  margin-bottom: 12px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+/* Form Input Elements */
+.form-textarea, .form-input {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  background-color: white;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.9rem;
+  resize: vertical;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.form-textarea:focus, .form-input:focus {
+  border-color: #488c73;
+  outline: none;
+}
+
+.form-input {
+  height: 45px;
+}
+
+/* Checkbox Container */
+.checkbox-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.checkbox-option {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: 20px;
+  background-color: #f1f1f1;
+  color: #333;
+  border: 1px solid #ddd;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.checkbox-option.selected {
+  background-color: #488c73;
+  color: white;
+  border-color: #3a7c63;
+}
+
+.checkbox-input {
+  margin-right: 8px;
+}
+
+.checkbox-label {
+  font-size: 0.85rem;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+/* Toggle Switch */
+.toggle-container {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 24px;
+  margin-right: 12px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: #488c73;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #488c73;
+}
+
+input:checked + .slider:before {
+  transform: translateX(26px);
+}
+
+.slider.round {
+  border-radius: 24px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+.toggle-label {
+  font-size: 0.9rem;
+  color: #333;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.toggle-description {
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 0;
+  margin-bottom: 16px;
+  margin-left: 62px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+/* Navigation Buttons */
+.nav-button-container {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.primary-button, .secondary-button {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-family: 'IBM Plex Mono', monospace;
+  border: none;
+}
+
+.primary-button {
+  background-color: #488c73;
+  color: white;
+}
+
+.primary-button:hover {
+  background-color: #3a7c63;
+}
+
+.primary-button:disabled {
+  background-color: #a0a0a0;
+  cursor: not-allowed;
+}
+
+.secondary-button {
+  background-color: transparent;
+  color: #333;
+  border: 1px solid #ccc;
+}
+
+.secondary-button:hover {
+  background-color: #f1f1f1;
+}
+
+.large-button {
+  min-width: 200px;
+  height: 50px;
+  font-size: 1rem;
+}
+
+/* Welcome Screen Specific */
+.welcome-screen {
+  text-align: center;
+  padding: 40px 24px;
+}
+
+.welcome-title {
+  font-size: 1.8rem;
+  margin-bottom: 20px;
+  font-weight: bold;
+  font-family: 'Poppins', sans-serif;
+}
+
+.user-name {
+  color: #488c73;
+}
+
+.welcome-text {
+  margin-bottom: 16px;
+  font-size: 1rem;
+  color: #333;
+  line-height: 1.5;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.welcome-text.italic {
+  font-style: italic;
+}
+
+/* Complete Screen Specific */
+.complete-screen {
+  text-align: center;
+  padding: 40px 24px;
+}
+
+.complete-title {
+  font-size: 1.8rem;
+  margin-bottom: 20px;
+  font-weight: bold;
+  font-family: 'Poppins', sans-serif;
+}
+
+.complete-text {
+  margin-bottom: 30px;
+  font-size: 1rem;
+  color: #333;
+  line-height: 1.5;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+/* Loading Container */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(167, 215, 197, 0.3);
+  border-radius: 50%;
+  border-top-color: #488c73;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .journal-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .date-badge {
+    margin-top: 10px;
+  }
+  
+  .checkbox-container {
+    flex-direction: column;
+  }
+  
+  .checkbox-option {
+    width: 100%;
+  }
+  
+  .nav-button-container {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .secondary-button, .primary-button {
+    width: 100%;
+  }
+  
+  .form-paper {
+    padding: 16px;
+  }
+}

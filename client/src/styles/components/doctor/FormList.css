@@ -1,0 +1,571 @@
+/* FormList.css */
+
+/* Import fonts */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('../../../assets/fonts/IBMPlexMono-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('../../../assets/fonts/IBMPlexMono-SemiBold.ttf') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('../../../assets/fonts/IBMPlexMono-Italic.ttf') format('truetype');
+  font-weight: normal;
+  font-style: italic;
+}
+
+/* Stats Cards - Updated styles */
+.stats-card h3.stats-label {
+  font-family: 'poppins';
+  font-size: 20px;
+  font-weight: bold;
+  color: #000000;
+  margin-bottom: 16px;
+}
+
+.stats-value-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+   background-color: rgba(167, 215, 197, 0.1);
+  border: 1px solid #A7D7C5;
+  border-radius: 12px;
+  padding: 20px;
+  height: 215px;
+}
+
+.stats-value {
+  font-family: 'Poppins';
+  font-size: 103px;
+  font-weight: 700;
+  background: linear-gradient(180deg, #548170 0%, #A7D7C5 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Keep existing responsive styles for stats cards */
+@media (max-width: 768px) {
+  .stats-value {
+    font-size: 48px;
+  }
+}
+
+/* Template Management Container */
+.template-management-content {
+  padding: 24px;
+}
+
+.template-management-header {
+  margin-bottom: 24px;
+}
+
+.template-management-header h1 {
+  font-size: 45px;
+  font-family: 'Poppins';
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #000000;
+}
+
+.template-management-header p {
+  font-size: 16px;
+  font-family: 'IBM Plex Mono';
+  font-style: italic;
+  color: #548170;
+  margin: 0;
+}
+
+/* Stats Cards */
+.stats-cards-container {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.stats-card {
+  flex: 1;
+  min-width: 200px;
+  height: 300px;
+  background-color: rgba(167, 215, 197, 0.1);
+  border: 1px solid #A7D7C5;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+}
+
+
+/* Search and Actions Bar */
+.template-actions-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.search-box {
+  position: relative;
+  flex: 1;
+  min-width: 250px;
+  max-width: 421px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  color: #666;
+}
+
+.search-box input {
+  width: 100%;
+  height: 55px;
+  padding: 10px 12px 10px 40px;
+  border: 1px solid #A7D7C5;
+  border-radius: 12px;
+  font-size: 15px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: #5B8C7E;
+}
+
+.add-template-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background-color: #5B8C7E;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-family: 'IBM Plex Mono', monospace;
+  height: 55px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.add-template-button:hover {
+  background-color: #4a7a6d;
+}
+
+.button-icon {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+/* Table Styling */
+.table-container {
+  margin-bottom: 30px;
+  overflow-x: auto;
+}
+
+.template-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 10px;
+}
+
+.template-table thead tr {
+  background-color: rgba(167, 215, 197, 0.1);
+  font-size: 15px;
+  font-family: 'IBM Plex Mono', monospace;
+  color: #548170;
+  font-weight: 700;
+}
+
+.template-table thead th {
+  padding: 12px 16px;
+  text-align: left;
+  border-top: 1px solid #A7D7C5;
+  border-bottom: 1px solid #A7D7C5;
+}
+
+.template-table thead th:first-child {
+  border-left: 1px solid #A7D7C5;
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+}
+
+.template-table thead th:last-child {
+  border-right: 1px solid #A7D7C5;
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+.template-table tbody tr {
+  background-color: #ffffff;
+}
+
+.template-table tbody tr:nth-child(even) {
+  background-color: rgba(167, 215, 197, 0.1);
+}
+
+.template-table tbody td {
+  padding: 12px 16px;
+  font-size: 15px;
+  font-family: 'IBM Plex Mono', monospace;
+  border-top: 1px solid #A7D7C5;
+  border-bottom: 1px solid #A7D7C5;
+}
+
+.template-table tbody td:first-child {
+  border-left: 1px solid #A7D7C5;
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+}
+
+.template-table tbody td:last-child {
+  border-right: 1px solid #A7D7C5;
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+/* Status Indicator */
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.status-indicator.active {
+  background-color: #E8F5E9;
+  color: #2E7D32;
+}
+
+.status-indicator.inactive {
+  background-color: #FFEBEE;
+  color: #D32F2F;
+}
+
+.status-indicator:before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+.status-indicator.active:before {
+  background-color: #2E7D32;
+}
+
+.status-indicator.inactive:before {
+  background-color: #D32F2F;
+}
+
+/* Action Icons */
+.action-icons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.action-icon {
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.action-icon.view {
+  background-color: #E8F5E9;
+}
+
+.action-icon.edit {
+  background-color: #E3F2FD;
+}
+
+.action-icon.delete {
+  background-color: #FFEBEE;
+}
+
+.action-icon:hover {
+  filter: brightness(0.9);
+}
+
+/* Empty State */
+.empty-state {
+  background-color: #fff;
+  border: 1px solid #A7D7C5;
+  border-radius: 12px;
+  padding: 40px;
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.empty-state h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.empty-state p {
+  font-size: 16px;
+  color: #666;
+  margin-bottom: 24px;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
+  gap: 8px;
+}
+
+.pagination-button {
+  padding: 8px 16px;
+  background-color: #fff;
+  border: 1px solid #A7D7C5;
+  border-radius: 6px;
+  color: #333;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pagination-button:hover:not(:disabled) {
+  background-color: rgba(167, 215, 197, 0.1);
+}
+
+.pagination-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-numbers {
+  display: flex;
+  gap: 8px;
+}
+
+.pagination-number {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #A7D7C5;
+  border-radius: 6px;
+  background-color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.pagination-number.active {
+  background-color: #5B8C7E;
+  color: #fff;
+  border-color: #5B8C7E;
+}
+
+/* Dialog */
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.dialog-content {
+  width: 90%;
+  max-width: 500px;
+  background-color: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.dialog-content h2 {
+  font-size: 20px;
+  color: #333;
+  margin-bottom: 16px;
+}
+
+.dialog-content p {
+  font-size: 16px;
+  color: #666;
+  margin-bottom: 24px;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.dialog-button {
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dialog-button.cancel {
+  background-color: #f5f5f5;
+  color: #333;
+  border: 1px solid #e0e0e0;
+}
+
+.dialog-button.delete {
+  background-color: #F44336;
+  color: white;
+  border: none;
+}
+
+.dialog-button.cancel:hover {
+  background-color: #e0e0e0;
+}
+
+.dialog-button.delete:hover {
+  background-color: #d32f2f;
+}
+
+/* Loading State */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 300px;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #5B8C7E;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Error Alert */
+.error-alert {
+  background-color: #FFEBEE;
+  border-left: 4px solid #F44336;
+  color: #D32F2F;
+  padding: 16px;
+  border-radius: 4px;
+  margin-bottom: 24px;
+}
+
+.alert-title {
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 1200px) {
+  .stats-cards-container {
+    flex-wrap: wrap;
+  }
+  
+  .stats-card {
+    min-width: calc(50% - 16px);
+    flex: 1 0 calc(50% - 16px);
+  }
+  
+  .template-actions-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .search-box {
+    max-width: 100%;
+    width: 100%;
+  }
+  
+  .add-template-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .template-management-header h1 {
+    font-size: 32px;
+  }
+  
+  .stats-card {
+    min-width: 100%;
+    flex: 1 0 100%;
+  }
+  
+  .stats-value {
+    font-size: 48px;
+  }
+  
+  .template-table thead {
+    display: none;
+  }
+  
+  .template-table tbody tr {
+    display: block;
+    margin-bottom: 16px;
+    border: 1px solid #A7D7C5;
+    border-radius: 12px;
+    padding: 16px;
+  }
+  
+  .template-table tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border: none;
+  }
+  
+  .template-table tbody td:before {
+    content: attr(data-label);
+    font-weight: 600;
+    margin-right: 8px;
+  }
+  
+  .template-table tbody td:first-child, 
+  .template-table tbody td:last-child {
+    border: none;
+    border-radius: 0;
+  }
+  
+  .action-icons {
+    justify-content: flex-start;
+  }
+}

@@ -1,0 +1,336 @@
+/* FindDoctor.css */
+
+/* Main container */
+.doctor-page-container {
+  height: 97vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+.doctor-content-container {
+  background-color: transparent;
+  border: 1px solid #A7D7C5;
+  border-radius: 8px;
+  padding: 24px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+
+/* Page header */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.page-title {
+  font-family: 'Poppins', sans-serif;
+  font-size: 28px;
+  font-weight: 600;
+  color: #000000;
+  margin: 0;
+}
+
+.page-subtitle {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 14px;
+  color: #666666;
+  font-style: italic;
+  margin-top: 5px;
+  margin-bottom: 20px;
+}
+
+.heart-icon {
+  width: 24px;
+  height: 24px;
+  fill: #FF5A5A;
+}
+
+.heart-icon-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 50px;
+  height: 50px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+}
+
+/* Divider */
+.divider {
+  height: 1px;
+  background-color: #e0e0e0;
+  margin: 20px 0;
+  width: 100%;
+}
+
+/* Doctor cards container */
+.doctor-cards-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+  margin-top: 24px;
+}
+
+/* Individual doctor card */
+.doctor-card {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background-color: #ffffff;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.doctor-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* Doctor avatar section */
+.doctor-avatar-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 180px;
+  background-color: #A7D7C5;
+  position: relative;
+}
+
+.doctor-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 60px;
+  border: 4px solid white;
+  object-fit: cover;
+  background-color: #f5f5f5;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 32px;
+  color: #666;
+  font-weight: bold;
+}
+
+/* Doctor info */
+.doctor-info {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.doctor-name {
+  font-family: 'Poppins', sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  color: #333;
+}
+
+.doctor-title {
+  font-size: 14px;
+  color: #666;
+  margin-top: 4px;
+  margin-bottom: 12px;
+}
+
+/* Language and LGBTQ+ chips */
+.doctor-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.doctor-tag {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.language-tag {
+  background-color: #f5f5f5;
+  color: #333;
+  border: 1px solid #e0e0e0;
+}
+
+.lgbtq-tag {
+  background-color: #f5f5f5;
+  color: #548170;
+  border: 1px solid #A7D7C5;
+}
+
+.tag-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.doctor-description {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 16px;
+  flex-grow: 1;
+}
+
+/* Action buttons */
+.doctor-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+}
+
+.schedule-btn {
+  background-color: #488c73;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 10px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  width: 100%;
+  text-transform: uppercase;
+}
+
+.schedule-btn:hover {
+  background-color: #3a7c63;
+}
+
+.profile-btn {
+  background-color: transparent;
+  color: #488c73;
+  border: 1px solid #488c73;
+  border-radius: 4px;
+  padding: 10px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  width: 100%;
+  text-transform: uppercase;
+}
+
+.profile-btn:hover {
+  background-color: rgba(72, 140, 115, 0.1);
+}
+
+/* Loading state */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 300px;
+}
+
+.spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border-left-color: #488c73;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Error message */
+.error-container {
+  background-color: #ffebee;
+  color: #d32f2f;
+  padding: 16px;
+  border-radius: 4px;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.error-message {
+  font-size: 14px;
+}
+
+.retry-btn {
+  background-color: transparent;
+  color: #d32f2f;
+  border: 1px solid #d32f2f;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* Load more button */
+.load-more-btn {
+  background-color: #548170;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 12px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 24px;
+  width: 100%;
+}
+
+.load-more-btn:hover {
+  background-color: #3a7c63;
+}
+
+/* Notification */
+.notification {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: #333;
+  color: white;
+  padding: 12px 16px;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  z-index: 1000;
+  animation: fadeInOut 3s forwards;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translateY(20px); }
+  10% { opacity: 1; transform: translateY(0); }
+  90% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(20px); }
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  margin-top: 24px;
+}
+
+.empty-state-message {
+  color: #666;
+  font-size: 16px;
+}

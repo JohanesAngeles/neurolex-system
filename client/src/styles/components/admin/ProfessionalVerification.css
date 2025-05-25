@@ -1,0 +1,801 @@
+/* Add Doctor Button */
+.Add-Patient-Button {
+  background-color: #5B8C7E;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  margin-left: auto;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.Add-Patient-Button:hover {
+  background-color: #4a7a6d;
+}/* ProfessionalVerification.css */
+
+/* Specific styles for Professional Verification page */
+
+/* Section Titles */
+.section-title {
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 24px;
+  color: #000000;
+  font-family: 'Poppins', sans-serif;
+}
+
+.registered-professionals-section {
+  margin-top: 40px;
+}
+
+/* Doctor Profile in Dialog */
+.doctor-profile-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.doctor-info {
+  flex: 1;
+}
+
+.doctor-info h3 {
+  margin: 0 0 4px 0;
+  font-size: 22px;
+  color: #333;
+}
+
+.doctor-email {
+  color: #666;
+  margin: 0 0 12px 0;
+}
+
+.doctor-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  overflow: hidden;
+  background-color: #E8F5E9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.doctor-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.user-initials.large {
+  font-size: 36px;
+  font-weight: 600;
+  color: #4CAF50;
+}
+
+/* Info Sections in Dialog */
+.info-section {
+  margin-bottom: 24px;
+}
+
+.info-section h4 {
+  font-size: 18px;
+  color: #333;
+  margin: 0 0 12px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.info-item {
+  font-size: 15px;
+  color: #333;
+}
+
+.info-item strong {
+  color: #666;
+  margin-right: 4px;
+}
+
+.doctor-bio {
+  font-size: 15px;
+  line-height: 1.5;
+  color: #333;
+}
+
+/* Table Styling to match Image 1 */
+.admin-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.admin-table thead {
+  background-color: rgba(167, 215, 197, 0.1);
+}
+
+.admin-table th {
+  padding: 15px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #548170;
+  text-align: left;
+  border-bottom: 1px solid #A7D7C5;
+  border-top: 1px solid #A7D7C5;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.admin-table th:first-child {
+  border-left: 1px solid #A7D7C5;
+  border-top-left-radius: 10px;
+}
+
+.admin-table th:last-child {
+  border-right: 1px solid #A7D7C5;
+  border-top-right-radius: 10px;
+}
+
+.admin-table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.admin-table tbody tr:hover {
+  background-color: rgba(167, 215, 197, 0.05);
+} 
+
+.admin-table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid #A7D7C5;
+  font-size: 14px;
+  color: #333;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.admin-table tbody tr:last-child td {
+  border-bottom: 1px solid #A7D7C5;
+}
+
+.admin-table tbody tr:last-child td:first-child {
+  border-bottom-left-radius: 10px;
+}
+
+.admin-table tbody tr:last-child td:last-child {
+  border-bottom-right-radius: 10px;
+}
+
+.admin-table td:first-child {
+  border-left: 1px solid #A7D7C5;
+}
+
+.admin-table td:last-child {
+  border-right: 1px solid #A7D7C5;
+}
+
+/* User Name Cell Styling to match Image 1 */
+.user-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: #E8F5E9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: #4CAF50;
+}
+
+.user-initials {
+  font-size: 14px;
+}
+
+/* Status Badge Styling */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  gap: 5px;
+}
+
+.status-badge.active {
+  background-color: #E8F5E9;
+  color: #2E7D32;
+}
+
+.status-badge.inactive, .status-badge.suspended {
+  background-color: #FFEBEE;
+  color: #D32F2F;
+}
+
+.status-badge.pending {
+  background-color: #FFF8E1;
+  color: #F57C00;
+}
+
+.status-badge.success {
+  background-color: #E8F5E9;
+  color: #2E7D32;
+}
+
+.status-badge.error {
+  background-color: #FFEBEE;
+  color: #D32F2F;
+}
+
+.status-badge.warning {
+  background-color: #FFF8E1;
+  color: #F57C00;
+}
+
+/* Action Icons */
+.action-icons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.action-icon {
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+.action-icon:hover {
+  opacity: 1;
+}
+
+/* Search and Filter Adjustments to match Image 1 */
+.search-box {
+  position: relative;
+  max-width: 350px;
+  margin-bottom: 15px;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 10px 10px 10px 35px;
+  border: 1px solid #A7D7C5;
+  border-radius: 5px;
+  font-size: 14px;
+  font-family: 'IBM Plex Mono', monospace;
+  color: #333;
+}
+
+.search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: #666;
+}
+
+.filter-item {
+  margin-bottom: 15px;
+  margin-right: 15px;
+  display: inline-block;
+}
+
+.filter-item label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 14px;
+  color: #548170;
+  font-weight: 600;
+}
+
+.filter-item select {
+  width: 100%;
+  min-width: 200px;
+  padding: 8px 12px;
+  border: 1px solid #A7D7C5;
+  border-radius: 5px;
+  background-color: white;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 14px;
+  color: #333;
+}
+
+/* Add Doctor Button */
+.Add-Patient-Button {
+  background-color: #5B8C7E;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  margin-left: auto;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.Add-Patient-Button:hover {
+  background-color: #4a7a6d;
+}
+
+/* Responsive Fixes */
+@media (max-width: 768px) {
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .doctor-profile-header {
+    flex-direction: column-reverse;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
+  }
+  
+  .doctor-avatar {
+    margin-bottom: 16px;
+  }
+} 
+
+
+.admin-table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid #A7D7C5;
+  font-size: 14px;
+  color: #333;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.admin-table tbody tr:last-child td {
+  border-bottom: 1px solid #A7D7C5;
+}
+
+.admin-table tbody tr:last-child td:first-child {
+  border-bottom-left-radius: 10px;
+}
+
+.admin-table tbody tr:last-child td:last-child {
+  border-bottom-right-radius: 10px;
+}
+
+.admin-table td:first-child {
+  border-left: 1px solid #A7D7C5;
+}
+
+.admin-table td:last-child {
+  border-right: 1px solid #A7D7C5;
+}
+
+/* User Name Cell Styling to match Image 1 */
+.user-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: #E8F5E9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: #4CAF50;
+}
+
+.user-initials {
+  font-size: 14px;
+}
+
+/* Status Badge Styling */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  gap: 5px;
+}
+
+.status-badge.active {
+  background-color: #E8F5E9;
+  color: #2E7D32;
+}
+
+.status-badge.inactive, .status-badge.suspended {
+  background-color: #FFEBEE;
+  color: #D32F2F;
+}
+
+.status-badge.pending {
+  background-color: #FFF8E1;
+  color: #F57C00;
+}
+
+/* Action Icons */
+.action-icons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.action-icon {
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+.action-icon:hover {
+  opacity: 1;
+}
+
+/* Search and Filter Adjustments to match Image 1 */
+.search-box {
+  position: relative;
+  max-width: 350px;
+  margin-bottom: 15px;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 10px 10px 10px 35px;
+  border: 1px solid #A7D7C5;
+  border-radius: 5px;
+  font-size: 14px;
+  font-family: 'IBM Plex Mono', monospace;
+  color: #333;
+}
+
+.search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: #666;
+}
+
+.filter-item {
+  margin-bottom: 15px;
+  margin-right: 15px;
+  display: inline-block;
+}
+
+.filter-item label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 14px;
+  color: #548170;
+  font-weight: 600;
+}
+
+.filter-item select {
+  width: 100%;
+  min-width: 200px;
+  padding: 8px 12px;
+  border: 1px solid #A7D7C5;
+  border-radius: 5px;
+  background-color: white;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 14px;
+  color: #333;
+}
+
+/* Modals */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-container {
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #333;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+}
+
+.modal-body {
+  padding: 24px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.modal-footer {
+  padding: 16px 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  border-top: 1px solid #e0e0e0;
+}
+
+/* Doctor Profile in Modal */
+.doctor-profile-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.doctor-info {
+  flex: 1;
+}
+
+.doctor-info h3 {
+  margin: 0 0 4px 0;
+  font-size: 22px;
+  color: #333;
+}
+
+.doctor-email {
+  color: #666;
+  margin: 0 0 12px 0;
+}
+
+.doctor-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  overflow: hidden;
+  background-color: #E8F5E9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.doctor-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.user-initials.large {
+  font-size: 36px;
+  font-weight: 600;
+  color: #4CAF50;
+}
+
+/* Info Sections in Modal */
+.info-section {
+  margin-bottom: 24px;
+}
+
+.info-section h4 {
+  font-size: 18px;
+  color: #333;
+  margin: 0 0 12px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.info-item {
+  font-size: 15px;
+  color: #333;
+}
+
+.info-item strong {
+  color: #666;
+  margin-right: 4px;
+}
+
+.doctor-bio {
+  font-size: 15px;
+  line-height: 1.5;
+  color: #333;
+}
+
+.document-link {
+  display: inline-block;
+  padding: 6px 12px;
+  background-color: #E8F5E9;
+  color: #2E7D32;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.document-link:hover {
+  background-color: #C8E6C9;
+}
+
+/* Alert Boxes */
+.alert {
+  padding: 16px;
+  border-radius: 6px;
+  margin-top: 16px;
+}
+
+.error-alert {
+  background-color: #FFEBEE;
+  border-left: 4px solid #F44336;
+  color: #D32F2F;
+}
+
+.info-alert {
+  background-color: #E3F2FD;
+  border-left: 4px solid #2196F3;
+  color: #0D47A1;
+}
+
+.alert strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.alert p {
+  margin: 0;
+}
+
+/* Form Elements in Modal */
+.verify-prompt {
+  margin-bottom: 20px;
+  font-size: 16px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #333;
+}
+
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #A7D7C5;
+  border-radius: 8px;
+  font-size: 15px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #5B8C7E;
+}
+
+.form-group textarea.error {
+  border-color: #F44336;
+}
+
+.form-help-text {
+  font-size: 13px;
+  color: #666;
+  margin-top: 4px;
+}
+
+.form-error {
+  font-size: 13px;
+  color: #F44336;
+  margin-top: 4px;
+}
+
+/* Button spinner for loading state */
+.button-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 8px;
+  display: inline-block;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Button Colors */
+.primary-button.success {
+  background-color: #4CAF50;
+}
+
+.primary-button.success:hover:not(:disabled) {
+  background-color: #388E3C;
+}
+
+.primary-button.error {
+  background-color: #F44336;
+}
+
+.primary-button.error:hover:not(:disabled) {
+  background-color: #D32F2F;
+}
+
+/* Responsive fixes */
+@media (max-width: 768px) {
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .doctor-profile-header {
+    flex-direction: column-reverse;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
+  }
+  
+  .doctor-avatar {
+    margin-bottom: 16px;
+  }
+  
+  .stats-cards {
+    flex-direction: column;
+  }
+  
+  .tab-button {
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+}

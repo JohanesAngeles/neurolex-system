@@ -1,0 +1,699 @@
+/* JournalTemplateForm.css */
+/* Using 'ntx-' prefix to ensure uniqueness and avoid style conflicts */
+
+/* Basic Reset */
+* {
+  box-sizing: border-box;
+}
+
+/* Main Page and Container */
+.ntx-journal-template-page {
+  width: 100%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: transparent;
+}
+
+.ntx-journal-template-container {
+  width: 100%;
+  max-width: 1600px; /* Set your desired max width */
+  margin: 0 auto; /* This centers the container */
+  margin-top: 50px;
+  padding: 0;
+}
+
+/* Combined Sections Container - RESTORED WITH PROPER STYLING */
+.ntx-combined-sections-container {
+  border-radius: 10px;
+  border: 1px solid #A7D7C5;
+    background-color: rgba(167, 215, 197, 0.1);
+  padding: 16px; /* Reduced from 24px */
+  margin-bottom: 20px;
+}
+
+/* Header */
+.ntx-journal-template-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 0;
+}
+
+.ntx-back-button {
+  width: 70px;
+  height: 70px;
+  border-radius: 10px;
+  border: 1px solid #A7D7C5;
+    background-color: rgba(167, 215, 197, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-right: 16px;
+  color: #555;
+}
+
+.ntx-back-button:hover {
+  background-color: #f5f5f5;
+}
+
+.ntx-arrow-left-icon {
+  font-size: 16px;
+}
+
+.ntx-template-title {
+  font-size: 45px;
+  font-weight: 600;
+  top: -12px;
+  color: #000000;
+  font-family: 'poppins', sans-serif;
+  margin: 0;
+  flex-grow: 1;
+  position: relative;
+}
+
+/* Subtitle styling */
+.ntx-template-subtitle {
+  color: #548170;
+  font-size: 16px;
+  font-family: 'IBM Plex Mono', monospace;
+  margin: 0 0 16px 0; /* Removed top margin to move it up */
+  font-weight: normal;
+  line-height: 1.5;
+  position: relative;
+  top: -40px; /* Move it up by 5px */
+  left: 83px;
+}
+
+/* Divider styling */
+.ntx-divider {
+  border: none;
+  height: 1px;
+  background-color: #e0e0e0;
+  margin: -24px 0 24px 0; /* Reduced top margin */
+  width: 100%;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .ntx-template-subtitle {
+    font-size: 14px;
+    margin: 0 0 12px 0;
+    top: -3px; /* Slightly less movement on mobile */
+  }
+  
+  .ntx-divider {
+    margin: 10px 0 20px 0;
+  }
+}
+
+
+.ntx-edit-icon-container {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ntx-edit-icon {
+  font-size: 18px;
+}
+
+/* Section Styles */
+.ntx-template-section {
+  margin-bottom: 24px;
+}
+
+.ntx-section-title {
+  font-size: 45px;
+  font-weight: 600;
+  font-family: 'poppins', sans-serif;
+  color: #000000;
+  margin: 0 0 14px 0;
+}
+
+.ntx-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.ntx-template-content-container {
+  background-color: rgba(167, 215, 197, 0.1); /* A7D7C5 with 10% opacity */
+  border: 1px solid #A7D7C5;
+  border-radius: 8px;
+  padding: 30px; /* Reduced from 24px */
+}
+
+/* Form Controls */
+.ntx-form-group {
+  margin-bottom: 20px;
+}
+
+.ntx-form-label {
+  display: block;
+  font-size: 20px;
+  font-family: 'poppins', sans-serif;
+  font-weight: 700;
+  color: #000000;
+  margin-bottom: 8px;
+}
+
+.ntx-form-input,
+.ntx-form-textarea,
+.ntx-form-select {
+  width: 100%;
+  height: 60px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 20px;
+  color: #000000;
+  font-family: 'IBM Plex Mono', monospace;
+  transition: border-color 0.2s ease;
+  background-color: rgba(167, 215, 197, 0.1); /* A7D7C5 with 10% opacity */
+  border: 1px solid #A7D7C5;
+}
+
+.ntx-form-textarea {
+  resize: vertical;
+  min-height: 150px;
+}
+
+.ntx-form-input:focus,
+.ntx-form-textarea:focus,
+.ntx-form-select:focus {
+  border-color: #A7D7C5;
+  outline: none;
+}
+
+.ntx-form-input::placeholder,
+.ntx-form-textarea::placeholder {
+  color: #aaa;
+  font-style: italic;
+}
+
+.ntx-checkbox-group {
+  display: flex;
+  align-items: center;
+}
+
+.ntx-checkbox-container {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.ntx-checkbox-label {
+  margin-left: 8px;
+  font-size: 15px;
+  color: #333;
+}
+
+/* Fields List */
+.ntx-fields-list {
+  width: 100%;
+}
+
+.ntx-empty-fields-message {
+  color: #888;
+  text-align: center;
+  padding: 24px 0;
+  font-size: 15px;
+  font-style: italic;
+}
+
+.ntx-field-item {
+  display: flex;
+  align-items: center;
+  background-color: white;
+  border: a1px solid #e0e0e0;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  padding: 14px;
+  transition: box-shadow 0.2s ease;
+}
+
+.ntx-field-item:hover {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.ntx-field-drag-handle {
+  font-size: 20px;
+  color: #999;
+  cursor: grab;
+  margin-right: 16px;
+}
+
+.ntx-field-content {
+  flex-grow: 1;
+}
+
+.ntx-field-label {
+  font-size: 15px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.ntx-field-type {
+  font-size: 13px;
+  color: #888;
+}
+
+.ntx-field-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.ntx-field-edit-button,
+.ntx-field-delete-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 6px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.ntx-field-edit-button:hover,
+.ntx-field-delete-button:hover {
+  background-color: #f5f5f5;
+}
+
+/* Buttons */
+.ntx-add-field-button {
+  background-color: #548170;
+  width: 191px;
+    height: 55px;   
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 16px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.ntx-add-field-button:hover {
+  background-color: #8fc5b0;
+}
+
+.ntx-template-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.ntx-cancel-button {
+  background-color: white;
+  color: #548170;
+  border: 1px solid #548170;
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-size: 25px;
+  font-weight: 700;
+  font-family: 'IBM Plex Mono', monospace;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 389px;
+  height: 72px;
+}
+
+.ntx-cancel-button:hover {
+  background-color: #f5f5f5;
+}
+
+.ntx-save-button {
+  background-color: #548170;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-size: 25px;
+  font-weight: 700;
+  font-family: 'IBM Plex Mono', monospace;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  min-width: 1200px;
+}
+
+.ntx-save-button:hover {
+  background-color: #8fc5b0;
+}
+
+.ntx-save-button:disabled,
+.ntx-cancel-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Modal Dialog */
+.ntx-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.ntx-modal-content {
+  background-color: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.ntx-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.ntx-modal-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+.ntx-modal-close {
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  color: #888;
+}
+
+.ntx-modal-body {
+  padding: 20px;
+}
+
+.ntx-modal-form-content {
+  background-color: rgba(167, 215, 197, 0.05);
+  border-radius: 6px;
+  padding: 20px;
+}
+
+.ntx-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 16px 20px;
+  border-top: 1px solid #e0e0e0;
+  gap: 14px;
+}
+
+.ntx-modal-cancel-button {
+  background-color: white;
+  color: #333;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 10px 20px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ntx-modal-cancel-button:hover {
+  background-color: #f5f5f5;
+}
+
+.ntx-modal-save-button {
+  background-color: #A7D7C5;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 20px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.ntx-modal-save-button:hover {
+  background-color: #8fc5b0;
+}
+
+.ntx-modal-save-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Options Editor */
+.ntx-options-editor {
+  margin-top: 20px;
+  border-top: 1px solid #e0e0e0;
+  padding-top: 16px;
+}
+
+.ntx-options-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 16px;
+}
+
+.ntx-option-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+
+.ntx-icon-input {
+  width: 80px;
+}
+
+.ntx-value-input {
+  width: 120px;
+}
+
+.ntx-delete-option-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+}
+
+.ntx-add-option-button {
+  background-color: transparent;
+  color: #A7D7C5;
+  border: 1px solid #A7D7C5;
+  border-radius: 4px;
+  padding: 8px 14px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 10px;
+}
+
+.ntx-add-option-button:hover {
+  background-color: rgba(167, 215, 197, 0.1);
+}
+
+/* Alerts */
+.ntx-error-alert {
+  background-color: #ffebee;
+  border-left: 4px solid #f44336;
+  color: #d32f2f;
+  padding: 14px 18px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  font-size: 15px;
+}
+
+.ntx-success-alert {
+  background-color: #e8f5e9;
+  border-left: 4px solid #4caf50;
+  color: #2e7d32;
+  padding: 14px 18px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  font-size: 15px;
+}
+
+.ntx-alert-title {
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+/* Input Error */
+.ntx-input-error {
+  color: #d32f2f;
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+/* Loading */
+.ntx-loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 400px;
+}
+
+.ntx-loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #A7D7C5;
+  border-radius: 50%;
+  animation: ntx-spin 1s linear infinite;
+}
+
+@keyframes ntx-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .ntx-combined-sections-container {
+    padding: 12px;
+  }
+  
+  .ntx-template-content-container {
+    padding: 12px;
+  }
+  
+  .ntx-template-actions {
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+  }
+  
+  .ntx-save-button,
+  .ntx-cancel-button {
+    width: 100%;
+    min-width: auto;
+  }
+  
+  .ntx-option-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .ntx-field-item {
+    flex-wrap: wrap;
+  }
+  
+  .ntx-field-actions {
+    margin-top: 8px;
+    width: 100%;
+    justify-content: flex-end;
+  }
+  
+  .ntx-modal-content {
+    width: 95%;
+    max-height: 95vh;
+  }
+  
+  .ntx-modal-body {
+    padding: 16px;
+  }
+  
+  .ntx-modal-form-content {
+    padding: 16px;
+  }
+  
+  .ntx-modal-header,
+  .ntx-modal-footer {
+    padding: 14px 16px;
+  }
+}
+
+
+
+/* CSS additions for the non-DnD field ordering controls */
+
+/* Field ordering controls */
+.ntx-field-order-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-right: 12px;
+  min-width: 24px;
+}
+
+.ntx-field-up-button,
+.ntx-field-down-button {
+  background: none;
+  border: none;
+  color: #777;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 2px;
+  transition: color 0.2s ease;
+}
+
+.ntx-field-up-button:hover,
+.ntx-field-down-button:hover {
+  color: #333;
+}
+
+.ntx-field-up-button:disabled,
+.ntx-field-down-button:disabled {
+  color: #ccc;
+  cursor: default;
+}
+
+.ntx-field-index {
+  font-size: 12px;
+  color: #666;
+  margin: 2px 0;
+}
+
+/* Update field item to accommodate the ordering controls */
+.ntx-field-item {
+  display: flex;
+  align-items: center;
+  background-color: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  padding: 12px;
+  transition: box-shadow 0.2s ease;
+}
+
+.ntx-field-item:hover {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Replace the drag handle with the order controls */
+.ntx-field-drag-handle {
+  display: none; /* Hide the drag handle since we're no longer using DnD */
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .ntx-field-order-controls {
+    margin-right: 8px;
+    min-width: 20px;
+  }
+  
+  .ntx-field-up-button,
+  .ntx-field-down-button {
+    font-size: 14px;
+  }
+  
+  .ntx-field-index {
+    font-size: 10px;
+  }
+}

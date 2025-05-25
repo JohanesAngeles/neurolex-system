@@ -1,0 +1,163 @@
+/* client/src/styles/components/communication/IncomingCall.css */
+.incoming-call-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    animation: fadeIn 0.3s ease-in-out;
+  }
+  
+  .incoming-call-container {
+    background-color: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    width: 320px;
+    max-width: 90%;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    animation: scaleIn 0.3s ease-in-out;
+  }
+  
+  .caller-info {
+    margin-bottom: 24px;
+  }
+  
+  .caller-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin: 0 auto 16px;
+    border: 3px solid #3498db;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .default-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background-color: #3498db;
+    color: #fff;
+    font-size: 32px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .caller-info h3 {
+    margin: 0 0 8px;
+    font-size: 20px;
+    color: #333;
+  }
+  
+  .call-type {
+    font-size: 16px;
+    color: #666;
+    margin: 8px 0;
+  }
+  
+  .timer {
+    font-size: 14px;
+    color: #888;
+    margin: 8px 0 0;
+  }
+  
+  .call-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  
+  .accept-button,
+  .decline-button {
+    flex: 1;
+    padding: 12px 0;
+    border-radius: 24px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+  }
+  
+  .accept-button {
+    background-color: #2ecc71;
+    color: white;
+  }
+  
+  .accept-button:hover {
+    background-color: #27ae60;
+    transform: scale(1.05);
+  }
+  
+  .decline-button {
+    background-color: #e74c3c;
+    color: white;
+  }
+  
+  .decline-button:hover {
+    background-color: #c0392b;
+    transform: scale(1.05);
+  }
+  
+  /* Animations */
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  @keyframes scaleIn {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  
+  /* Ringing animation */
+  .caller-avatar, .default-avatar {
+    animation: ringing 2s infinite;
+  }
+  
+  @keyframes ringing {
+    0% { transform: scale(1); }
+    25% { transform: scale(1.05); }
+    50% { transform: scale(1); }
+    75% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 480px) {
+    .incoming-call-container {
+      padding: 16px;
+      width: 280px;
+    }
+    
+    .caller-avatar,
+    .default-avatar {
+      width: 60px;
+      height: 60px;
+      font-size: 24px;
+    }
+    
+    .caller-info h3 {
+      font-size: 18px;
+    }
+    
+    .call-actions {
+      gap: 12px;
+    }
+    
+    .accept-button,
+    .decline-button {
+      padding: 10px 0;
+      font-size: 14px;
+    }
+  }

@@ -1,0 +1,48 @@
+/* Base styles for all inner dashboard pages */
+.journal-page,
+.appointments-page,
+.messages-page,
+.other-page {
+  background-color: rgba(167, 215, 197, 0.1); /* #A7D7C51A with 10% opacity */
+  border: 1px solid rgba(167, 215, 197, 0.1); /* #A7D7C51A border */
+  border-radius: 12px;
+  padding: 20px;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+
+/* Common heading styles */
+.journal-page h1,
+.appointments-page h1,
+.messages-page h1,
+.other-page h1 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 1.5rem;
+  color: #333;
+}
+
+/* Common paragraph styles */
+.journal-page p,
+.appointments-page p,
+.messages-page p,
+.other-page p {
+  color: #666;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 768px) {
+  .journal-page,
+  .appointments-page,
+  .messages-page,
+  .other-page {
+    padding: 16px;
+  }
+  
+  .inner-page-content {
+    padding: 16px;
+  }
+}

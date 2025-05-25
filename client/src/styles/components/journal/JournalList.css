@@ -1,0 +1,555 @@
+/* JournalList.css - FIXED VERSION */
+
+/* Regular */
+@font-face {
+    font-family: 'IBM Plex Mono';
+    src: url('../../../assets/fonts/IBMPlexMono-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+  
+/* Bold */
+@font-face {
+    font-family: 'IBM Plex Mono';
+    src: url('../../../assets/fonts/IBMPlexMono-SemiBold.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+}
+  
+/* Italic */
+@font-face {
+    font-family: 'IBM Plex Mono';
+    src: url('../../../assets/fonts/IBMPlexMono-Italic.ttf') format('truetype');
+    font-weight: normal;
+    font-style: italic;
+}
+  
+/* Bold Italic */
+@font-face {
+    font-family: 'IBM Plex Mono';
+    src: url('../../../assets/fonts/IBMPlexMono-SemiBoldItalic.ttf') format('truetype');
+    font-weight: bold;
+    font-style: italic;
+}
+
+/* Make the outer container full viewport height */
+.journal-page-container {
+    height: 97vh;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+}
+
+/* Make the content container fill available space */
+.journal-content-container {
+    background-color: transparent;
+    border: 1px solid #A7D7C5;
+    border-radius: 15px;
+    box-shadow: none;
+    padding: 40px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    overflow: hidden; 
+}
+
+.journal-content-container .MuiTypography-root.journal-title {
+    font-size: 35px !important;
+    font-family: 'Poppins' !important;
+    font-weight: 700 !important;
+    margin-bottom: 16px !important;
+    color: #000000 !important;
+}
+
+/* Search and controls row */
+.journal-controls-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+/* Main controls group for search and add button */
+.main-controls-group {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+/* This targets the container */
+.search-container {
+    flex: 1;
+    max-width: 421px !important;
+    height: 55px !important;
+}
+
+/* This targets the TextField component */
+.search-field {
+    width: 100% !important;
+    height: 55px !important;
+}
+
+/* This targets the actual input element and its container */
+.search-field .MuiOutlinedInput-root {
+    background-color: transparent;
+    border-radius: 15px !important;
+    border: 1px solid #A7D7C5 !important;
+    height: 55px !important;
+    font-family: 'IBM Plex Mono' !important;
+    font-size: 16px !important;
+    width: 421px !important;
+}
+
+/* This removes the default MUI outline */
+.search-field .MuiOutlinedInput-notchedOutline {
+    border: none !important;
+}
+
+/* This targets the actual input element */
+.search-field .MuiInputBase-input {
+    padding: 8px 12px !important;
+    font-size: 14px !important;
+}
+
+.right-controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.entries-per-page {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.show-label {
+    font-size: 14px;
+    color: #666;
+}
+
+.entries-select {
+    min-width: 70px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    padding: 4px 8px;
+    border: 1px solid #e0e0e0;
+    height: 32px;
+}
+
+.add-entry-button {
+    background-color: #488c73;
+    color: white;
+    border-radius: 15px !important;
+    width: 300px !important;
+    font-family: 'IBM Plex Mono' !important; 
+    font-size: 16px !important;    
+    font-weight: 700 !important;   
+    padding: 6px 16px;
+    border: none;
+    height: 55px !important;
+    cursor: pointer;
+}
+
+.add-entry-button:hover {
+    background-color: #3a7c63;
+}
+
+.refresh-button {
+    color: #666;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+/* Filters row */
+.filters-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.mood-filter, .sentiment-filter {
+    display: flex;
+    align-items: center;
+    margin-right: 24px;
+}
+
+.filter-label {
+    font-size: 17px !important;
+    color: #548170;
+    font-family: 'IBM Plex Mono' !important;
+    font-weight: bold !important;
+    white-space: nowrap;
+    margin-right: 20px !important;
+}
+
+.filter-select {
+    width: 365px;
+    height: 55px !important; 
+    background-color: rgba(167, 215, 197, 0.1);
+    font-family: 'IBM Plex Mono' !important;
+    font-weight: bold !important;
+    border-radius: 15px !important;    
+    color: #548170 !important;
+    padding: 4px 8px;
+    border: 1px solid #A7D7C5;
+}
+
+.export-button {
+    margin-left: auto;
+    background-color: #548170 !important; 
+    color: #ffffff !important;
+    font-family: 'IBM Plex Mono' !important;
+    font-size: 16px !important; 
+    border-radius: 15px !important;
+    font-weight: 500;
+    padding: 6px 16px;
+    height: 55px !important;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.export-button:hover {
+    background-color: #3a7c63 !important;
+}
+
+/* Table Container Styling - FIXED */
+.custom-table-container {
+    width: 100%;
+    margin: 0 auto;
+    border: 1px solid #A7D7C5;
+    border-radius: 15px !important;
+    overflow: auto; /* Changed to auto for scrolling */
+    display: flex;
+    flex-direction: column;
+    flex: 1; /* Take remaining space */
+}
+
+/* Fixed header */
+.custom-table-header {
+    display: flex;
+    background-color: rgba(167, 215, 197, 0.1) !important;
+    height: 55px !important;
+    min-height: 55px !important;
+    align-items: center;
+    border-bottom: 1px solid #A7D7C5;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+/* Header Cell Styling */
+.header-cell {
+    padding: 0 16px !important;
+    font-size: 16px !important;
+    color: #548170;
+    font-family: 'IBM Plex Mono' !important;
+    font-weight: 700 !important;
+    display: flex;
+    align-items: center;
+    height: 55px !important;
+}
+
+/* Table Body Row */
+.custom-table-row {
+    display: flex;
+    border-bottom: 1px solid #f0f0f0;
+    height: 55px !important;
+    min-height: 55px !important;
+    align-items: center;
+}
+
+.custom-table-row:last-child {
+    border-bottom: none;
+}
+
+.custom-table-row:hover {
+    background-color: #f9f9f9;
+}
+
+/* Cell Styling - All uniform height */
+.cell {
+    padding: 0 16px !important;
+    display: flex;
+    align-items: center;
+    height: 55px !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Define column widths */
+.date-header, .date-cell {
+    width: 18%;
+}
+
+.title-header, .title-cell {
+    width: 25%;
+}
+
+.mood-header, .mood-cell,
+.sentiment-header, .sentiment-cell {
+    width: 15%;
+}
+
+.emotions-header, .emotions-cell {
+    width: 17%;
+}
+
+.actions-header, .actions-cell {
+    width: 10%;
+    display: flex;
+    justify-content: center;
+}
+
+/* Cell specific styling */
+.date-cell {
+    color: #666;
+}
+
+.title-cell {
+    font-weight: 500;
+    color: #333;
+}
+
+/* Mood styling */
+.mood-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 100%;
+}
+
+.mood-emoji {
+    font-size: 16px;
+    line-height: 1;
+}
+
+.mood-text {
+    color: #555;
+    font-size: 14px;
+}
+
+.mood-emoji.i-m-good {
+    color: #4caf50;
+}
+
+.mood-emoji.i-m-okay {
+    color: #ff9800;
+}
+
+.mood-emoji.i-m-struggling {
+    color: #f44336;
+}
+
+/* Sentiment styling */
+.sentiment-indicator {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.sentiment-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+.sentiment-text {
+    font-size: 14px;
+    color: #555;
+}
+
+/* Sentiment colors */
+.sentiment-indicator.positive .sentiment-dot {
+    background-color: #4caf50;
+}
+
+.sentiment-indicator.neutral .sentiment-dot {
+    background-color: #ff9800;
+}
+
+.sentiment-indicator.negative .sentiment-dot {
+    background-color: #f44336;
+}
+
+/* Emotions styling */
+.emotions-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+    height: 100%;
+}
+
+.emotion-tag {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background-color: #f0f7ff;
+    color: #0066cc;
+    border-radius: 12px;
+    font-size: 10px !important;
+    padding: 0px 5px !important;
+    height: 18px !important;
+    white-space: nowrap;
+}
+
+/* Actions column */
+.actions-container {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 15px !important;
+    height: 100% !important;
+}
+
+/* Action buttons styling */
+.action-button {
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 32px !important;
+    height: 32px !important;
+    transition: background-color 0.2s !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    outline: none !important;
+}
+
+/* View button styling */
+.view-button:hover {
+    background-color: rgba(76, 175, 80, 0.1) !important;
+}
+
+/* Edit button styling */
+.edit-button:hover {
+    background-color: rgba(33, 150, 243, 0.1) !important;
+}
+
+/* Delete button styling - with circular red background */
+.delete-button {
+    background-color: #FF7676 !important;
+    border-radius: 5px !important;  
+    width: 40px !important;
+    height: 40px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.view-button, .edit-button {
+    color: #fff !important;
+    font-size: 16px !important;
+    width: 40px !important;
+    height: 40px !important;
+    border: 1px solid #A7D7C5 !important;
+    border-radius: 5px !important;  
+    background-color: rgba(167, 215, 197, 0.1) !important;
+} 
+
+.delete-button:hover {
+    background-color: #ff5252 !important;
+}
+
+/* Action icons - no borders */
+.action-icon {
+    width: 22px !important;
+    height: 22px !important;
+    display: block !important;
+    border: none !important;
+    outline: none !important;
+}
+
+/* Empty state */
+.empty-row {
+    justify-content: center;
+    min-height: 100px;
+}
+
+.empty-message {
+    text-align: center;
+    padding: 30px;
+    color: #666;
+    font-style: italic;
+    width: 100%;
+}
+
+/* Pagination - directly in table container at bottom */
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    padding: 10px 0;
+    margin-top: auto; /* Push to bottom */
+    background-color: #ffffff;
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+}
+
+/* Make sure the body and html elements don't interfere */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+/* Hide scrollbars but allow scrolling */
+.custom-table-container::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    background: transparent;
+}
+
+/* Responsive adjustments */
+@media (max-width: 960px) {
+    .journal-controls-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+    
+    .main-controls-group {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .search-container {
+        max-width: 100%;
+        width: 100%;
+    }
+    
+    .right-controls {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .filters-row {
+        flex-wrap: wrap;
+    }
+    
+    .mood-filter, .sentiment-filter {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    
+    .export-button {
+        margin-left: 0;
+        margin-top: 16px;
+        width: 100%;
+    }
+}

@@ -1,0 +1,335 @@
+/* ProfessionalRegistration.css */
+
+/* Main layout container */
+.registration-page-container {
+  min-height: 100vh;
+  background-color: #ffffff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px;
+}
+
+.registration-layout {
+  display: flex;
+  width: 100%;
+  height: 98vh;
+  background-color: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  gap: 10px; /* Add gap between left and right containers */
+}
+
+/* Left column - Logo and branding */
+.registration-logo-container {
+  flex: 0 0 20%; /* Fixed width of 35% */
+  background: linear-gradient(to bottom right, #ffffff, #A7D7C5, #A7D7C5); /* Linear gradient background */
+  border-radius: 12px;
+  border: 1px solid #A7D7C5;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  overflow: hidden; /* For the neuron graphic overlay */
+}
+
+.logo-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+  z-index: 1; /* Position above the background overlay */
+}
+
+.logo-wrapper {
+  width: 180px;
+  height: 180px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.logo-image {
+  width: 100%;
+  height: auto;
+  max-width: 180px;
+}
+
+/* Right column - Registration form */
+.registration-form-container {
+  flex: 1; /* Take remaining space */
+  padding: 40px;
+  background-color: rgba(167, 215, 197, 0.1);
+  border-radius: 12px;
+  border: 1px solid #A7D7C5;
+  overflow-y: auto;
+}
+
+.form-header {
+  margin-bottom: 30px;
+}
+
+.form-header h2 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 20px 0;
+}
+
+.selected-tenant {
+  margin-bottom: 20px;
+  padding: 10px 15px;
+  background-color: #E8F5E9;
+  border-left: 4px solid #4CAF50;
+  border-radius: 4px;
+}
+
+/* Progress indicator */
+.registration-progress {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 30px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.progress-step {
+  flex: 1;
+  text-align: center;
+  padding: 10px;
+  color: #9e9e9e;
+  position: relative;
+  font-weight: 500;
+}
+
+.progress-step.active {
+  color: #4CAF50;
+}
+
+.progress-step:not(:last-child):after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -15%;
+  width: 30%;
+  height: 1px;
+  background-color: #e0e0e0;
+}
+
+.progress-step.active:after {
+  background-color: #4CAF50;
+}
+
+/* Registration form styles */
+.registration-step {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.registration-step h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 25px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 15px;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: #4CAF50;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
+}
+
+.form-group textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.form-group select[multiple] {
+  height: 120px;
+}
+
+.form-group small {
+  display: block;
+  margin-top: 5px;
+  color: #757575;
+  font-size: 12px;
+}
+
+/* Checkbox styles */
+.checkbox-group div {
+  margin-bottom: 10px;
+}
+
+.checkbox-group input[type="checkbox"] {
+  width: auto;
+  display: inline-block;
+  margin-right: 10px;
+}
+
+.checkbox-group label {
+  display: inline-block;
+  font-weight: normal;
+}
+
+/* Form actions */
+.form-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 30px;
+}
+
+.btn-primary {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+  background-color: #388E3C;
+}
+
+.btn-primary:disabled {
+  background-color: #9E9E9E;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: #333;
+  border: 1px solid #ddd;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  background-color: #f5f5f5;
+  border-color: #ccc;
+}
+
+/* Verification notice */
+.verification-notice {
+  margin: 25px 0;
+  padding: 15px;
+  background-color: #FFF8E1;
+  border-left: 4px solid #FFC107;
+  border-radius: 4px;
+}
+
+.verification-notice p {
+  margin: 0;
+  color: #5D4037;
+}
+
+/* Login link */
+.login-link {
+  text-align: center;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.login-link a {
+  color: #4CAF50;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.login-link a:hover {
+  text-decoration: underline;
+}
+
+/* Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+  .registration-layout {
+    flex-direction: column;
+  }
+  
+  .registration-logo-container {
+    flex: 0 0 auto;
+    padding: 30px;
+  }
+  
+  .logo-wrapper {
+    width: 150px;
+    height: 150px;
+  }
+  
+  .logo-image {
+    width: 100%;
+    max-width: 150px;
+  }
+}
+
+@media (max-width: 768px) {
+  .registration-page-container {
+    padding: 0;
+  }
+  
+  .registration-layout {
+    border-radius: 0;
+    box-shadow: none;
+  }
+  
+  .registration-form-container {
+    padding: 20px;
+  }
+  
+  .registration-progress {
+    flex-wrap: wrap;
+  }
+  
+  .progress-step {
+    flex: 0 0 50%;
+    margin-bottom: 10px;
+  }
+  
+  .progress-step:not(:last-child):after {
+    display: none;
+  }
+}

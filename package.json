@@ -1,0 +1,26 @@
+{
+  "name": "neurolex",
+  "version": "1.0.0",
+  "description": "Mental health platform with multi-tenant support",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "cd server && npm run dev",
+    "client": "cd client && npm start",
+    "build": "cd client && npm run build",
+    "heroku-postbuild": "npm run install-deps && npm run build",
+    "install-deps": "cd server && npm install && cd ../client && npm install"
+  },
+  "engines": {
+    "node": "18.x",
+    "npm": "9.x"
+  },
+  "keywords": ["mental-health", "telemedicine", "multi-tenant"],
+  "author": "Hoax",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  },
+  "dependencies": {}
+}

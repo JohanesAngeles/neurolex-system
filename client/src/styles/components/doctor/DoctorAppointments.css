@@ -1,0 +1,1462 @@
+/* DoctorAppointments.css - Matching JournalList Design - WITH UNIQUE CLASS NAMES */
+
+/* Main container */
+.doctor-appointments-container {
+  padding: 24px;
+}
+
+/* Header */
+.doctor-appointments-header {
+  margin-bottom: 24px;
+}
+
+.doctor-appointments-page-title {
+  font-size: 45px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #000000;
+}
+
+/* Header controls */
+.doctor-appointments-header-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.doctor-appointments-search-container {
+  position: relative;
+  flex: 1;
+  max-width: 421px;
+}
+
+.doctor-appointments-search-input {
+  width: 100%;
+  height: 55px;
+  padding: 10px 12px 10px 40px;
+  border: 1px solid #A7D7C5;
+  border-radius: 12px;
+  font-size: 15px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.doctor-appointments-billing-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-family: 'IBM Plex Mono', monospace;
+  height: 55px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: white;
+  color: #333;
+  border: 1px solid #A7D7C5;
+}
+
+.doctor-appointments-billing-toggle-btn:hover {
+  background-color: #f5f5f5;
+}
+
+/* Error alert */
+.doctor-appointments-error-alert {
+  background-color: #FFEBEE;
+  border-left: 4px solid #F44336;
+  color: #D32F2F;
+  padding: 16px;
+  border-radius: 4px;
+  margin-bottom: 24px;
+}
+
+.doctor-appointments-alert-icon {
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+/* Appointments sections */
+.doctor-appointments-section {
+  margin-bottom: 40px;
+}
+
+.doctor-appointments-section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.doctor-appointments-section-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #333;
+  font-family: 'Poppins', sans-serif;
+}
+
+.doctor-appointments-section-count {
+  background-color: rgba(167, 215, 197, 0.3);
+  color: #548170;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+/* Table styling to match JournalList */
+.doctor-appointments-table {
+  margin-bottom: 30px;
+  overflow-x: auto;
+}
+
+.doctor-appointments-table-header {
+  display: flex;
+  background-color: rgba(167, 215, 197, 0.1);
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-bottom: 10px;
+}
+
+.doctor-appointments-header-cell {
+  padding: 12px 16px;
+  text-align: left;
+  border-top: 1px solid #A7D7C5;
+  border-bottom: 1px solid #A7D7C5;
+  font-size: 15px;
+  font-family: 'IBM Plex Mono', monospace;
+  color: #548170;
+  font-weight: 700;
+  flex: 1;
+}
+
+.doctor-appointments-header-cell:first-child {
+  border-left: 1px solid #A7D7C5;
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+}
+
+.doctor-appointments-header-cell:last-child {
+  border-right: 1px solid #A7D7C5;
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+.doctor-appointments-table-row {
+  display: flex;
+  background-color: #ffffff;
+  margin-bottom: 10px;
+  border-radius: 12px;
+}
+
+.doctor-appointments-table-row:nth-child(even) {
+  background-color: rgba(167, 215, 197, 0.1);
+}
+
+.doctor-appointments-table-cell {
+  padding: 12px 16px;
+  border-top: 1px solid #A7D7C5;
+  border-bottom: 1px solid #A7D7C5;
+  font-size: 15px;
+  font-family: 'IBM Plex Mono', monospace;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.doctor-appointments-table-cell:first-child {
+  border-left: 1px solid #A7D7C5;
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+}
+
+.doctor-appointments-table-cell:last-child {
+  border-right: 1px solid #A7D7C5;
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+/* Patient info styling */
+.doctor-appointments-patient-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.doctor-appointments-patient-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: rgba(167, 215, 197, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  color: #548170;
+}
+
+.doctor-appointments-patient-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: #333;
+}
+
+/* Date time info */
+.doctor-appointments-date-time-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.doctor-appointments-date-text {
+  font-size: 15px;
+  color: #333;
+}
+
+.doctor-appointments-time-range {
+  font-size: 13px;
+  color: #666;
+}
+
+/* Status badges */
+.doctor-appointments-status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.doctor-appointments-status-pending {
+  background-color: #FFF3CD;
+  color: #856404;
+}
+
+.doctor-appointments-status-scheduled {
+  background-color: #D1ECF1;
+  color: #0C5460;
+}
+
+.doctor-appointments-status-completed {
+  background-color: #D4EDDA;
+  color: #155724;
+}
+
+.doctor-appointments-status-cancelled,
+.doctor-appointments-status-declined {
+  background-color: #F8D7DA;
+  color: #721C24;
+}
+
+/* Action buttons */
+.doctor-appointments-actions-cell {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.doctor-appointments-action-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid;
+  transition: all 0.2s ease;
+}
+
+.doctor-appointments-accept-btn {
+  background-color: #D4EDDA;
+  color: #155724;
+  border-color: #C3E6CB;
+}
+
+.doctor-appointments-decline-btn {
+  background-color: #F8D7DA;
+  color: #721C24;
+  border-color: #F5C6CB;
+}
+
+.doctor-appointments-edit-btn {
+  background-color: #E3F2FD;
+  color: #0D47A1;
+  border-color: #BBDEFB;
+}
+
+.doctor-appointments-complete-btn {
+  background-color: #E8F5E9;
+  color: #2E7D32;
+  border-color: #C8E6C9;
+}
+
+.doctor-appointments-view-btn {
+  background-color: #F5F5F5;
+  color: #333;
+  border-color: #E0E0E0;
+}
+
+.doctor-appointments-action-btn:hover {
+  opacity: 0.8;
+}
+
+/* Empty state */
+.doctor-appointments-empty-state {
+  background-color: #fff;
+  border: 1px solid #A7D7C5;
+  border-radius: 12px;
+  padding: 40px;
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.doctor-appointments-empty-state h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.doctor-appointments-empty-state p {
+  font-size: 16px;
+  color: #666;
+  margin: 0;
+}
+
+/* Billing section */
+.doctor-appointments-billing-section-wrapper {
+  margin-bottom: 40px;
+}
+
+.doctor-appointments-billing-section {
+  margin-bottom: 40px;
+}
+
+.doctor-appointments-billing-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.doctor-appointments-billing-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+}
+
+.doctor-appointments-billing-controls .doctor-appointments-search-bar input {
+  height: 40px;
+  padding: 8px 12px;
+  border: 1px solid #A7D7C5;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: 'IBM Plex Mono', monospace;
+  min-width: 200px;
+}
+
+.doctor-appointments-patient-filter,
+.doctor-appointments-status-filter {
+  height: 40px;
+  padding: 8px 12px;
+  border: 1px solid #A7D7C5;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: 'IBM Plex Mono', monospace;
+  min-width: 150px;
+}
+
+.doctor-appointments-export-btn,
+.doctor-appointments-setup-payment-btn {
+  height: 40px;
+  padding: 8px 16px;
+  background-color: #fff;
+  border: 1px solid #A7D7C5;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: 'IBM Plex Mono', monospace;
+  cursor: pointer;
+}
+
+.doctor-appointments-export-btn:hover,
+.doctor-appointments-setup-payment-btn:hover {
+  background-color: #f5f5f5;
+}
+
+/* Billing table uses same styling as appointments table */
+.doctor-appointments-billing-table {
+  margin-bottom: 30px;
+  overflow-x: auto;
+}
+
+.doctor-appointments-billing-table .doctor-appointments-table-header {
+  display: flex;
+  background-color: rgba(167, 215, 197, 0.1);
+  margin-bottom: 10px;
+}
+
+.doctor-appointments-billing-table .doctor-appointments-table-row {
+  display: flex;
+  background-color: #ffffff;
+  margin-bottom: 10px;
+  border-radius: 12px;
+}
+
+.doctor-appointments-billing-table .doctor-appointments-table-row:nth-child(even) {
+  background-color: rgba(167, 215, 197, 0.1);
+}
+
+/* Billing status badges */
+.doctor-appointments-billing-paid {
+  background-color: #D4EDDA;
+  color: #155724;
+}
+
+.doctor-appointments-billing-pending {
+  background-color: #FFF3CD;
+  color: #856404;
+}
+
+.doctor-appointments-billing-overdue {
+  background-color: #F8D7DA;
+  color: #721C24;
+}
+
+/* Loading container */
+.doctor-appointments-loading-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 300px;
+  gap: 16px;
+}
+
+.doctor-appointments-loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #5B8C7E;
+  border-radius: 50%;
+  animation: doctor-appointments-spin 1s linear infinite;
+}
+
+@keyframes doctor-appointments-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Modal styles */
+.doctor-appointments-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.doctor-appointments-modal {
+  background-color: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  min-width: 400px;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow: auto;
+}
+
+.doctor-appointments-large-modal {
+  min-width: 600px;
+}
+
+.doctor-appointments-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #E0E0E0;
+}
+
+.doctor-appointments-modal-header h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+.doctor-appointments-close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+}
+
+.doctor-appointments-modal-body {
+  margin-bottom: 24px;
+}
+
+.doctor-appointments-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid #E0E0E0;
+}
+
+.doctor-appointments-cancel-btn,
+.doctor-appointments-confirm-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid;
+}
+
+.doctor-appointments-cancel-btn {
+  background-color: #fff;
+  color: #333;
+  border-color: #E0E0E0;
+}
+
+.doctor-appointments-confirm-btn {
+  background-color: #4CAF50;
+  color: #fff;
+  border-color: #4CAF50;
+}
+
+.doctor-appointments-confirm-btn.doctor-appointments-accept {
+  background-color: #4CAF50;
+  border-color: #4CAF50;
+}
+
+.doctor-appointments-confirm-btn.doctor-appointments-decline {
+  background-color: #F44336;
+  border-color: #F44336;
+}
+
+.doctor-appointments-confirm-btn.doctor-appointments-reschedule {
+  background-color: #2196F3;
+  border-color: #2196F3;
+}
+
+.doctor-appointments-confirm-btn.doctor-appointments-save {
+  background-color: #4CAF50;
+  border-color: #4CAF50;
+}
+
+/* Form elements in modals */
+.doctor-appointments-form-group {
+  margin-bottom: 16px;
+}
+
+.doctor-appointments-form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #333;
+}
+
+.doctor-appointments-form-group input,
+.doctor-appointments-form-group textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #A7D7C5;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.doctor-appointments-form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.doctor-appointments-form-row {
+  display: flex;
+  gap: 16px;
+}
+
+.doctor-appointments-form-row .doctor-appointments-form-group {
+  flex: 1;
+}
+
+/* Appointment summary in modal */
+.doctor-appointments-appointment-summary {
+  background-color: #f8f9fa;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.doctor-appointments-appointment-summary p {
+  margin: 8px 0;
+  color: #333;
+}
+
+/* Payment setup sections */
+.doctor-appointments-payment-setup-section {
+  margin-bottom: 24px;
+}
+
+.doctor-appointments-payment-setup-section h4 {
+  margin-bottom: 16px;
+  color: #333;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.doctor-appointments-payment-method {
+  margin-bottom: 16px;
+}
+
+.doctor-appointments-payment-method label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #333;
+}
+
+.doctor-appointments-payment-method input[type="file"] {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #A7D7C5;
+  border-radius: 8px;
+}
+
+.doctor-appointments-qr-preview {
+  width: 100px;
+  height: 100px;
+  margin-top: 8px;
+  border-radius: 8px;
+}
+
+/* Bank account form */
+.doctor-appointments-bank-account-form .doctor-appointments-form-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.doctor-appointments-bank-account-form input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #A7D7C5;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.doctor-appointments-add-account-btn {
+  padding: 8px 16px;
+  background-color: #fff;
+  border: 1px solid #A7D7C5;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.doctor-appointments-bank-accounts-list {
+  margin-top: 16px;
+}
+
+.doctor-appointments-bank-account-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid #A7D7C5;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  background-color: #f8f9fa;
+}
+
+.doctor-appointments-remove-btn {
+  background: none;
+  border: none;
+  color: #F44336;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+/* Billing details */
+.doctor-appointments-billing-details {
+  line-height: 1.6;
+}
+
+.doctor-appointments-billing-details p {
+  margin: 8px 0;
+  color: #333;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .doctor-appointments-container {
+    padding: 16px;
+  }
+  
+  .doctor-appointments-page-title {
+    font-size: 32px;
+  }
+  
+  .doctor-appointments-header-controls {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+  
+  .doctor-appointments-search-container {
+    max-width: 100%;
+  }
+  
+  .doctor-appointments-billing-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .doctor-appointments-billing-controls {
+    justify-content: stretch;
+  }
+  
+  .doctor-appointments-billing-controls > * {
+    flex: 1;
+    min-width: auto;
+  }
+  
+  .doctor-appointments-table-row {
+    flex-direction: column;
+  }
+  
+  .doctor-appointments-table-cell {
+    border-radius: 0;
+    border-left: 1px solid #A7D7C5;
+    border-right: 1px solid #A7D7C5;
+    padding: 8px 16px;
+  }
+  
+  .doctor-appointments-table-cell:first-child {
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+  }
+  
+  .doctor-appointments-table-cell:last-child {
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+  }
+  
+  .doctor-appointments-actions-cell {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  .doctor-appointments-modal {
+    margin: 16px;
+    min-width: auto;
+    max-width: calc(100vw - 32px);
+  }
+}
+  
+
+/* Appointments sections */
+.appointments-section {
+  margin-bottom: 40px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #333;
+  font-family: 'Poppins', sans-serif;
+}
+
+.section-count {
+  background-color: rgba(167, 215, 197, 0.3);
+  color: #548170;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+/* Table styling to match JournalList */
+.appointments-table {
+  margin-bottom: 30px;
+  overflow-x: auto;
+}
+
+.table-header {
+  display: flex;
+  background-color: rgba(167, 215, 197, 0.1);
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-bottom: 10px;
+}
+
+.header-cell {
+  padding: 12px 16px;
+  text-align: left;
+  border-top: 1px solid #A7D7C5;
+  border-bottom: 1px solid #A7D7C5;
+  font-size: 15px;
+  font-family: 'IBM Plex Mono', monospace;
+  color: #548170;
+  font-weight: 700;
+  flex: 1;
+}
+
+.header-cell:first-child {
+  border-left: 1px solid #A7D7C5;
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+}
+
+.header-cell:last-child {
+  border-right: 1px solid #A7D7C5;
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+.table-row {
+  display: flex;
+  background-color: #ffffff;
+  margin-bottom: 10px;
+  border-radius: 12px;
+}
+
+.table-row:nth-child(even) {
+  background-color: rgba(167, 215, 197, 0.1);
+}
+
+.table-cell {
+  padding: 12px 16px;
+  border-top: 1px solid #A7D7C5;
+  border-bottom: 1px solid #A7D7C5;
+  font-size: 15px;
+  font-family: 'IBM Plex Mono', monospace;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.table-cell:first-child {
+  border-left: 1px solid #A7D7C5;
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+}
+
+.table-cell:last-child {
+  border-right: 1px solid #A7D7C5;
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+/* Patient info styling */
+.patient-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.patient-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: rgba(167, 215, 197, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  color: #548170;
+}
+
+.patient-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: #333;
+}
+
+/* Date time info */
+.date-time-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.date-text {
+  font-size: 15px;
+  color: #333;
+}
+
+.time-range {
+  font-size: 13px;
+  color: #666;
+}
+
+/* Status badges */
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.status-pending {
+  background-color: #FFF3CD;
+  color: #856404;
+}
+
+.status-scheduled {
+  background-color: #D1ECF1;
+  color: #0C5460;
+}
+
+.status-completed {
+  background-color: #D4EDDA;
+  color: #155724;
+}
+
+.status-cancelled,
+.status-declined {
+  background-color: #F8D7DA;
+  color: #721C24;
+}
+
+/* Action buttons */
+.actions-cell {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.action-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid;
+  transition: all 0.2s ease;
+}
+
+.accept-btn {
+  background-color: #D4EDDA;
+  color: #155724;
+  border-color: #C3E6CB;
+}
+
+.decline-btn {
+  background-color: #F8D7DA;
+  color: #721C24;
+  border-color: #F5C6CB;
+}
+
+.edit-btn {
+  background-color: #E3F2FD;
+  color: #0D47A1;
+  border-color: #BBDEFB;
+}
+
+.complete-btn {
+  background-color: #E8F5E9;
+  color: #2E7D32;
+  border-color: #C8E6C9;
+}
+
+.view-btn {
+  background-color: #F5F5F5;
+  color: #333;
+  border-color: #E0E0E0;
+}
+
+.action-btn:hover {
+  opacity: 0.8;
+}
+
+/* Empty state */
+.empty-state {
+  background-color: #fff;
+  border: 1px solid #A7D7C5;
+  border-radius: 12px;
+  padding: 40px;
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.empty-state h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.empty-state p {
+  font-size: 16px;
+  color: #666;
+  margin: 0;
+}
+
+/* Billing section */
+.billing-section-wrapper {
+  margin-bottom: 40px;
+}
+
+.billing-section {
+  margin-bottom: 40px;
+}
+
+.billing-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.billing-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+}
+
+.billing-controls .search-bar input {
+  height: 40px;
+  padding: 8px 12px;
+  border: 1px solid #A7D7C5;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: 'IBM Plex Mono', monospace;
+  min-width: 200px;
+}
+
+.patient-filter,
+.status-filter {
+  height: 40px;
+  padding: 8px 12px;
+  border: 1px solid #A7D7C5;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: 'IBM Plex Mono', monospace;
+  min-width: 150px;
+}
+
+.export-btn,
+.setup-payment-btn {
+  height: 40px;
+  padding: 8px 16px;
+  background-color: #fff;
+  border: 1px solid #A7D7C5;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: 'IBM Plex Mono', monospace;
+  cursor: pointer;
+}
+
+.export-btn:hover,
+.setup-payment-btn:hover {
+  background-color: #f5f5f5;
+}
+
+/* Billing table uses same styling as appointments table */
+.billing-table {
+  margin-bottom: 30px;
+  overflow-x: auto;
+}
+
+.billing-table .table-header {
+  display: flex;
+  background-color: rgba(167, 215, 197, 0.1);
+  margin-bottom: 10px;
+}
+
+.billing-table .table-row {
+  display: flex;
+  background-color: #ffffff;
+  margin-bottom: 10px;
+  border-radius: 12px;
+}
+
+.billing-table .table-row:nth-child(even) {
+  background-color: rgba(167, 215, 197, 0.1);
+}
+
+/* Billing status badges */
+.billing-paid {
+  background-color: #D4EDDA;
+  color: #155724;
+}
+
+.billing-pending {
+  background-color: #FFF3CD;
+  color: #856404;
+}
+
+.billing-overdue {
+  background-color: #F8D7DA;
+  color: #721C24;
+}
+
+/* Loading container */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 300px;
+  gap: 16px;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #5B8C7E;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Modal styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background-color: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  min-width: 400px;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow: auto;
+}
+
+.large-modal {
+  min-width: 600px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #E0E0E0;
+}
+
+.modal-header h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+}
+
+.modal-body {
+  margin-bottom: 24px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid #E0E0E0;
+}
+
+.cancel-btn,
+.confirm-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid;
+}
+
+.cancel-btn {
+  background-color: #fff;
+  color: #333;
+  border-color: #E0E0E0;
+}
+
+.confirm-btn {
+  background-color: #4CAF50;
+  color: #fff;
+  border-color: #4CAF50;
+}
+
+.confirm-btn.accept {
+  background-color: #4CAF50;
+  border-color: #4CAF50;
+}
+
+.confirm-btn.decline {
+  background-color: #F44336;
+  border-color: #F44336;
+}
+
+.confirm-btn.reschedule {
+  background-color: #2196F3;
+  border-color: #2196F3;
+}
+
+.confirm-btn.save {
+  background-color: #4CAF50;
+  border-color: #4CAF50;
+}
+
+/* Form elements in modals */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #333;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #A7D7C5;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+}
+
+.form-row .form-group {
+  flex: 1;
+}
+
+/* Appointment summary in modal */
+.appointment-summary {
+  background-color: #f8f9fa;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.appointment-summary p {
+  margin: 8px 0;
+  color: #333;
+}
+
+/* Payment setup sections */
+.payment-setup-section {
+  margin-bottom: 24px;
+}
+
+.payment-setup-section h4 {
+  margin-bottom: 16px;
+  color: #333;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.payment-method {
+  margin-bottom: 16px;
+}
+
+.payment-method label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #333;
+}
+
+.payment-method input[type="file"] {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #A7D7C5;
+  border-radius: 8px;
+}
+
+.qr-preview {
+  width: 100px;
+  height: 100px;
+  margin-top: 8px;
+  border-radius: 8px;
+}
+
+/* Bank account form */
+.bank-account-form .form-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.bank-account-form input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #A7D7C5;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.add-account-btn {
+  padding: 8px 16px;
+  background-color: #fff;
+  border: 1px solid #A7D7C5;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.bank-accounts-list {
+  margin-top: 16px;
+}
+
+.bank-account-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid #A7D7C5;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  background-color: #f8f9fa;
+}
+
+.remove-btn {
+  background: none;
+  border: none;
+  color: #F44336;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+/* Billing details */
+.billing-details {
+  line-height: 1.6;
+}
+
+.billing-details p {
+  margin: 8px 0;
+  color: #333;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .doctor-appointments {
+    padding: 16px;
+  }
+  
+  .page-title {
+    font-size: 32px;
+  }
+  
+  .header-controls {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+  
+  .search-container {
+    max-width: 100%;
+  }
+  
+  .billing-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .billing-controls {
+    justify-content: stretch;
+  }
+  
+  .billing-controls > * {
+    flex: 1;
+    min-width: auto;
+  }
+  
+  .table-row {
+    flex-direction: column;
+  }
+  
+  .table-cell {
+    border-radius: 0;
+    border-left: 1px solid #A7D7C5;
+    border-right: 1px solid #A7D7C5;
+    padding: 8px 16px;
+  }
+  
+  .table-cell:first-child {
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+  }
+  
+  .table-cell:last-child {
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+  }
+  
+  .actions-cell {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  .modal {
+    margin: 16px;
+    min-width: auto;
+    max-width: calc(100vw - 32px);
+  }
+}

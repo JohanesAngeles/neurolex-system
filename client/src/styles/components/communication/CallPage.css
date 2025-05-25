@@ -1,0 +1,61 @@
+/* client/src/styles/pages/CallPage.css */
+.call-page {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background-color: #f5f5f5;
+  }
+  
+  .call-page-header {
+    display: flex;
+    align-items: center;
+    padding: 16px 24px;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .back-button {
+    background: none;
+    border: none;
+    font-size: 16px;
+    font-weight: 500;
+    color: #3498db;
+    cursor: pointer;
+    margin-right: 16px;
+    padding: 8px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+  }
+  
+  .back-button:hover {
+    background-color: rgba(52, 152, 219, 0.1);
+  }
+  
+  .call-page-header h2 {
+    margin: 0;
+    font-size: 20px;
+    color: #333;
+  }
+  
+  .call-container {
+    flex: 1;
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  
+  /* Media query for mobile devices */
+  @media (max-width: 768px) {
+    .call-container {
+      padding: 10px;
+    }
+    
+    .call-page-header {
+      padding: 12px 16px;
+    }
+    
+    .call-page-header h2 {
+      font-size: 18px;
+    }
+  }

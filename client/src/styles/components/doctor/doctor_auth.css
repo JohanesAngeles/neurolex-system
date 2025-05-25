@@ -1,0 +1,338 @@
+/* doctor_auth.css */
+
+/* Main container layouts */
+.doctor-auth-form-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.doctor-auth-form {
+  width: 100%;
+  max-width: 500px;
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+  padding: 32px;
+  margin: 20px 0;
+}
+
+/* Form header styles */
+.doctor-form-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.doctor-form-subtitle {
+  font-size: 16px;
+  color: #666;
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+/* Form group styles */
+.doctor-form-group {
+  margin-bottom: 20px;
+}
+
+.doctor-form-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.doctor-form-row .doctor-form-group {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.doctor-form-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #444;
+  margin-bottom: 6px;
+}
+
+.doctor-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: border-color 0.3s;
+}
+
+.doctor-input:focus {
+  outline: none;
+  border-color: #4CAF50; /* Match Neurolex green */
+}
+
+.doctor-input-error {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #e74c3c;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: border-color 0.3s;
+}
+
+.doctor-input-error:focus {
+  outline: none;
+  border-color: #e74c3c;
+}
+
+.doctor-error-message {
+  font-size: 12px;
+  color: #e74c3c;
+  margin-top: 4px;
+}
+
+.doctor-error-alert {
+  background-color: #FFEBEE;
+  border-left: 4px solid #F44336;
+  color: #D32F2F;
+  padding: 12px 16px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+/* Button styles */
+.doctor-auth-button {
+  width: 100%;
+  padding: 14px;
+  background-color: #4CAF50; /* Match Neurolex green */
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  margin-top: 12px;
+}
+
+.doctor-auth-button:hover {
+  background-color: #3d9140;
+}
+
+.doctor-auth-button:disabled {
+  background-color: #9e9e9e;
+  cursor: not-allowed;
+}
+
+/* Checkbox styles */
+.doctor-checkbox-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.doctor-checkbox-group input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+}
+
+.doctor-checkbox-label {
+  font-size: 14px;
+  color: #444;
+}
+
+/* Link styles */
+.doctor-auth-link {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 14px;
+  color: #666;
+}
+
+.doctor-link {
+  color: #4CAF50; /* Match Neurolex green */
+  text-decoration: none;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.doctor-link:hover {
+  text-decoration: underline;
+}
+
+/* Form options styles */
+.doctor-form-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.doctor-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.doctor-remember-label {
+  font-size: 14px;
+  color: #666;
+}
+
+.doctor-forgot-link {
+  font-size: 14px;
+}
+
+/* Password strength indicator */
+.doctor-password-strength {
+  margin-top: 8px;
+}
+
+.doctor-strength-bar {
+  height: 4px;
+  border-radius: 2px;
+  margin-bottom: 4px;
+}
+
+.doctor-weak {
+  width: 33%;
+  background-color: #e74c3c;
+}
+
+.doctor-medium {
+  width: 66%;
+  background-color: #f39c12;
+}
+
+.doctor-strong {
+  width: 100%;
+  background-color: #2ecc71;
+}
+
+/* Modal styles */
+.doctor-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.doctor-modal-content {
+  background-color: #fff;
+  border-radius: 8px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 24px;
+  position: relative;
+}
+
+.doctor-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.doctor-modal-body {
+  margin: 16px 0;
+}
+
+.doctor-modal-button {
+  padding: 10px 24px;
+  background-color: #4CAF50; /* Match Neurolex green */
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+/* Success message */
+.doctor-success-message {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.doctor-success-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background-color: #4CAF50;
+  color: white;
+  font-size: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+
+/* Resend code section */
+.doctor-resend-container {
+  text-align: center;
+  margin-top: 24px;
+}
+
+.doctor-resend-button {
+  background: none;
+  border: none;
+  color: #4CAF50;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  margin-top: 8px;
+}
+
+.doctor-resend-button:disabled {
+  color: #9e9e9e;
+  cursor: not-allowed;
+}
+
+/* Loading spinner */
+.doctor-loading-spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #4CAF50;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: doctor-spin 1s linear infinite;
+  margin: 20px auto;
+}
+
+@keyframes doctor-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive styles */
+@media (max-width: 576px) {
+  .doctor-form-row {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .doctor-auth-form {
+    padding: 24px 16px;
+  }
+  
+  .doctor-form-options {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .doctor-forgot-link {
+    align-self: flex-end;
+  }
+}

@@ -1,0 +1,178 @@
+/* JournalInsights.css */
+.journal-insights-container {
+    padding: 24px;
+  }
+  
+  .journal-header {
+    margin-bottom: 24px;
+  }
+  
+  .journal-title {
+    font-size: 1.5rem;
+    font-weight: 500;
+    margin-bottom: 8px;
+  }
+  
+  .journal-subtitle {
+    font-size: 0.875rem;
+    color: #666;
+  }
+  
+  .insights-card {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  
+  .insights-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  
+  .insights-title {
+    font-size: 1.25rem;
+    font-weight: 500;
+  }
+  
+  .sentiment-summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  
+  .sentiment-card {
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .sentiment-card.positive {
+    background-color: #4CAF50;
+    color: #000;
+  }
+  
+  .sentiment-card.neutral {
+    background-color: #FFEB3B;
+    color: #000;
+  }
+  
+  .sentiment-card.negative {
+    background-color: #FF5252;
+    color: #fff;
+  }
+  
+  .sentiment-card.unlogged {
+    background-color: #E0E0E0;
+    color: #000;
+  }
+  
+  .sentiment-count {
+    margin-top: 8px;
+    font-size: 0.875rem;
+    color: rgba(0, 0, 0, 0.7);
+  }
+  
+  .score-summary {
+    display: flex;
+    align-items: flex-start;
+  }
+  
+  .score-circle {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    margin-right: 24px;
+  }
+  
+  .score-number {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2rem;
+    font-weight: 500;
+  }
+  
+  .top-sentiment {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-weight: 500;
+    font-size: 0.875rem;
+  }
+  
+  .emotions-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+  }
+  
+  .emotion-tag {
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 0.75rem;
+  }
+  
+  .daily-sentiment {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    margin-top: 16px;
+  }
+  
+  .day-indicator {
+    height: 80px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 8px;
+    font-weight: 500;
+  }
+  
+  .chart-container {
+    height: 200px;
+    width: 100%;
+  }
+  
+  .chart-legend {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 16px;
+  }
+  
+  .legend-item {
+    display: flex;
+    align-items: center;
+  }
+  
+  .legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 4px;
+  }
+  
+  @media (max-width: 768px) {
+    .sentiment-summary {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .score-summary {
+      flex-direction: column;
+    }
+    
+    .score-circle {
+      margin-bottom: 16px;
+    }
+  }

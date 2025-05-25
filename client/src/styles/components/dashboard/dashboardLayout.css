@@ -1,0 +1,28 @@
+/* Dashboard Layout Styles */
+.dashboard-layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f8f9fa;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.dashboard-content {
+  flex: 1;
+  margin-left: 100px; /* Sidebar width (80px) + gap */
+  transition: margin-left 0.3s ease;
+  height: calc(100vh - 40px); /* Exactly viewport height minus padding */
+  box-sizing: border-box;
+}
+
+/* Handle responsive layouts */
+@media screen and (max-width: 768px) {
+  .dashboard-layout {
+    padding: 16px;
+  }
+  
+  .dashboard-content {
+    margin-left: 80px;
+    height: calc(100vh - 32px); /* Adjust for smaller padding */
+  }
+}

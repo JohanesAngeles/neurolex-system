@@ -1,0 +1,200 @@
+/* styles/components/admin/AdminLayout.css */
+
+/* Basic Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Layout Structure */
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  background-color: #ffffff;
+  padding: 10px;
+}
+
+/* Sidebar Styles */
+.admin-sidebar {
+  width: 100px;
+  background-color: rgba(167, 215, 197, 0.1);
+  border: 1px solid #A7D7C5;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 0;
+}
+
+/* Top Logo Section */
+.sidebar-top {
+  width: 100%;
+  padding: 0 10px;
+  margin-bottom: 30px;
+}
+
+.logo-container {
+  width: 50px;
+  height: 50px;
+  background-color: #f0f9f5;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.admin-logo {
+  width: 42px;
+  height: 48px;
+}
+
+/* Navigation Menu */
+.sidebar-nav {
+  flex-grow: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.nav-menu {
+  list-style: none;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nav-item {
+  width: 100%;
+  padding: 0 10px;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 70px;
+  height: 70px;
+  border-radius: 8px;
+  text-decoration: none;
+  margin: 0 auto;
+}
+
+.nav-link:hover {
+  background-color: #f0f9f5;
+}
+
+.nav-link.active {
+  background-color: #5B8C7E;
+}
+
+.icon-container {
+  width: 24px;
+  height: 24px;
+  background-color: #FFFFFF;
+  mask-size: cover;
+  -webkit-mask-size: cover;
+}
+
+.nav-link.active .icon-container {
+  background-color: white;
+}
+
+/* Profile Section */
+.sidebar-bottom {
+  width: 100%;
+  padding: 0 10px;
+  margin-top: 30px;
+}
+
+.profile-container {
+  width: 50px;
+  height: 50px;
+  background-color: #f0f9f5;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.profile-icon {
+  width: 24px;
+  height: 24px;
+  background-color: #5B8C7E;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E") no-repeat center;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E") no-repeat center;
+}
+
+/* Main Content Area */
+.admin-content {
+  flex: 1;
+  padding-left: 10px; /* This creates the 10px gap to the sidebar */
+  overflow-y: auto;
+}
+
+/* Admin content container - NEW */
+.admin-content-container {
+  background-color: transparent;
+  border: 1px solid #A7D7C5;
+  border-radius: 10px;
+  padding: 24px;
+  height: 100%;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .admin-sidebar {
+    width: 60px;
+  }
+  
+  .logo-container,
+  .profile-container,
+  .nav-link {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .icon-container,
+  .logo-icon,
+  .profile-icon {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .admin-content-container {
+    padding: 16px;
+  }
+}
+
+/* icons design */
+.nav-icon[alt="Dashboard"] {
+  width: 38px;
+  height: 38px;
+}
+
+.nav-icon[alt="User Management"] {
+  width: 37px;
+  height: 37px;
+}
+
+.nav-icon[alt="Doctor Management"] {
+  width: 36px;
+  height: 36px;
+}
+
+.nav-icon[alt="Journal Management"] {
+  width: 40px;
+  height: 40px;
+}
+
+.nav-icon[alt="System Settings"] {
+  width: 36px;
+  height: 36px;
+}

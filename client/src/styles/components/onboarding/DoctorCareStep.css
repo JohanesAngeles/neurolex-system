@@ -1,0 +1,5 @@
+body.doctor-care-page .progress-indicator {
+    /* Move the progress indicator higher */
+    margin-top: 20px;
+    margin-bottom: -5px; /* Add some space below */
+  }
