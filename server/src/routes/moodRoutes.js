@@ -1,62 +1,17 @@
+// server/src/routes/moodRoutes.js
 const express = require('express');
 const router = express.Router();
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const { protect } = require('../middleware/auth');
 
-// Define protect middleware directly in this file for now
-const protect = async (req, res, next) => {
-  try {
-    let token;
-    
-    // Get token from Authorization header
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-      token = req.headers.authorization.split(' ')[1];
-    }
-    
-    // Check if token exists
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: 'Not authorized, no token provided'
-      });
-    }
-    
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    // Get user from token
-    const user = await User.findById(decoded.id).select('-password');
-    
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-    
-    // Add user to request object
-    req.user = user;
-    next();
-  } catch (error) {
-    console.error('Auth middleware error:', error);
-    
-    // Handle expired token
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({
-        success: false,
-        message: 'Token expired, please log in again'
-      });
-    }
-    
-    // Handle invalid token
-    return res.status(401).json({
-      success: false,
-      message: 'Not authorized, invalid token'
-    });
-  }
-};
+// Import mood model with error handling
+let Mood;
+try {
+  Mood = require('../models/Mood');
+} catch (error) {
+  console.error('Error importing Mood model:', error);
+}
 
-// Import controllers (using a try-catch to handle potential issues)
+// Import controllers with error handling
 let moodController;
 try {
   moodController = require('../controllers/moodController');
@@ -65,10 +20,10 @@ try {
   // Provide fallback controllers
   moodController = {
     saveMood: (req, res) => {
-      res.status(500).json({ message: 'Controller not implemented yet' });
+      res.status(500).json({ success: false, message: 'Controller not implemented yet' });
     },
     getUserMoods: (req, res) => {
-      res.status(500).json({ message: 'Controller not implemented yet' });
+      res.status(500).json({ success: false, message: 'Controller not implemented yet' });
     }
   };
 }
@@ -79,8 +34,16 @@ router.post('/', protect, moodController.saveMood);
 // Get mood entries for a user
 router.get('/', protect, moodController.getUserMoods);
 
-router.get('/users/:userId/moods/current', protect, async (req, res) => {
+// Get current mood for a specific user
+router.get('/users/:userId/current', protect, async (req, res) => {
   try {
+    if (!Mood) {
+      return res.status(500).json({
+        success: false,
+        message: 'Mood model not available'
+      });
+    }
+
     const { userId } = req.params;
     
     // Get latest mood entry
@@ -107,9 +70,16 @@ router.get('/users/:userId/moods/current', protect, async (req, res) => {
   }
 });
 
-// Create mood entry
-router.post('/users/:userId/moods', protect, async (req, res) => {
+// Create mood entry for a specific user
+router.post('/users/:userId/create', protect, async (req, res) => {
   try {
+    if (!Mood) {
+      return res.status(500).json({
+        success: false,
+        message: 'Mood model not available'
+      });
+    }
+
     const { userId } = req.params;
     const { mood, notes, timestamp } = req.body;
     
