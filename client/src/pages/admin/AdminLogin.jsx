@@ -1,10 +1,13 @@
-// client/src/pages/admin/AdminLogin.jsx
+// client/src/pages/admin/AdminLogin.jsx - FIXED VERSION
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import AdminAuthLayout from '../../components/admin/layout/AdminAuthLayout';
 import '../../styles/components/admin/AdminAuth.css';
 import neuroLexLogo from '../../assets/images/Neurolex_Logo_New.png';
+
+// FIXED: Use the correct API URL
+const API_URL = process.env.REACT_APP_API_URL || '/api';
 
 // Icons (SVG icons directly embedded)
 const EyeIcon = () => (
@@ -97,17 +100,17 @@ const AdminLogin = () => {
     try {
       console.log('🔧 Attempting admin login with:', { email: formData.email });
       
-      // 🔧 FIX 1: Use the admin-specific endpoint from your authController
-      const response = await axios.post('/api/auth/admin-login', formData);
+      // FIXED: Use the correct admin endpoint that actually exists
+      const response = await axios.post(`${API_URL}/admin/login`, formData);
       
-      console.log('🔧 Login response:', response.data);
+      console.log('✅ Login response:', response.data);
       
       if (response.data.success) {
         const { token, user } = response.data;
         
-        // 🔧 FIX 2: Store using the same keys your auth system expects
-        localStorage.setItem('token', token); // Use 'token', not 'adminToken'
-        localStorage.setItem('user', JSON.stringify(user)); // Use 'user', not 'adminUser'
+        // Store authentication data
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(user));
         
         // Set token expiry
         if (rememberMe) {
@@ -120,19 +123,19 @@ const AdminLogin = () => {
           localStorage.setItem('tokenExpiry', expiryDate.toISOString());
         }
         
-        // 🔧 FIX 3: Set up axios default header for future requests
+        // Set up axios default header for future requests
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         
-        console.log('🔧 Token and user stored successfully');
-        console.log('🔧 User role:', user.role);
+        console.log('✅ Token and user stored successfully');
+        console.log('👤 User role:', user.role);
         
-        // 🔧 FIX 4: Add small delay before navigation to ensure auth state is set
+        // Navigate to admin dashboard
         setTimeout(() => {
           if (user.role === 'admin') {
-            console.log('🔧 Navigating to admin dashboard');
-            navigate('/admin', { replace: true });
+            console.log('🚀 Navigating to admin dashboard');
+            navigate('/admin/dashboard', { replace: true });
           } else {
-            console.log('🔧 User is not admin, role:', user.role);
+            console.log('❌ User is not admin, role:', user.role);
             setError('Access denied. Admin privileges required.');
           }
         }, 100);
@@ -146,7 +149,7 @@ const AdminLogin = () => {
       
       // Better error handling
       if (error.response) {
-        const errorMessage = error.response.data?.message || 'Login failed';
+        const errorMessage = error.response.data?.message || 'Invalid credentials';
         console.log('❌ Server error:', errorMessage);
         setError(errorMessage);
       } else if (error.request) {
@@ -160,31 +163,6 @@ const AdminLogin = () => {
       setIsLoading(false);
     }
   };
-
-  // 🔧 TEMPORARILY DISABLED: Auto-redirect check to fix loop
-  // React.useEffect(() => {
-  //   const checkExistingAuth = () => {
-  //     const token = localStorage.getItem('token');
-  //     const userStr = localStorage.getItem('user');
-  //     
-  //     if (token && userStr) {
-  //       try {
-  //         const user = JSON.parse(userStr);
-  //         if (user.role === 'admin') {
-  //           console.log('🔧 Admin already logged in, redirecting to dashboard');
-  //           navigate('/admin', { replace: true });
-  //         }
-  //       } catch (err) {
-  //         console.log('❌ Error parsing stored user data:', err);
-  //         // Clear invalid data
-  //         localStorage.removeItem('token');
-  //         localStorage.removeItem('user');
-  //       }
-  //     }
-  //   };
-  //   
-  //   checkExistingAuth();
-  // }, [navigate]);
 
   // Login form content
   const loginForm = (
@@ -205,7 +183,7 @@ const AdminLogin = () => {
       
       {error && (
         <div className="alert alert-error">
-          {error}
+          Invalid credentials
         </div>
       )}
       
@@ -216,7 +194,7 @@ const AdminLogin = () => {
             type="email"
             id="email"
             name="email"
-            placeholder="Enter Email Address"
+            placeholder="admin@neurolex.com"
             value={formData.email}
             onChange={handleChange}
             className={`admin-form-input ${formErrors.email ? 'input-error' : ''}`}
@@ -231,7 +209,7 @@ const AdminLogin = () => {
               type={showPassword ? "text" : "password"}
               id="password"
               name="password"
-              placeholder="Enter Password"
+              placeholder="AdminPassword123!"
               value={formData.password}
               onChange={handleChange}
               className={`admin-form-input ${formErrors.password ? 'input-error' : ''}`}
@@ -277,10 +255,9 @@ const AdminLogin = () => {
           )}
         </button>
         
-        {/* Only add this section if admins can register themselves or if superadmins can navigate to register page */}
         <div className="account-link-container">
-          <span className="account-link-text">Don't have an account?</span>
-          <Link to="/admin/register" className="account-link">Sign Up</Link>
+          <span className="account-link-text">Need help accessing your account?</span>
+          <Link to="/contact" className="account-link">Contact Support</Link>
         </div>
       </form>
       </div>
