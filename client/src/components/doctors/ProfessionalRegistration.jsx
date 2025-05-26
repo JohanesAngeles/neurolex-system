@@ -1,15 +1,20 @@
-// ProfessionalRegistration.jsx
+// ProfessionalRegistration.jsx - COMPLETE FIXED VERSION
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
+import { toast } from 'react-toastify';
 import '../../styles/components/doctor/ProfessionalRegistration.css';
 // Import the logo image
 import neurolexLogo from '../../assets/images/NeurolexLogo_White.png';
+
+// FIXED: Use the correct API URL
+const API_URL = process.env.REACT_APP_API_URL || 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com/api';
 
 const ProfessionalRegistration = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [tenants, setTenants] = useState([]);
+  const [isLoadingTenants, setIsLoadingTenants] = useState(false);
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -59,27 +64,52 @@ const ProfessionalRegistration = () => {
     termsAccepted: false,
   });
 
-  // Fetch available tenants on component mount
+  // FIXED: Fetch available tenants with correct endpoint
   useEffect(() => {
     const fetchTenants = async () => {
       try {
-        const response = await axios.get('/api/auth/tenants');
-        if (response.data.success) {
-          setTenants(response.data.data);
+        setIsLoadingTenants(true);
+        console.log('🔄 Fetching tenants from:', `${API_URL}/tenants/public`);
+        
+        // FIXED: Use the correct endpoint
+        const response = await axios.get(`${API_URL}/tenants/public`);
+        console.log('✅ Tenant API Response:', response.data);
+        
+        let tenantsData = [];
+        if (response.data && response.data.data) {
+          tenantsData = response.data.data;
+        } else if (Array.isArray(response.data)) {
+          tenantsData = response.data;
+        } else if (response.data && response.data.success && Array.isArray(response.data.data)) {
+          tenantsData = response.data.data;
+        }
+        
+        console.log('📋 Processed tenants data:', tenantsData);
+        
+        if (Array.isArray(tenantsData) && tenantsData.length > 0) {
+          setTenants(tenantsData);
+          console.log('🏥 Setting tenants:', tenantsData);
           
-          // Check for tenant ID in URL query params (if provided)
+          // Check for tenant ID in URL query params
           const params = new URLSearchParams(location.search);
           const tenantParam = params.get('tenant');
           
-          if (tenantParam && response.data.data.some(t => t._id === tenantParam)) {
+          if (tenantParam && tenantsData.some(t => t._id === tenantParam)) {
             setFormData(prev => ({ ...prev, tenantId: tenantParam }));
-          } else if (response.data.data.length > 0) {
-            // Set first tenant as default if no tenant specified
-            setFormData(prev => ({ ...prev, tenantId: response.data.data[0]._id }));
+          } else if (tenantsData.length === 1) {
+            // Auto-select if only one tenant
+            setFormData(prev => ({ ...prev, tenantId: tenantsData[0]._id }));
           }
+        } else {
+          console.log('⚠️ No tenants data found');
+          toast.warning('No clinics available. Please contact support.');
         }
       } catch (error) {
-        console.error('Error fetching tenants:', error);
+        console.error('❌ Error fetching tenants:', error);
+        console.error('Error details:', error.response?.data);
+        toast.error('Failed to load clinics. Please refresh the page.');
+      } finally {
+        setIsLoadingTenants(false);
       }
     };
     
@@ -181,13 +211,67 @@ const ProfessionalRegistration = () => {
       )
     }));
   };
+
+  // FIXED: Form validation
+  const validateForm = () => {
+    const errors = [];
+    
+    // Step 1 validation
+    if (step === 1) {
+      if (!formData.tenantId) errors.push('Please select a clinic');
+      if (!formData.firstName) errors.push('First name is required');
+      if (!formData.lastName) errors.push('Last name is required');
+      if (!formData.email) errors.push('Email is required');
+      if (!formData.password) errors.push('Password is required');
+      if (formData.password !== formData.confirmPassword) errors.push('Passwords do not match');
+    }
+    
+    // Step 2 validation
+    if (step === 2) {
+      if (!formData.specialty) errors.push('Specialty is required');
+      if (!formData.experience) errors.push('Experience is required');
+    }
+    
+    // Step 3 validation
+    if (step === 3) {
+      const hasAvailability = Object.values(formData.availability).some(day => day.available);
+      if (!hasAvailability) errors.push('Please select at least one day of availability');
+      
+      const hasAppointmentType = formData.appointmentTypes.inPerson || formData.appointmentTypes.telehealth;
+      if (!hasAppointmentType) errors.push('Please select at least one appointment type');
+    }
+    
+    // Step 4 validation
+    if (step === 4) {
+      if (formData.education.length === 0) errors.push('Please add at least one education entry');
+      if (formData.licenses.length === 0) errors.push('Please add at least one license');
+      if (!formData.licenseDocument) errors.push('License document is required');
+      if (!formData.educationCertificate) errors.push('Education certificate is required');
+      if (!formData.termsAccepted) errors.push('You must accept the terms of service');
+    }
+    
+    if (errors.length > 0) {
+      errors.forEach(error => toast.error(error));
+      return false;
+    }
+    
+    return true;
+  };
   
-  // Handle form submission
+  // FIXED: Handle form submission with proper error handling
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
+      console.log('🔄 Submitting professional registration...');
+      console.log('Tenant ID:', formData.tenantId);
+      
       // Create FormData object
       const submitData = new FormData();
       
@@ -203,7 +287,7 @@ const ProfessionalRegistration = () => {
         }
       });
       
-      // Explicitly add role (tenantId is already added above)
+      // Explicitly add role and ensure tenantId is included
       submitData.append('role', 'doctor');
       
       // Append file fields
@@ -224,19 +308,43 @@ const ProfessionalRegistration = () => {
         });
       }
       
-      // Submit to server
-      const response = await axios.post('/api/auth/register', submitData, {
+      // Log what we're sending
+      console.log('📤 Submitting form data with tenant ID:', formData.tenantId);
+      
+      // FIXED: Submit to correct endpoint - NO TRAILING "1"!
+      const response = await axios.post(`${API_URL}/auth/register`, submitData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       });
       
+      console.log('✅ Registration successful:', response.data);
+      
       if (response.data.success) {
+        toast.success('Registration submitted successfully! Please check your email for verification.');
         navigate('/verification-pending');
       }
     } catch (error) {
-      console.error('Registration failed:', error);
-      // Handle error display here
+      console.error('❌ Registration failed:', error);
+      console.error('Error response:', error.response?.data);
+      
+      let errorMessage = 'Registration failed. Please try again.';
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.errors) {
+        // Handle validation errors
+        const errors = error.response.data.errors;
+        if (Array.isArray(errors)) {
+          errorMessage = errors.join(', ');
+        } else if (typeof errors === 'object') {
+          errorMessage = Object.values(errors).join(', ');
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -244,12 +352,36 @@ const ProfessionalRegistration = () => {
   
   // Move to next step in multi-step form
   const nextStep = () => {
-    setStep(step + 1);
+    if (validateForm()) {
+      setStep(step + 1);
+    }
   };
   
   // Move to previous step in multi-step form
   const prevStep = () => {
     setStep(step - 1);
+  };
+  
+  // Remove time slot
+  const removeTimeSlot = (day, slotIndex) => {
+    setFormData(prev => ({
+      ...prev,
+      availability: {
+        ...prev.availability,
+        [day]: {
+          ...prev.availability[day],
+          slots: prev.availability[day].slots.filter((_, index) => index !== slotIndex)
+        }
+      }
+    }));
+  };
+
+  // Remove credential
+  const removeCredential = (type, id) => {
+    setFormData(prev => ({
+      ...prev,
+      [type]: prev[type].filter(item => item.id !== id)
+    }));
   };
   
   // Render step 1: Personal Information
@@ -264,6 +396,7 @@ const ProfessionalRegistration = () => {
           name="tenantId"
           value={formData.tenantId}
           onChange={handleChange}
+          disabled={isLoadingTenants}
           required
         >
           <option value="">Select a clinic</option>
@@ -273,6 +406,7 @@ const ProfessionalRegistration = () => {
             </option>
           ))}
         </select>
+        {isLoadingTenants && <div className="loading-message">Loading clinics...</div>}
       </div>
       
       <div className="form-group">
@@ -494,6 +628,13 @@ const ProfessionalRegistration = () => {
                         onChange={(e) => handleTimeSlotChange(day, index, 'endTime', e.target.value)}
                         placeholder="End time"
                       />
+                      <button
+                        type="button"
+                        onClick={() => removeTimeSlot(day, index)}
+                        className="btn-remove-slot"
+                      >
+                        ×
+                      </button>
                     </div>
                   ))}
                   <button
@@ -576,6 +717,13 @@ const ProfessionalRegistration = () => {
                 value={edu.year}
                 onChange={(e) => handleCredentialChange('education', edu.id, 'year', e.target.value)}
               />
+              <button
+                type="button"
+                onClick={() => removeCredential('education', edu.id)}
+                className="btn-remove-credential"
+              >
+                ×
+              </button>
             </div>
           ))}
           <button
@@ -612,6 +760,13 @@ const ProfessionalRegistration = () => {
                 value={license.expirationDate}
                 onChange={(e) => handleCredentialChange('licenses', license.id, 'expirationDate', e.target.value)}
               />
+              <button
+                type="button"
+                onClick={() => removeCredential('licenses', license.id)}
+                className="btn-remove-credential"
+              >
+                ×
+              </button>
             </div>
           ))}
           <button
@@ -648,6 +803,13 @@ const ProfessionalRegistration = () => {
                 value={cert.year}
                 onChange={(e) => handleCredentialChange('certifications', cert.id, 'year', e.target.value)}
               />
+              <button
+                type="button"
+                onClick={() => removeCredential('certifications', cert.id)}
+                className="btn-remove-credential"
+              >
+                ×
+              </button>
             </div>
           ))}
           <button
