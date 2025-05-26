@@ -1,10 +1,10 @@
-// server/src/routes/adminRoutes.js - SIMPLIFIED VERSION
+// server/src/routes/adminRoutes.js - FIXED VERSION WITH LOGIN
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
 const adminAuth = require('../middleware/adminAuth');
 
-console.log('Loading simplified admin routes...');
+console.log('Loading admin routes with login functionality...');
 
 // Test route
 router.get('/test', (req, res) => {
@@ -14,6 +14,11 @@ router.get('/test', (req, res) => {
     timestamp: new Date()
   });
 });
+
+// ADMIN AUTHENTICATION ROUTES - FIXED FOR YOUR SYSTEM
+router.post('/login', adminController.adminLogin);
+router.post('/logout', adminAuth, adminController.adminLogout);
+router.get('/profile', adminAuth, adminController.getAdminProfile);
 
 // Dashboard
 router.get('/dashboard', adminAuth, adminController.getDashboardData);
@@ -65,6 +70,6 @@ router.put('/feedback/status/:id', adminAuth, adminController.updateFeedbackStat
 // Data Export
 router.get('/backup', adminAuth, adminController.generateBackup);
 
-console.log('Simplified admin routes loaded successfully');
+console.log('Admin routes with login functionality loaded successfully');
 
 module.exports = router;
