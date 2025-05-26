@@ -452,7 +452,6 @@ const adminService = {
     // Prepare query parameters
     const params = {};
     
-    // Only add tenantId if it's provided and not null/undefined/empty
     if (tenantId) {
       params.tenantId = tenantId;
       console.log(`Using specific tenant ID: ${tenantId}`);
@@ -460,9 +459,9 @@ const adminService = {
       console.log('No tenant ID provided, will search across all tenants');
     }
     
-    // ✅ FIXED: Use correct endpoint from adminController.js
+    // ✅ FIXED: Correct URL structure to match adminRoutes.js
     const response = await api.post(
-      `/admin/doctors/verify/${doctorId}`, 
+      `/admin/doctors/${doctorId}/verify`, // Changed from /verify/${doctorId}
       verificationData,
       { params }
     );
