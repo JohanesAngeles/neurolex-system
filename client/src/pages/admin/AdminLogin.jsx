@@ -112,6 +112,10 @@ const AdminLogin = () => {
         localStorage.setItem('adminToken', token);
         localStorage.setItem('adminUser', JSON.stringify(user));
         
+        // IMPORTANT: Also set regular token for API compatibility
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(user));
+        
         // Set token expiry
         if (rememberMe) {
           const expiryDate = new Date();
@@ -133,7 +137,7 @@ const AdminLogin = () => {
         setTimeout(() => {
           if (user.role === 'admin') {
             console.log('🚀 Navigating to admin dashboard');
-            navigate('/admin/dashboard', { replace: true });
+            navigate('/admin', { replace: true }); // Changed from /admin/dashboard to /admin
           } else {
             console.log('❌ User is not admin, role:', user.role);
             setError('Access denied. Admin privileges required.');
