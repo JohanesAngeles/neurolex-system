@@ -34,7 +34,7 @@ router.get('/doctors/pending', adminAuth, adminController.getPendingDoctors);
 router.get('/doctors/approved', adminAuth, adminController.getVerifiedDoctors);
 router.get('/doctors/rejected', adminAuth, adminController.getRejectedDoctors);
 router.get('/doctors/:id', adminAuth, adminController.getDoctorDetails);
-router.post('/doctors/verify/:id', adminAuth, adminController.verifyDoctor);
+router.post('/doctors/:id/verify', adminAuth, adminController.verifyDoctor); // ✅ FIXED URL
 router.get('/doctor-verification-stats', adminAuth, adminController.getDoctorVerificationStats);
 
 // User Management
