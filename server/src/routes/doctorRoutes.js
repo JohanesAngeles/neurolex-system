@@ -1,13 +1,14 @@
-// server/src/routes/doctorRoutes.js - SIMPLIFIED VERSION
+// server/src/routes/doctorRoutes.js - COMPLETE VERSION WITH BILLING ROUTES
 const express = require('express');
 const router = express.Router();
 const doctorController = require('../controllers/doctorController');
 const journalController = require('../controllers/journalController');
+const billingController = require('../controllers/billingController'); // ✅ ADDED - This was missing!
 const { protect, restrictTo } = require('../middleware/auth');
 const tenantMiddleware = require('../middleware/tenantMiddleware');
 const multer = require('multer');
 
-console.log('Loading simplified doctor routes...');
+console.log('Loading complete doctor routes with billing functionality...');
 
 // Configure multer for file uploads
 const storage = multer.memoryStorage();
@@ -21,6 +22,19 @@ const doctorUploadFields = upload.fields([
   { name: 'profilePhoto', maxCount: 1 },
   { name: 'certifications', maxCount: 5 }
 ]);
+
+// Configure multer for QR code uploads - ✅ ADDED
+const qrUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed for QR codes'), false);
+    }
+  }
+});
 
 // Test route
 router.get('/test', (req, res) => {
@@ -152,6 +166,35 @@ router.get('/appointments/pending', async (req, res) => {
   }
 });
 
-console.log('Simplified doctor routes loaded successfully');
+// ============================================================================
+// BILLING ROUTES - THESE WERE COMPLETELY MISSING FROM YOUR FILE!
+// ============================================================================
+console.log('Adding billing routes...');
+
+// Payment Methods Management
+router.get('/billing/payment-methods', billingController.getPaymentMethods);
+router.put('/billing/payment-methods', billingController.updatePaymentMethods);
+router.post('/billing/upload-qr', qrUpload.single('qrCode'), billingController.uploadQRCode);
+
+// Bank Accounts Management
+router.post('/billing/bank-accounts', billingController.addBankAccount);
+router.delete('/billing/bank-accounts/:accountId', billingController.removeBankAccount);
+
+// Billing Records Management
+router.get('/billing', billingController.getBillingRecords);
+router.get('/billing/stats', billingController.getBillingStats);
+router.get('/billing/report', billingController.generateBillingReport);
+router.get('/billing/:billingId', billingController.getBillingRecord);
+router.post('/billing', billingController.createBillingRecord);
+router.put('/billing/:billingId/status', billingController.updateBillingStatus);
+router.put('/billing/:billingId/mark-paid', billingController.markAsPaid);
+
+console.log('Billing routes added successfully');
+
+// ============================================================================
+// END OF BILLING ROUTES
+// ============================================================================
+
+console.log('Complete doctor routes with billing functionality loaded successfully');
 
 module.exports = router;
