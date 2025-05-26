@@ -1084,9 +1084,16 @@ exports.verifyDoctor = async (req, res) => {
             updateFields.rejectionReason = rejectionReason;
           }
           // Set verifiedBy if user is available
-          if (req.user && req.user._id) {
-            updateFields.verifiedBy = req.user._id;
-          }
+          // Set verifiedBy if user is available - Handle default admin case  
+if (req.user && req.user._id) {
+  if (req.user._id === 'admin_default' || req.user.id === 'admin_default') {
+    // For default admin, use a special identifier or skip this field
+    updateFields.verifiedByAdmin = 'System Administrator';
+  } else {
+    // For database admins, use the actual ObjectId
+    updateFields.verifiedBy = req.user._id;
+  }
+}
           
           // Use findByIdAndUpdate with runValidators: false to avoid validation errors
           const updatedDoctor = await User.findByIdAndUpdate(
