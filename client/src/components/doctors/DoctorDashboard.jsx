@@ -1,9 +1,9 @@
 // client/src/components/doctors/dashboard/DoctorDashboard.jsx - FIXED WITH REAL DATA
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+
 import doctorService from '../../services/doctorService';
 import '../../styles/components/doctor/DoctorDashboard.css';
-import authService from '../../../services/authService';
 
 const DoctorDashboard = () => {
   const [stats, setStats] = useState({
@@ -156,37 +156,20 @@ const DoctorDashboard = () => {
         
         // Fetch doctor profile information
         try {
-  // Use authService to get current user (works for all user types)
-  const profileResponse = await authService.getCurrentUser();
-  const profile = profileResponse.user || profileResponse.data || {};
-  
-  setDoctorInfo({
-    firstName: profile.firstName || 'Doctor',
-    lastName: profile.lastName || ''
-  });
-  
-  console.log('✅ Doctor profile loaded via authService:', profile.firstName, profile.lastName);
-} catch (profileError) {
-  console.error('❌ Error fetching doctor profile:', profileError);
-  
-  // Fallback: try to get user data from localStorage
-  try {
-    const userStr = localStorage.getItem('user');
-    if (userStr) {
-      const user = JSON.parse(userStr);
-      setDoctorInfo({
-        firstName: user.firstName || 'Doctor',
-        lastName: user.lastName || ''
-      });
-      console.log('✅ Used localStorage user data:', user.firstName, user.lastName);
-    } else {
-      setDoctorInfo({ firstName: 'Doctor', lastName: '' });
-    }
-  } catch (storageError) {
-    console.error('❌ Error getting user from localStorage:', storageError);
-    setDoctorInfo({ firstName: 'Doctor', lastName: '' });
-  }
-}
+          const profileResponse = await doctorService.getProfile();
+          const profile = profileResponse.data || {};
+          
+          setDoctorInfo({
+            firstName: profile.firstName || 'Doctor',
+            lastName: profile.lastName || ''
+          });
+          
+          console.log('✅ Doctor profile loaded:', profile.firstName, profile.lastName);
+        } catch (profileError) {
+          console.error('❌ Error fetching doctor profile:', profileError);
+          setDoctorInfo({ firstName: 'Doctor', lastName: '' });
+        }
+        
         // ✅ FIXED: Fetch real appointments with meeting links
         try {
           console.log('🔍 Fetching real appointments...');
