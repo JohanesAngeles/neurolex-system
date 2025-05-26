@@ -10,7 +10,195 @@ const { getMasterConnection } = require('../config/dbMaster');
 const dbManager = require('../utils/dbManager');
 const PDFDocument = require('pdfkit'); // Add this import for PDF generation
 
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+
 // ===== PATIENT MANAGEMENT FUNCTIONS (NEW) =====
+
+// Admin login function
+exports.adminLogin = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    console.log('🔐 Admin login attempt:', { email });
+    
+    // Validate input
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email and password are required'
+      });
+    }
+    
+    // Check for admin credentials from environment variables first
+    const adminEmail = process.env.DEFAULT_ADMIN_EMAIL || process.env.ADMIN_EMAIL || 'admin@neurolex.com';
+    const adminPassword = process.env.DEFAULT_ADMIN_PASSWORD || 'AdminPassword123!';
+    
+    console.log('🔑 Expected admin credentials:', { 
+      adminEmail, 
+      adminPassword: adminPassword ? 'set' : 'not set' 
+    });
+    
+    // Check if this is the default admin login
+    if (email === adminEmail && password === adminPassword) {
+      console.log('✅ Default admin login successful');
+      
+      // Generate JWT token
+      const token = jwt.sign(
+        { 
+          id: 'admin_default',
+          email: adminEmail,
+          role: 'admin',
+          name: 'System Administrator'
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      );
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Admin login successful',
+        token,
+        user: {
+          id: 'admin_default',
+          email: adminEmail,
+          role: 'admin',
+          firstName: 'System',
+          lastName: 'Administrator',
+          name: 'System Administrator'
+        }
+      });
+    }
+    
+    // If not default admin, check database for admin users
+    try {
+      // Find user by email
+      const user = await User.findOne({ email: email.toLowerCase() });
+      
+      if (!user) {
+        console.log('❌ Admin user not found:', email);
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid credentials'
+        });
+      }
+      
+      // Check if user is admin
+      if (user.role !== 'admin') {
+        console.log('❌ User is not admin:', { email, role: user.role });
+        return res.status(403).json({
+          success: false,
+          message: 'Admin access required'
+        });
+      }
+      
+      // Check password
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      
+      if (!isPasswordValid) {
+        console.log('❌ Invalid password for admin:', email);
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid credentials'
+        });
+      }
+      
+      console.log('✅ Database admin login successful:', email);
+      
+      // Generate JWT token
+      const token = jwt.sign(
+        { 
+          id: user._id,
+          email: user.email,
+          role: user.role,
+          name: `${user.firstName} ${user.lastName}`
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      );
+      
+      // Update last login
+      user.lastLogin = new Date();
+      await user.save();
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Admin login successful',
+        token,
+        user: {
+          id: user._id,
+          email: user.email,
+          role: user.role,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          name: `${user.firstName} ${user.lastName}`
+        }
+      });
+    } catch (dbError) {
+      console.error('❌ Database error during admin login:', dbError);
+      return res.status(500).json({
+        success: false,
+        message: 'Database error during authentication'
+      });
+    }
+  } catch (error) {
+    console.error('❌ Admin login error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Admin logout function
+exports.adminLogout = async (req, res) => {
+  try {
+    console.log('🔓 Admin logout');
+    
+    // In a more sophisticated system, you might want to blacklist the token
+    // For now, we'll just return success and let the client handle token removal
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Admin logout successful'
+    });
+  } catch (error) {
+    console.error('❌ Admin logout error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Logout failed',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Get admin profile
+exports.getAdminProfile = async (req, res) => {
+  try {
+    console.log('👤 Getting admin profile for:', req.user.email);
+    
+    return res.status(200).json({
+      success: true,
+      user: {
+        id: req.user.id || req.user._id,
+        email: req.user.email,
+        role: req.user.role,
+        firstName: req.user.firstName || 'System',
+        lastName: req.user.lastName || 'Administrator',
+        name: req.user.name || `${req.user.firstName} ${req.user.lastName}` || 'System Administrator'
+      }
+    });
+  } catch (error) {
+    console.error('❌ Get admin profile error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to get admin profile',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 
 // Get all patients across all tenants
 exports.getAllPatients = async (req, res) => {
