@@ -1,4 +1,4 @@
-// server/src/middleware/adminAuth.js
+// server/src/middleware/adminAuth.js - FIXED VERSION
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
@@ -21,34 +21,52 @@ const adminAuth = async (req, res, next) => {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       console.log('🔍 Token decoded:', { id: decoded.id, role: decoded.role });
       
-      // 🔧 FIX: Use 'id' instead of '_id' to match your token payload
-      const user = await User.findById(decoded.id);  // Changed from decoded._id to decoded.id
+      // FIXED: Handle default admin vs database admin
+      let user;
       
-      if (!user) {
-        console.log(`❌ User not found with ID: ${decoded.id}`);
-        return res.status(401).json({ 
-          success: false, 
-          message: 'User not found',
-          redirect: '/admin/login'
-        });
+      if (decoded.id === 'admin_default') {
+        // This is the default admin from environment variables
+        console.log('🔧 Using default admin from environment variables');
+        user = {
+          _id: 'admin_default',
+          id: 'admin_default',
+          email: decoded.email,
+          role: 'admin',
+          firstName: 'System',
+          lastName: 'Administrator',
+          name: decoded.name || 'System Administrator'
+        };
+      } else {
+        // This is a database admin user
+        console.log('🔍 Looking up database admin user');
+        user = await User.findById(decoded.id);
+        
+        if (!user) {
+          console.log(`❌ User not found with ID: ${decoded.id}`);
+          return res.status(401).json({ 
+            success: false, 
+            message: 'User not found',
+            redirect: '/admin/login'
+          });
+        }
+        
+        // Check if database user is an admin
+        if (user.role !== 'admin') {
+          console.log(`❌ Admin access denied to user ${user._id} with role ${user.role}`);
+          return res.status(403).json({ 
+            success: false, 
+            message: 'Admin access required',
+            redirect: '/admin/login'
+          });
+        }
       }
       
-      console.log(`🔍 User found: ${user.email}, role: ${user.role}`);
-      
-      // Check if user is an admin
-      if (user.role !== 'admin') {
-        console.log(`❌ Admin access denied to user ${user._id} with role ${user.role}`);
-        return res.status(403).json({ 
-          success: false, 
-          message: 'Admin access required',
-          redirect: '/admin/login'
-        });
-      }
+      console.log(`🔍 Admin user: ${user.email}, role: ${user.role}`);
       
       // Set user on request object
       req.user = user;
       req.token = token;
-      console.log(`✅ Admin access granted to user ${user._id} with role ${user.role}`);
+      console.log(`✅ Admin access granted to user ${user.id || user._id}`);
       
       next();
     } catch (error) {
@@ -78,7 +96,7 @@ const adminAuth = async (req, res, next) => {
     return res.status(500).json({ 
       success: false, 
       message: 'Server error', 
-      error: error.message,
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Authentication failed',
       redirect: '/admin/login'
     });
   }
