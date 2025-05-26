@@ -2114,3 +2114,98 @@ exports.generateBackup = async (req, res) => {
     });
   }
 };
+
+// Get dashboard data with proper counts
+exports.getDashboardData = async (req, res) => {
+  try {
+    console.log('Getting admin dashboard data...');
+    
+    // If multi-tenant is enabled, get data from all tenants
+    if (process.env.ENABLE_MULTI_TENANT === 'true') {
+      // Get master connection
+      const masterConn = getMasterConnection();
+      if (!masterConn) {
+        throw new Error('Failed to connect to master database');
+      }
+      
+      const Tenant = masterConn.model('Tenant');
+      const tenants = await Tenant.find({ active: true });
+      
+      let totalUsers = 0;
+      let totalProfessionals = 0;
+      let pendingVerifications = 0;
+      let totalJournalEntries = 0;
+      
+      // Loop through each tenant and collect stats
+      for (const tenant of tenants) {
+        try {
+          const tenantConn = await dbManager.connectTenant(tenant._id.toString());
+          if (!tenantConn) continue;
+          
+          const User = tenantConn.model('User');
+          const JournalEntry = tenantConn.model('JournalEntry');
+          
+          // Count users (patients)
+          const userCount = await User.countDocuments({ role: 'patient' });
+          totalUsers += userCount;
+          
+          // Count professionals (doctors)
+          const professionalCount = await User.countDocuments({ role: 'doctor' });
+          totalProfessionals += professionalCount;
+          
+          // Count pending verifications
+          const pendingCount = await User.countDocuments({ 
+            role: 'doctor', 
+            verificationStatus: 'pending' 
+          });
+          pendingVerifications += pendingCount;
+          
+          // Count journal entries
+          const journalCount = await JournalEntry.countDocuments();
+          totalJournalEntries += journalCount;
+          
+        } catch (error) {
+          console.error(`Error fetching stats from tenant ${tenant.name}:`, error);
+        }
+      }
+      
+      return res.json({
+        success: true,
+        totalUsers,
+        totalProfessionals,
+        pendingVerifications,
+        totalJournalEntries,
+        recentUsers: [] // Can implement this later if needed
+      });
+    } else {
+      // Single tenant mode
+      const totalUsers = await User.countDocuments({ role: 'patient' });
+      const totalProfessionals = await User.countDocuments({ role: 'doctor' });
+      const pendingVerifications = await User.countDocuments({ 
+        role: 'doctor', 
+        verificationStatus: 'pending' 
+      });
+      const totalJournalEntries = await JournalEntry.countDocuments();
+      const recentUsers = await User.find({ role: 'patient' })
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .select('firstName lastName email createdAt');
+      
+      return res.json({
+        success: true,
+        totalUsers,
+        totalProfessionals,
+        pendingVerifications,
+        totalJournalEntries,
+        recentUsers
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching dashboard data:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve dashboard data',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};

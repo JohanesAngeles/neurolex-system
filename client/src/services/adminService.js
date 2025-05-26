@@ -60,31 +60,31 @@ const adminService = {
   
   // Get dashboard data
   getDashboardData: async () => {
-    try {
-      console.log('adminService.getDashboardData called');
-      // Use the correct API endpoint for admin dashboard data
-      const response = await api.get('/admin/dashboard');
-      console.log('getDashboardData response:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('adminService.getDashboardData error:', error);
-      // For development, return mock data if API fails
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Returning mock dashboard data for development');
-        return {
-          totalUsers: 120,
-          totalProfessionals: 15,
-          pendingVerifications: 5,
-          recentUsers: [
-            { _id: '1', name: 'John Doe', email: 'john@example.com', createdAt: new Date().toISOString() },
-            { _id: '2', name: 'Jane Smith', email: 'jane@example.com', createdAt: new Date().toISOString() },
-            { _id: '3', name: 'Alex Johnson', email: 'alex@example.com', createdAt: new Date().toISOString() }
-          ]
-        };
-      }
-      throw error;
+  try {
+    console.log('adminService.getDashboardData called');
+    // ✅ FIXED: Use correct endpoint from adminController.js
+    const response = await api.get('/admin/dashboard');
+    console.log('getDashboardData response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('adminService.getDashboardData error:', error);
+    // Return mock data for development if API fails
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Returning mock dashboard data for development');
+      return {
+        success: true,
+        totalUsers: 120,
+        totalProfessionals: 15,
+        pendingVerifications: 5,
+        recentUsers: [
+          { _id: '1', name: 'John Doe', email: 'john@example.com', createdAt: new Date().toISOString() },
+          { _id: '2', name: 'Jane Smith', email: 'jane@example.com', createdAt: new Date().toISOString() }
+        ]
+      };
     }
-  },
+    throw error;
+  }
+},
   
   // ===== USER MANAGEMENT METHODS =====
   
@@ -358,134 +358,123 @@ const adminService = {
   
   // Get doctor verification stats
   getDoctorVerificationStats: async () => {
-    try {
-      console.log('adminService.getDoctorVerificationStats called');
-      const response = await api.get('/admin/doctor-verification-stats');
-      console.log('getDoctorVerificationStats response:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('adminService.getDoctorVerificationStats error:', error);
-      throw error;
-    }
-  },
+  try {
+    console.log('adminService.getDoctorVerificationStats called');
+    // ✅ FIXED: Use correct endpoint from adminController.js
+    const response = await api.get('/admin/doctor-verification-stats');
+    console.log('getDoctorVerificationStats response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('adminService.getDoctorVerificationStats error:', error);
+    throw error;
+  }
+},
 
   // Get pending doctors
-  getPendingDoctors: async () => {
-    try {
-      console.log('adminService.getPendingDoctors called');
-      const response = await api.get('/admin/doctors/pending');
-      console.log('getPendingDoctors response:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('adminService.getPendingDoctors error:', error);
-      throw error;
-    }
-  },
+  getPendingDoctors: async (params = {}) => {
+  try {
+    console.log('adminService.getPendingDoctors called with params:', params);
+    // ✅ FIXED: Use correct endpoint from adminController.js
+    const response = await api.get('/admin/doctors/pending', { params });
+    console.log('getPendingDoctors response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('adminService.getPendingDoctors error:', error);
+    throw error;
+  }
+},
 
   // Get approved doctors
-  getApprovedDoctors: async () => {
-    try {
-      console.log('adminService.getApprovedDoctors called');
-      const response = await api.get('/admin/doctors/approved');
-      console.log('getApprovedDoctors response:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('adminService.getApprovedDoctors error:', error);
-      throw error;
-    }
-  },
+  getApprovedDoctors: async (params = {}) => {
+  try {
+    console.log('adminService.getApprovedDoctors called with params:', params);
+    // ✅ FIXED: Use correct endpoint from adminController.js
+    const response = await api.get('/admin/doctors/approved', { params });
+    console.log('getApprovedDoctors response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('adminService.getApprovedDoctors error:', error);
+    throw error;
+  }
+},
+
 
   // Get rejected doctors
-  getRejectedDoctors: async () => {
-    try {
-      console.log('adminService.getRejectedDoctors called');
-      const response = await api.get('/admin/doctors/rejected');
-      console.log('getRejectedDoctors response:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('adminService.getRejectedDoctors error:', error);
-      throw error;
-    }
-  },
+  getRejectedDoctors: async (params = {}) => {
+  try {
+    console.log('adminService.getRejectedDoctors called with params:', params);
+    // ✅ FIXED: Use correct endpoint from adminController.js  
+    const response = await api.get('/admin/doctors/rejected', { params });
+    console.log('getRejectedDoctors response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('adminService.getRejectedDoctors error:', error);
+    throw error;
+  }
+},
+
 
   // Get doctor details
   getDoctorDetails: async (doctorId, tenantId = null) => {
-    try {
-      console.log(`adminService.getDoctorDetails called for ID: ${doctorId}, Tenant ID: ${tenantId || 'not specified'}`);
-      
-      // Prepare query parameters
-      const params = {};
-      
-      // Only add tenantId if it's provided and not null/undefined/empty
-      if (tenantId) {
-        params.tenantId = tenantId;
-        console.log(`Using specific tenant ID: ${tenantId}`);
-      } else {
-        // If no tenantId is provided, check if there's one in localStorage
-        const currentTenantId = localStorage.getItem('tenantId');
-        
-        // Only use the localStorage tenantId if it's not 'all'
-        if (currentTenantId && currentTenantId !== 'all') {
-          params.tenantId = currentTenantId;
-          console.log(`Using tenant ID from localStorage: ${currentTenantId}`);
-        } else {
-          console.log('No tenant ID provided, will search across all tenants');
-        }
-      }
-      
-      // Make the API call with or without the tenantId parameter
-      const response = await api.get(`/admin/doctors/${doctorId}`, { 
-        params 
-      });
-      
-      console.log('getDoctorDetails response:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('adminService.getDoctorDetails error:', error);
-      throw error;
+  try {
+    console.log(`adminService.getDoctorDetails called for ID: ${doctorId}, Tenant ID: ${tenantId || 'not specified'}`);
+    
+    // Prepare query parameters
+    const params = {};
+    
+    // Only add tenantId if it's provided and not null/undefined/empty
+    if (tenantId) {
+      params.tenantId = tenantId;
+      console.log(`Using specific tenant ID: ${tenantId}`);
+    } else {
+      console.log('No tenant ID provided, will search across all tenants');
     }
-  },
+    
+    // ✅ FIXED: Use correct endpoint from adminController.js
+    const response = await api.get(`/admin/doctors/${doctorId}`, { 
+      params 
+    });
+    
+    console.log('getDoctorDetails response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('adminService.getDoctorDetails error:', error);
+    throw error;
+  }
+},
 
   // Verify doctor
   verifyDoctor: async (doctorId, verificationData, tenantId = null) => {
-    try {
-      console.log(`adminService.verifyDoctor called for ID: ${doctorId}, Tenant ID: ${tenantId || 'not specified'}`);
-      console.log('Verification data:', verificationData);
-      
-      // Prepare query parameters
-      const params = {};
-      
-      // Only add tenantId if it's provided and not null/undefined/empty
-      if (tenantId) {
-        params.tenantId = tenantId;
-        console.log(`Using specific tenant ID: ${tenantId}`);
-      } else {
-        // If no tenantId is provided, check if there's one in localStorage
-        const currentTenantId = localStorage.getItem('tenantId');
-        
-        // Only use the localStorage tenantId if it's not 'all'
-        if (currentTenantId && currentTenantId !== 'all') {
-          params.tenantId = currentTenantId;
-          console.log(`Using tenant ID from localStorage: ${currentTenantId}`);
-        } else {
-          console.log('No tenant ID provided, will search across all tenants');
-        }
-      }
-      
-      // Make the API call with or without the tenantId parameter
-      const response = await api.post(
-        `/admin/doctors/${doctorId}/verify`, 
-        verificationData,
-        { params }
-      );
-      
-      console.log('verifyDoctor response:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('adminService.verifyDoctor error:', error);
-      throw error;
+  try {
+    console.log(`adminService.verifyDoctor called for ID: ${doctorId}, Tenant ID: ${tenantId || 'not specified'}`);
+    console.log('Verification data:', verificationData);
+    
+    // Prepare query parameters
+    const params = {};
+    
+    // Only add tenantId if it's provided and not null/undefined/empty
+    if (tenantId) {
+      params.tenantId = tenantId;
+      console.log(`Using specific tenant ID: ${tenantId}`);
+    } else {
+      console.log('No tenant ID provided, will search across all tenants');
     }
-  },
+    
+    // ✅ FIXED: Use correct endpoint from adminController.js
+    const response = await api.post(
+      `/admin/doctors/verify/${doctorId}`, 
+      verificationData,
+      { params }
+    );
+    
+    console.log('verifyDoctor response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('adminService.verifyDoctor error:', error);
+    throw error;
+  }
+},
+
   
   // ===== SYSTEM SETTINGS AND ANALYTICS =====
   
