@@ -108,9 +108,9 @@ const AdminLogin = () => {
       if (response.data.success) {
         const { token, user } = response.data;
         
-        // Store authentication data
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(user));
+        // FIXED: Store authentication data with admin-specific keys
+        localStorage.setItem('adminToken', token);
+        localStorage.setItem('adminUser', JSON.stringify(user));
         
         // Set token expiry
         if (rememberMe) {

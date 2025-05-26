@@ -1,80 +1,130 @@
-// client/src/components/admin/AdminDashboard.jsx
+// client/src/components/admin/AdminDashboard.jsx - FIXED VERSION
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAdmin } from '../../context/AdminContext';
-import adminService from '../../services/adminService';
+import axios from 'axios';
 import { toast } from 'react-toastify';
 import '../../styles/components/admin/AdminDashboard.css';
 
+// FIXED: Use correct API URL
+const API_URL = process.env.REACT_APP_API_URL || '/api';
+
 const AdminDashboard = () => {
-  // Add navigate for redirection
   const navigate = useNavigate();
   
-  // Context and state
-  const adminContext = useAdmin();
-  const dashboardData = adminContext?.dashboardData || {
+  // FIXED: Remove admin context dependency and use direct state
+  const [dashboardData, setDashboardData] = useState({
     totalUsers: 0,
-    totalProfessionals: 2,
-    pendingVerifications: 1,
-    journalEntries: 234,
-  };
+    totalProfessionals: 0,
+    pendingVerifications: 0,
+    journalEntries: 0,
+  });
   
   const [pendingDoctors, setPendingDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 10;
   
+  // FIXED: Setup axios with admin token
+  useEffect(() => {
+    const adminToken = localStorage.getItem('adminToken');
+    if (adminToken) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${adminToken}`;
+    }
+  }, []);
+  
+  // Fetch dashboard data
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const adminToken = localStorage.getItem('adminToken');
+        if (!adminToken) {
+          navigate('/admin/login');
+          return;
+        }
+        
+        // Fetch dashboard statistics
+        const response = await axios.get(`${API_URL}/admin/dashboard`, {
+          headers: {
+            'Authorization': `Bearer ${adminToken}`
+          }
+        });
+        
+        if (response.data.success) {
+          setDashboardData({
+            totalUsers: response.data.totalUsers || 0,
+            totalProfessionals: response.data.totalProfessionals || 0,
+            pendingVerifications: response.data.pendingVerifications || 0,
+            journalEntries: response.data.journalEntries || 0,
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        // Don't show error toast for dashboard stats, just use defaults
+      }
+    };
+    
+    fetchDashboardData();
+  }, [navigate]);
+  
   // Fetch pending doctors
   useEffect(() => {
     const fetchPendingDoctors = async () => {
       try {
         setLoading(true);
-        const response = await adminService.getPendingDoctors();
+        const adminToken = localStorage.getItem('adminToken');
+        if (!adminToken) {
+          navigate('/admin/login');
+          return;
+        }
         
-        if (response && response.data) {
+        const response = await axios.get(`${API_URL}/admin/doctors/pending`, {
+          headers: {
+            'Authorization': `Bearer ${adminToken}`
+          }
+        });
+        
+        if (response.data.success && response.data.data) {
+          setPendingDoctors(response.data.data);
+          // Update pending count in dashboard
+          setDashboardData(prev => ({
+            ...prev,
+            pendingVerifications: response.data.data.length
+          }));
+        } else if (response.data && Array.isArray(response.data)) {
           setPendingDoctors(response.data);
-        } else if (response && Array.isArray(response)) {
-          setPendingDoctors(response);
         } else {
           setPendingDoctors([]);
         }
       } catch (error) {
         console.error('Error fetching pending doctors:', error);
-        toast.error('Failed to load doctor applications');
+        if (error.response?.status === 401) {
+          navigate('/admin/login');
+        } else {
+          toast.error('Failed to load doctor applications');
+        }
       } finally {
         setLoading(false);
       }
     };
     
     fetchPendingDoctors();
-  }, []);
+  }, [navigate]);
   
-  // Handle admin logout with improved logout function
+  // Handle admin logout
   const handleAdminLogout = () => {
-    // First clear all tokens
+    // Clear all admin tokens
     localStorage.removeItem('adminToken');
     localStorage.removeItem('adminUser');
     localStorage.removeItem('adminTokenExpiry');
     
-    // Also clear any regular user tokens to prevent confusion
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('tokenExpiry');
+    // Also clear axios default header
+    delete axios.defaults.headers.common['Authorization'];
     
     // Show success message
     toast.success('Logged out successfully');
     
-    // Primary method: Use React Router navigation
+    // Navigate to admin login
     navigate('/admin/login');
-    
-    // Fallback method: Use direct URL navigation with a slight delay
-    // This ensures we get to the login page even if there are issues with React Router
-    setTimeout(() => {
-      if (window.location.pathname.includes('/admin') && 
-          !window.location.pathname.includes('/login')) {
-        window.location.href = '/admin/login';
-      }
-    }, 100);
   };
   
   // Action handlers
@@ -84,31 +134,71 @@ const AdminDashboard = () => {
   
   const handleApproveDoctor = async (id) => {
     try {
-      await adminService.verifyDoctor(id, { 
+      const adminToken = localStorage.getItem('adminToken');
+      if (!adminToken) {
+        navigate('/admin/login');
+        return;
+      }
+      
+      await axios.post(`${API_URL}/admin/doctors/verify/${id}`, { 
         verificationStatus: 'approved',
         verificationNotes: 'Approved from dashboard'
+      }, {
+        headers: {
+          'Authorization': `Bearer ${adminToken}`
+        }
       });
       
       toast.success('Doctor approved successfully');
       setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== id));
+      
+      // Update dashboard count
+      setDashboardData(prev => ({
+        ...prev,
+        pendingVerifications: Math.max(0, prev.pendingVerifications - 1)
+      }));
     } catch (error) {
       console.error('Error approving doctor:', error);
-      toast.error('Failed to approve doctor');
+      if (error.response?.status === 401) {
+        navigate('/admin/login');
+      } else {
+        toast.error('Failed to approve doctor');
+      }
     }
   };
   
   const handleRejectDoctor = async (id) => {
     try {
-      await adminService.verifyDoctor(id, { 
+      const adminToken = localStorage.getItem('adminToken');
+      if (!adminToken) {
+        navigate('/admin/login');
+        return;
+      }
+      
+      await axios.post(`${API_URL}/admin/doctors/verify/${id}`, { 
         verificationStatus: 'rejected',
         rejectionReason: 'Application rejected by admin'
+      }, {
+        headers: {
+          'Authorization': `Bearer ${adminToken}`
+        }
       });
       
       toast.success('Doctor rejected successfully');
       setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== id));
+      
+      // Update dashboard count
+      setDashboardData(prev => ({
+        ...prev,
+        pendingVerifications: Math.max(0, prev.pendingVerifications - 1)
+      }));
     } catch (error) {
       console.error('Error rejecting doctor:', error);
-      toast.error('Failed to reject doctor');
+      if (error.response?.status === 401) {
+        navigate('/admin/login');
+      } else {
+        toast.error('Failed to reject doctor');
+      }
     }
   };
   
@@ -136,10 +226,12 @@ const AdminDashboard = () => {
   
   return (
     <div className="dashboard">
-      {/* Add a header with title and logout button */}
+      {/* Dashboard header */}
       <div className="dashboard-header">
-        <h1 className="dashboard-title">Dashboard</h1>
-        <button onClick={handleAdminLogout} className="logout-button">Logout</button>
+        <h1 className="dashboard-title">Admin Dashboard</h1>
+        <button onClick={handleAdminLogout} className="logout-button">
+          Logout
+        </button>
       </div>
       
       {/* Stats cards */}
@@ -161,12 +253,12 @@ const AdminDashboard = () => {
         <div className="stat-card">
           <p className="stat-label">Pending Verifications</p>
           <div className="stat-value-container">
-            <h2 className="stat-value">{pendingDoctors.length || dashboardData.pendingVerifications}</h2>
+            <h2 className="stat-value">{dashboardData.pendingVerifications}</h2>
           </div>
         </div>
         
         <div className="stat-card">
-          <p className="stat-label">Journal Entries Logged</p>
+          <p className="stat-label">Journal Entries</p>
           <div className="stat-value-container">
             <h2 className="stat-value">{dashboardData.journalEntries}</h2>
           </div>
@@ -178,9 +270,9 @@ const AdminDashboard = () => {
       
       {/* Doctor Applications */}
       <div className="dashboard-section">
-        <h2 className="admin-section-title">Doctor Application Under Review</h2>
+        <h2 className="admin-section-title">Doctor Applications Under Review</h2>
         
-        {/* Custom Table with DIVs instead of TABLE elements */}
+        {/* Custom Table */}
         <div className="custom-table">
           {/* Table Header */}
           <div className="table-row header-row">
@@ -195,7 +287,10 @@ const AdminDashboard = () => {
           {loading ? (
             <div className="table-row loading-row">
               <div className="table-cell" style={{ gridColumn: '1 / -1' }}>
-                <div className="loading-spinner"></div>
+                <div className="loading-container">
+                  <div className="loading-spinner"></div>
+                  <span>Loading doctor applications...</span>
+                </div>
               </div>
             </div>
           ) : currentDoctors.length === 0 ? (
@@ -210,32 +305,39 @@ const AdminDashboard = () => {
                 key={doctor._id} 
                 className={`table-row ${index % 2 === 0 ? 'odd-row' : 'even-row'}`}
               >
-                <div className="table-cell">{doctor.firstName} {doctor.lastName}</div>
+                <div className="table-cell">
+                  {doctor.firstName} {doctor.lastName}
+                  {doctor.tenantName && (
+                    <div className="tenant-info">
+                      <small>({doctor.tenantName})</small>
+                    </div>
+                  )}
+                </div>
                 <div className="table-cell">{doctor.email}</div>
-                <div className="table-cell">{doctor.specialization || 'Not specified'}</div>
+                <div className="table-cell">{doctor.specialization || doctor.specialty || 'Not specified'}</div>
                 <div className="table-cell">{formatDate(doctor.createdAt)}</div>
                 <div className="table-cell">
                   <div className="action-buttons">
                     <button 
-                      className="btn-icon view"
+                      className="btn-action view"
                       onClick={() => handleViewDoctor(doctor._id)}
-                      title="View"
+                      title="View Details"
                     >
-                      <i className="icon-view"></i>
+                      View
                     </button>
                     <button 
-                      className="btn-icon approve"
+                      className="btn-action approve"
                       onClick={() => handleApproveDoctor(doctor._id)}
-                      title="Approve"
+                      title="Approve Application"
                     >
-                      <i className="icon-approve"></i>
+                      Approve
                     </button>
                     <button 
-                      className="btn-icon reject"
+                      className="btn-action reject"
                       onClick={() => handleRejectDoctor(doctor._id)}
-                      title="Reject"
+                      title="Reject Application"
                     >
-                      <i className="icon-reject"></i>
+                      Reject
                     </button>
                   </div>
                 </div>
@@ -279,7 +381,12 @@ const AdminDashboard = () => {
         
         {pendingDoctors.length > 0 && (
           <div className="view-all">
-            <a href="/admin/professionals" className="view-all-link">View All Applications</a>
+            <button 
+              onClick={() => navigate('/admin/professionals')}
+              className="view-all-link"
+            >
+              View All Applications
+            </button>
           </div>
         )}
       </div>
