@@ -2253,6 +2253,102 @@ exports.getDoctorProfileById = async (req, res) => {
 };
 
 /**
+ * Get current doctor's own profile
+ * @authenticated - For logged-in doctors only
+ */
+exports.getCurrentDoctorProfile = async (req, res) => {
+  try {
+    console.log('🔍 getCurrentDoctorProfile called for user:', req.user.id || req.user._id);
+    console.log('🏢 Tenant context:', {
+      tenantId: req.tenantId || 'None',
+      tenantDbName: req.tenantDbName || 'None',
+      tenantConnection: !!req.tenantConnection
+    });
+    
+    // Get the requesting user's ID (handle both _id and id)
+    const doctorId = req.user.id || req.user._id;
+    
+    if (!doctorId) {
+      console.log('❌ No user ID found in request');
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+    
+    // Use tenant-specific User model
+    let UserModel;
+    
+    if (req.tenantConnection) {
+      try {
+        UserModel = req.tenantConnection.model('User');
+        console.log('✅ Using User model from tenant connection:', req.tenantDbName);
+      } catch (err) {
+        console.error('❌ Error getting User model from tenant connection:', err);
+        UserModel = require('../models/User');
+        console.log('🔄 Falling back to global User model');
+      }
+    } else if (req.getModel) {
+      UserModel = req.getModel('User');
+      console.log('✅ Using User model from req.getModel');
+    } else {
+      UserModel = require('../models/User');
+      console.log('🔄 Using global User model (no tenant connection)');
+    }
+    
+    // Find the current doctor's profile
+    const doctor = await UserModel.findById(doctorId)
+      .select('firstName lastName email title specialty specialization profilePicture bio consultationFee yearsOfPractice clinicAddress languages emergencyAware telehealth inPerson verificationStatus')
+      .lean();
+    
+    if (!doctor) {
+      console.log('❌ Doctor profile not found for ID:', doctorId);
+      return res.status(404).json({
+        success: false,
+        message: 'Doctor profile not found'
+      });
+    }
+    
+    // Check if this is actually a doctor
+    if (doctor.role && doctor.role !== 'doctor') {
+      console.log('❌ User is not a doctor, role:', doctor.role);
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Doctor role required.'
+      });
+    }
+    
+    console.log('✅ Doctor profile retrieved successfully:', {
+      id: doctor._id,
+      name: `${doctor.firstName} ${doctor.lastName}`,
+      email: doctor.email
+    });
+    
+    // Remove sensitive fields before sending
+    const sanitizedProfile = {
+      ...doctor,
+      password: undefined,
+      passwordResetToken: undefined,
+      emailVerificationToken: undefined,
+      refreshToken: undefined
+    };
+    
+    return res.status(200).json({
+      success: true,
+      data: sanitizedProfile
+    });
+    
+  } catch (error) {
+    console.error('❌ Error getting current doctor profile:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error getting doctor profile',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+};
+
+/**
  * Get doctor's payment methods for mobile app
  * This endpoint is used by the mobile payment modal to display doctor's payment options
  */

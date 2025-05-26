@@ -85,7 +85,7 @@ router.get('/patients/:id', doctorController.getPatient);
 router.use(restrictTo('doctor'));
 
 // Doctor-only routes
-router.get('/profile', doctorController.getDoctorProfile);
+router.get('/profile', doctorController.getCurrentDoctorProfile);
 router.get('/dashboard/stats', doctorController.getDashboardStats);
 router.get('/patients', doctorController.getPatients);
 router.post('/assign-template', doctorController.assignTemplate);
