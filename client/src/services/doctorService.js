@@ -297,6 +297,32 @@ const doctorService = {
       throw error;
     }
   },
+
+  // Get doctor profile
+getProfile: async () => {
+  try {
+    console.log('🔍 Fetching doctor profile...');
+    const response = await doctorApi.get('/profile');
+    console.log('✅ Doctor profile fetched:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('❌ Error fetching doctor profile:', error);
+    throw error;
+  }
+},
+
+// Update doctor profile
+updateProfile: async (profileData) => {
+  try {
+    console.log('🔄 Updating doctor profile...');
+    const response = await doctorApi.put('/profile', profileData);
+    console.log('✅ Doctor profile updated:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('❌ Error updating doctor profile:', error);
+    throw error;
+  }
+},
   
   // Enhanced version of analyzeJournalEntry with better error handling and debugging
   // Modify your analyzeJournalEntry method in doctorService.js
