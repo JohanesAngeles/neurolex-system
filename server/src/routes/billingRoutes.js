@@ -1,75 +1,200 @@
-// server/src/routes/billingRoutes.js
+// server/src/routes/doctorRoutes.js - COMPLETE VERSION WITH BILLING ROUTES
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middleware/auth');
+const doctorController = require('../controllers/doctorController');
+const journalController = require('../controllers/journalController');
+const billingController = require('../controllers/billingController'); // ADDED FOR BILLING
+const { protect, restrictTo } = require('../middleware/auth');
 const tenantMiddleware = require('../middleware/tenantMiddleware');
+const multer = require('multer');
 
-// Import controllers with error handling
-let billingController;
-try {
-  billingController = require('../controllers/billingController');
-} catch (error) {
-  console.error('Error importing billing controller:', error);
-  // Provide fallback controllers
-  billingController = {
-    getPaymentMethods: (req, res) => {
-      res.status(500).json({ success: false, message: 'Controller not implemented yet' });
-    },
-    updatePaymentMethods: (req, res) => {
-      res.status(500).json({ success: false, message: 'Controller not implemented yet' });
-    },
-    getBillingRecords: (req, res) => {
-      res.status(500).json({ success: false, message: 'Controller not implemented yet' });
-    },
-    createBillingRecord: (req, res) => {
-      res.status(500).json({ success: false, message: 'Controller not implemented yet' });
-    },
-    getBillingStats: (req, res) => {
-      res.status(500).json({ success: false, message: 'Controller not implemented yet' });
-    }
-  };
-}
+console.log('Loading complete doctor routes with billing functionality...');
 
-// Apply tenant middleware to ALL billing routes
-router.use(tenantMiddleware);
-
-// Debug middleware for tenant context
-router.use((req, res, next) => {
-  console.log('\n===== BILLING ROUTES TENANT DEBUG =====');
-  console.log(`🔗 Route: ${req.method} ${req.originalUrl}`);
-  console.log(`👤 User ID: ${req.user ? req.user.id : 'Not authenticated'}`);
-  console.log(`🏢 Tenant ID: ${req.tenantId || 'Not set'}`);
-  console.log('=======================================\n');
-  next();
+// Configure multer for file uploads
+const storage = multer.memoryStorage();
+const upload = multer({ 
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }
 });
 
-// Simplified routes to avoid path-to-regexp errors
-// Payment methods routes
-router.get('/payment-methods', protect, billingController.getPaymentMethods);
-router.put('/payment-methods', protect, billingController.updatePaymentMethods);
+const doctorUploadFields = upload.fields([
+  { name: 'licenseDocument', maxCount: 1 },
+  { name: 'profilePhoto', maxCount: 1 },
+  { name: 'certifications', maxCount: 5 }
+]);
 
-// Billing records routes
-router.get('/stats', protect, billingController.getBillingStats);
-router.get('/', protect, billingController.getBillingRecords);
-router.post('/', protect, billingController.createBillingRecord);
+// Configure multer for QR code uploads
+const qrUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed for QR codes'), false);
+    }
+  }
+});
 
-// Specific billing record routes
-router.get('/record/:billingId', protect, billingController.getBillingRecord || ((req, res) => {
-  res.status(500).json({ success: false, message: 'Controller not implemented yet' });
-}));
-
-router.put('/record/:billingId/status', protect, billingController.updateBillingStatus || ((req, res) => {
-  res.status(500).json({ success: false, message: 'Controller not implemented yet' });
-}));
-
-// Error handling middleware
-router.use((error, req, res, next) => {
-  console.error('Billing routes error:', error);
-  res.status(500).json({
-    success: false,
-    message: 'Error processing billing request',
-    error: error.message
+// Test route
+router.get('/test', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'Doctor routes working',
+    timestamp: new Date()
   });
 });
+
+// Public routes - no authentication required
+router.post('/register', doctorUploadFields, doctorController.register);
+router.get('/verification-status/:id', doctorController.getVerificationStatus);
+
+// Get available doctors - SIMPLIFIED VERSION
+router.get('/available', async (req, res, next) => {
+  try {
+    console.log('Available doctors route called');
+    const { tenantId } = req.query;
+    
+    if (tenantId) {
+      const dbManager = require('../utils/dbManager');
+      const connection = await dbManager.connectTenant(tenantId);
+      
+      if (connection) {
+        const User = connection.model('User');
+        const doctors = await User.find({ 
+          role: 'doctor', 
+          verificationStatus: 'approved' 
+        })
+        .select('firstName lastName specialty profilePicture consultationFee')
+        .lean();
+        
+        return res.status(200).json({
+          success: true,
+          data: doctors,
+          source: 'tenant'
+        });
+      }
+    }
+    
+    // Fallback to controller
+    next();
+  } catch (error) {
+    console.error('Available doctors error:', error);
+    next();
+  }
+}, doctorController.getAvailableDoctors);
+
+// Apply base middleware for authenticated routes
+router.use(protect);
+router.use(tenantMiddleware);
+
+// Mixed access routes (both patients and doctors can access)
+router.get('/profile/:id', doctorController.getDoctorProfile);
+router.post('/connect', doctorController.connectWithDoctor);
+router.get('/profile-by-id/:id', doctorController.getDoctorProfileById);
+router.get('/payment-methods/:doctorId', doctorController.getDoctorPaymentMethods);
+router.get('/patients/:id', doctorController.getPatient);
+
+// Apply doctor role restriction for routes below
+router.use(restrictTo('doctor'));
+
+// Doctor-only routes
+router.get('/profile', doctorController.getCurrentDoctorProfile);
+router.get('/dashboard/stats', doctorController.getDashboardStats);
+router.get('/patients', doctorController.getPatients);
+router.post('/assign-template', doctorController.assignTemplate);
+
+// Templates
+router.get('/templates', doctorController.getTemplates);
+router.get('/templates/:id', doctorController.getTemplate);
+router.post('/templates', doctorController.createTemplate);
+router.put('/templates/:id', doctorController.updateTemplate);
+router.delete('/templates/:id', doctorController.deleteTemplate);
+router.post('/templates/assign/:id', doctorController.assignTemplate);
+
+// Journal entries routes
+router.get('/journal-entries', journalController.getDoctorJournalEntries || doctorController.getJournalEntries);
+router.get('/journal-entries/:id', journalController.getDoctorJournalEntry || doctorController.getJournalEntry);
+router.post('/journal-entries/analyze/:id', journalController.analyzeJournalEntry || doctorController.analyzeJournalEntry);
+router.post('/journal-entries/notes/:id', journalController.addDoctorNoteToJournalEntry || doctorController.addNoteToJournalEntry);
+
+// Simplified appointment routes for doctors
+router.get('/appointments', async (req, res) => {
+  try {
+    const Appointment = req.tenantConnection ? req.tenantConnection.model('Appointment') : require('../models/Appointment');
+    
+    const appointments = await Appointment.find({ doctor: req.user.id })
+      .populate('patient', 'firstName lastName email profilePicture')
+      .sort({ appointmentDate: 1 });
+    
+    res.status(200).json({
+      success: true,
+      data: appointments
+    });
+  } catch (error) {
+    console.error('Error getting doctor appointments:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting appointments',
+      error: error.message
+    });
+  }
+});
+
+router.get('/appointments/pending', async (req, res) => {
+  try {
+    const Appointment = req.tenantConnection ? req.tenantConnection.model('Appointment') : require('../models/Appointment');
+    
+    const appointments = await Appointment.find({ 
+      doctor: req.user.id, 
+      status: 'Pending' 
+    })
+    .populate('patient', 'firstName lastName email profilePicture')
+    .sort({ createdAt: -1 });
+    
+    res.status(200).json({
+      success: true,
+      data: appointments
+    });
+  } catch (error) {
+    console.error('Error getting pending appointments:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting pending appointments',
+      error: error.message
+    });
+  }
+});
+
+// ============================================================================
+// BILLING ROUTES - ADDED FOR PAYMENT FUNCTIONALITY
+// ============================================================================
+console.log('Adding billing routes...');
+
+// Payment Methods Management
+router.get('/billing/payment-methods', billingController.getPaymentMethods);
+router.put('/billing/payment-methods', billingController.updatePaymentMethods);
+router.post('/billing/upload-qr', qrUpload.single('qrCode'), billingController.uploadQRCode);
+
+// Bank Accounts Management
+router.post('/billing/bank-accounts', billingController.addBankAccount);
+router.delete('/billing/bank-accounts/:accountId', billingController.removeBankAccount);
+
+// Billing Records Management
+router.get('/billing', billingController.getBillingRecords);
+router.get('/billing/stats', billingController.getBillingStats);
+router.get('/billing/report', billingController.generateBillingReport);
+router.get('/billing/:billingId', billingController.getBillingRecord);
+router.post('/billing', billingController.createBillingRecord);
+router.put('/billing/:billingId/status', billingController.updateBillingStatus);
+router.put('/billing/:billingId/mark-paid', billingController.markAsPaid);
+
+console.log('Billing routes added successfully');
+
+// ============================================================================
+// END OF BILLING ROUTES
+// ============================================================================
+
+console.log('Complete doctor routes with billing functionality loaded successfully');
 
 module.exports = router;

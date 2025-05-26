@@ -2,6 +2,7 @@
 const path = require('path');
 const fs = require('fs').promises;
 const { ObjectId } = require('mongoose').Types;
+const billingController = require('../controllers/billingController');
 
 /**
  * Get billing records for the logged-in doctor with multi-tenant support
