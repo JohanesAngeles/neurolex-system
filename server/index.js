@@ -312,21 +312,6 @@ if (tenantRoutes) {
   console.log('✅ Tenant routes mounted');
 }
 
-// Billing routes (if available)
-if (billingRoutes) {
-  app.use('/api/doctor/billing', (req, res, next) => {
-    if (!isProduction) {
-      console.log('\n===== BILLING ROUTE HIT =====');
-      console.log(`📍 Route: ${req.method} ${req.originalUrl}`);
-      console.log(`🔐 Auth: ${req.headers.authorization ? 'Present' : 'Missing'}`);
-      console.log('=============================\n');
-    }
-    next();
-  });
-  
-  app.use('/api/doctor/billing', protect, billingRoutes);
-  console.log('✅ Billing routes mounted');
-}
 
 // Patient-facing endpoints
 app.get('/api/doctor/available', protect, doctorController.getAvailableDoctors);
