@@ -135,7 +135,8 @@ try {
 }
 
 // ============= ROUTE IMPORTS WITH MEMORY SAFETY =============
-let apiRoutes, doctorRoutes, appointmentRoutes, adminRoutes, journalRoutes, moodRoutes, tenantRoutes, billingRoutes;
+// 🔧 CRITICAL FIX: Added authRoutes variable
+let apiRoutes, authRoutes, doctorRoutes, appointmentRoutes, adminRoutes, journalRoutes, moodRoutes, tenantRoutes, billingRoutes;
 
 console.log('🔄 Loading route files...');
 
@@ -144,6 +145,10 @@ try {
   if (isProduction) {
     console.log('🚫 Production: Loading routes with AI training disabled');
   }
+  
+  // 🔧 CRITICAL FIX: Import auth routes
+  authRoutes = require('./src/routes/authRoutes');
+  console.log('✅ Auth routes loaded');
   
   // Import route files with error handling
   doctorRoutes = require('./src/routes/doctorRoutes');
@@ -312,6 +317,11 @@ if (tenantRoutes) {
   console.log('✅ Tenant routes mounted');
 }
 
+// 🔧 CRITICAL FIX: Mount auth routes - FIXES LOGIN 404 ERROR
+if (authRoutes) {
+  app.use('/api/auth', authRoutes);
+  console.log('✅ Auth routes mounted');
+}
 
 // Patient-facing endpoints
 app.get('/api/doctor/available', protect, doctorController.getAvailableDoctors);
@@ -516,6 +526,12 @@ if (doctorRoutes) {
 if (adminRoutes) {
   app.use('/api/admin', adminRoutes);
   console.log('✅ Admin routes mounted');
+}
+
+// Mount journal routes
+if (journalRoutes) {
+  app.use('/api/journal', journalRoutes);
+  console.log('✅ Journal routes mounted');
 }
 
 // ============= MOBILE APP ROUTES =============
