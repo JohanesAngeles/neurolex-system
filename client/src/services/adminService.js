@@ -1,8 +1,8 @@
-// client/src/services/adminService.js
+// client/src/services/adminService.js - SIMPLE FIX
 import axios from 'axios';
 
-// Setup base URL for API requests
-const API_URL = process.env.REACT_APP_API_URL || '/api';
+// ✅ FIXED: Remove /api from API_URL since routes already include /admin
+const API_URL = process.env.REACT_APP_API_URL || '';
 
 // Create axios instance with common configuration
 const api = axios.create({
@@ -63,7 +63,7 @@ const adminService = {
   try {
     console.log('adminService.getDashboardData called');
     // ✅ FIXED: Use correct endpoint from adminController.js
-    const response = await api.get('/admin/dashboard');
+    const response = await api.get('/api/admin/dashboard');
     console.log('getDashboardData response:', response.data);
     return response.data;
   } catch (error) {
@@ -110,7 +110,7 @@ const adminService = {
       if (params.sortBy) queryParams.append('sortBy', params.sortBy);
       if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder);
       
-      const response = await api.get(`/users?${queryParams.toString()}`);
+      const response = await api.get(`/api/users?${queryParams.toString()}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -122,7 +122,7 @@ const adminService = {
   getUserById: async (userId) => {
     try {
       console.log(`adminService.getUserById called for ID: ${userId}`);
-      const response = await api.get(`/users/${userId}`);
+      const response = await api.get(`/api/users/${userId}`);
       return response.data;
     } catch (error) {
       console.error(`Error fetching user ${userId}:`, error);
@@ -134,7 +134,7 @@ const adminService = {
   createUser: async (userData) => {
     try {
       console.log('adminService.createUser called with data:', userData);
-      const response = await api.post('/users', userData);
+      const response = await api.post('/api/users', userData);
       return response.data;
     } catch (error) {
       console.error('Error creating user:', error);
@@ -146,7 +146,7 @@ const adminService = {
   updateUser: async (userId, userData) => {
     try {
       console.log(`adminService.updateUser called for ID: ${userId} with data:`, userData);
-      const response = await api.put(`/users/${userId}`, userData);
+      const response = await api.put(`/api/users/${userId}`, userData);
       return response.data;
     } catch (error) {
       console.error(`Error updating user ${userId}:`, error);
@@ -158,7 +158,7 @@ const adminService = {
   deleteUser: async (userId) => {
     try {
       console.log(`adminService.deleteUser called for ID: ${userId}`);
-      const response = await api.delete(`/users/${userId}`);
+      const response = await api.delete(`/api/users/${userId}`);
       return response.data;
     } catch (error) {
       console.error(`Error deleting user ${userId}:`, error);
@@ -170,7 +170,7 @@ const adminService = {
   updateUserStatus: async (userId, status, reason = '') => {
     try {
       console.log(`adminService.updateUserStatus called for user ${userId} to status ${status}`);
-      const response = await api.put(`/admin/users/${userId}/status`, { status, reason });
+      const response = await api.put(`/api/admin/users/${userId}/status`, { status, reason });
       console.log('updateUserStatus response:', response.data);
       return response.data;
     } catch (error) {
@@ -183,7 +183,7 @@ const adminService = {
   getUserJournalEntries: async (userId) => {
     try {
       console.log(`adminService.getUserJournalEntries called for user ${userId}`);
-      const response = await api.get(`/users/${userId}/journal-entries`);
+      const response = await api.get(`/api/users/${userId}/journal-entries`);
       return response.data;
     } catch (error) {
       console.error(`Error fetching journal entries for user ${userId}:`, error);
@@ -195,7 +195,7 @@ const adminService = {
   getUserAppointments: async (userId) => {
     try {
       console.log(`adminService.getUserAppointments called for user ${userId}`);
-      const response = await api.get(`/users/${userId}/appointments`);
+      const response = await api.get(`/api/users/${userId}/appointments`);
       return response.data;
     } catch (error) {
       console.error(`Error fetching appointments for user ${userId}:`, error);
@@ -207,7 +207,7 @@ const adminService = {
   assignDoctorToPatient: async (patientId, doctorId) => {
     try {
       console.log(`adminService.assignDoctorToPatient - Patient: ${patientId}, Doctor: ${doctorId}`);
-      const response = await api.post(`/users/${patientId}/assign-doctor`, { doctorId });
+      const response = await api.post(`/api/users/${patientId}/assign-doctor`, { doctorId });
       return response.data;
     } catch (error) {
       console.error(`Error assigning doctor ${doctorId} to patient ${patientId}:`, error);
@@ -219,7 +219,7 @@ const adminService = {
   exportUsersToPdf: async (filters = {}) => {
     try {
       console.log('adminService.exportUsersToPdf called with filters:', filters);
-      const response = await api.get('/admin/users/export-pdf', {
+      const response = await api.get('/api/admin/users/export-pdf', {
         params: filters,
         responseType: 'blob'
       });
@@ -246,7 +246,7 @@ const adminService = {
   getAllPatients: async (filters = {}) => {
     try {
       console.log('adminService.getAllPatients called with filters:', filters);
-      const response = await api.get('/admin/patients', {
+      const response = await api.get('/api/admin/patients', {
         params: filters
       });
       return response.data;
@@ -260,7 +260,7 @@ const adminService = {
   getTenants: async () => {
     try {
       console.log('adminService.getTenants called');
-      const response = await api.get('/admin/tenants');
+      const response = await api.get('/api/admin/tenants');
       return response.data;
     } catch (error) {
       console.error('Error fetching tenants:', error);
@@ -272,7 +272,7 @@ const adminService = {
   deletePatient: async (patientId, tenantId) => {
     try {
       console.log(`adminService.deletePatient called for ID: ${patientId}, Tenant ID: ${tenantId || 'not specified'}`);
-      const response = await api.delete(`/admin/patients/${patientId}`, {
+      const response = await api.delete(`/api/admin/patients/${patientId}`, {
         params: { tenantId }
       });
       return response.data;
@@ -287,7 +287,7 @@ const adminService = {
     try {
       console.log('adminService.exportPatientsToPdf called with filters:', filters);
       // Make a request that returns a blob
-      const response = await api.get('/admin/patients/export/pdf', {
+      const response = await api.get('/api/admin/patients/export/pdf', {
         params: filters,
         responseType: 'blob' // Important for file downloads
       });
@@ -321,7 +321,7 @@ const adminService = {
   getVerifications: async (page = 1, limit = 10, status = 'pending') => {
     try {
       console.log('adminService.getVerifications called');
-      const response = await api.get(`/admin/verifications?page=${page}&limit=${limit}&status=${status}`);
+      const response = await api.get(`/api/admin/verifications?page=${page}&limit=${limit}&status=${status}`);
       console.log('getVerifications response:', response.data);
       return response.data;
     } catch (error) {
@@ -334,7 +334,7 @@ const adminService = {
   approveVerification: async (verificationId) => {
     try {
       console.log('adminService.approveVerification called for ID:', verificationId);
-      const response = await api.post(`/admin/verifications/${verificationId}/approve`);
+      const response = await api.post(`/api/admin/verifications/${verificationId}/approve`);
       console.log('approveVerification response:', response.data);
       return response.data;
     } catch (error) {
@@ -347,7 +347,7 @@ const adminService = {
   rejectVerification: async (verificationId, reason) => {
     try {
       console.log('adminService.rejectVerification called for ID:', verificationId);
-      const response = await api.post(`/admin/verifications/${verificationId}/reject`, { reason });
+      const response = await api.post(`/api/admin/verifications/${verificationId}/reject`, { reason });
       console.log('rejectVerification response:', response.data);
       return response.data;
     } catch (error) {
@@ -361,7 +361,7 @@ const adminService = {
   try {
     console.log('adminService.getDoctorVerificationStats called');
     // ✅ FIXED: Use correct endpoint from adminController.js
-    const response = await api.get('/admin/doctor-verification-stats');
+    const response = await api.get('/api/admin/doctor-verification-stats');
     console.log('getDoctorVerificationStats response:', response.data);
     return response.data;
   } catch (error) {
@@ -375,7 +375,7 @@ const adminService = {
   try {
     console.log('adminService.getPendingDoctors called with params:', params);
     // ✅ FIXED: Use correct endpoint from adminController.js
-    const response = await api.get('/admin/doctors/pending', { params });
+    const response = await api.get('/api/admin/doctors/pending', { params });
     console.log('getPendingDoctors response:', response.data);
     return response.data;
   } catch (error) {
@@ -389,7 +389,7 @@ const adminService = {
   try {
     console.log('adminService.getApprovedDoctors called with params:', params);
     // ✅ FIXED: Use correct endpoint from adminController.js
-    const response = await api.get('/admin/doctors/approved', { params });
+    const response = await api.get('/api/admin/doctors/approved', { params });
     console.log('getApprovedDoctors response:', response.data);
     return response.data;
   } catch (error) {
@@ -404,7 +404,7 @@ const adminService = {
   try {
     console.log('adminService.getRejectedDoctors called with params:', params);
     // ✅ FIXED: Use correct endpoint from adminController.js  
-    const response = await api.get('/admin/doctors/rejected', { params });
+    const response = await api.get('/api/admin/doctors/rejected', { params });
     console.log('getRejectedDoctors response:', response.data);
     return response.data;
   } catch (error) {
@@ -431,7 +431,7 @@ const adminService = {
     }
     
     // ✅ FIXED: Use correct endpoint from adminController.js
-    const response = await api.get(`/admin/doctors/${doctorId}`, { 
+    const response = await api.get(`/api/admin/doctors/${doctorId}`, { 
       params 
     });
     
@@ -461,7 +461,7 @@ const adminService = {
     
     // ✅ FIXED: Correct URL structure to match adminRoutes.js
     const response = await api.post(
-      `/admin/doctors/${doctorId}/verify`, // Changed from /verify/${doctorId}
+      `/api/admin/doctors/${doctorId}/verify`, // Changed from /verify/${doctorId}
       verificationData,
       { params }
     );
@@ -481,7 +481,7 @@ const adminService = {
   getSystemMetrics: async (period = 'month') => {
     try {
       console.log('adminService.getSystemMetrics called for period:', period);
-      const response = await api.get(`/admin/metrics?period=${period}`);
+      const response = await api.get(`/api/admin/metrics?period=${period}`);
       console.log('getSystemMetrics response:', response.data);
       return response.data;
     } catch (error) {
@@ -494,7 +494,7 @@ const adminService = {
   updateSettings: async (settings) => {
     try {
       console.log('adminService.updateSettings called with:', settings);
-      const response = await api.put('/admin/settings', settings);
+      const response = await api.put('/api/admin/settings', settings);
       console.log('updateSettings response:', response.data);
       return response.data;
     } catch (error) {
@@ -509,7 +509,7 @@ const adminService = {
   getModerationQueue: async (page = 1, limit = 10) => {
     try {
       console.log('adminService.getModerationQueue called');
-      const response = await api.get(`/admin/moderation?page=${page}&limit=${limit}`);
+      const response = await api.get(`/api/admin/moderation?page=${page}&limit=${limit}`);
       console.log('getModerationQueue response:', response.data);
       return response.data;
     } catch (error) {
@@ -524,7 +524,7 @@ const adminService = {
   createBackup: async () => {
     try {
       console.log('adminService.createBackup called');
-      const response = await api.post('/admin/backup');
+      const response = await api.post('/api/admin/backup');
       console.log('createBackup response:', response.data);
       return response.data;
     } catch (error) {
@@ -537,7 +537,7 @@ const adminService = {
   getBackupHistory: async () => {
     try {
       console.log('adminService.getBackupHistory called');
-      const response = await api.get('/admin/backup/history');
+      const response = await api.get('/api/admin/backup/history');
       console.log('getBackupHistory response:', response.data);
       return response.data;
     } catch (error) {
@@ -550,7 +550,7 @@ const adminService = {
 getTenantSettings: async (tenantId) => {
   try {
     console.log(`adminService.getTenantSettings called for tenant: ${tenantId}`);
-    const response = await api.get(`/admin/tenant-settings/${tenantId}`);
+    const response = await api.get(`/api/admin/tenant-settings/${tenantId}`);
     return response.data;
   } catch (error) {
     console.error('Error fetching tenant settings:', error);
@@ -562,7 +562,7 @@ getTenantSettings: async (tenantId) => {
 updateTenantSettings: async (tenantId, settings) => {
   try {
     console.log(`adminService.updateTenantSettings called for tenant: ${tenantId}`);
-    const response = await api.put(`/admin/tenant-settings/${tenantId}`, settings);
+    const response = await api.put(`/api/admin/tenant-settings/${tenantId}`, settings);
     return response.data;
   } catch (error) {
     console.error('Error updating tenant settings:', error);
@@ -574,7 +574,7 @@ updateTenantSettings: async (tenantId, settings) => {
 updateIndividualSetting: async (tenantId, settingData) => {
   try {
     console.log(`adminService.updateIndividualSetting called for tenant: ${tenantId}`);
-    const response = await api.patch(`/admin/tenant-settings/${tenantId}`, settingData);
+    const response = await api.patch(`/api/admin/tenant-settings/${tenantId}`, settingData);
     return response.data;
   } catch (error) {
     console.error('Error updating individual setting:', error);
@@ -595,7 +595,7 @@ uploadTenantAsset: async (formData) => {
       }
     });
     
-    const response = await uploadApi.post('/admin/upload-logo', formData);
+    const response = await uploadApi.post('/api/admin/upload-logo', formData);
     return response.data;
   } catch (error) {
     console.error('Error uploading tenant asset:', error);
