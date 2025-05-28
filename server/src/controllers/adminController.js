@@ -391,30 +391,6 @@ exports.deletePatient = async (req, res) => {
   }
 };
 
-// Get all tenants for filtering
-exports.getTenants = async (req, res) => {
-  try {
-    // Get master connection
-    const masterConn = getMasterConnection();
-    const Tenant = masterConn.model('Tenant');
-    
-    // Get all active tenants
-    const tenants = await Tenant.find({ active: true })
-      .select('name logoUrl primaryColor secondaryColor');
-    
-    return res.json({
-      success: true,
-      data: tenants
-    });
-  } catch (error) {
-    console.error('Error getting tenants:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve tenants',
-      error: error.message
-    });
-  }
-};
 
 // Export patients to PDF
 exports.exportPatientsToPdf = async (req, res) => {
