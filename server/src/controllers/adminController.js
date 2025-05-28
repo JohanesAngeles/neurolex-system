@@ -391,6 +391,30 @@ exports.deletePatient = async (req, res) => {
   }
 };
 
+// Get all tenants for filtering
+exports.getTenants = async (req, res) => {
+  try {
+    // Get master connection
+    const masterConn = getMasterConnection();
+    const Tenant = masterConn.model('Tenant');
+    
+    // Get all active tenants
+    const tenants = await Tenant.find({ active: true })
+      .select('name logoUrl primaryColor secondaryColor');
+    
+    return res.json({
+      success: true,
+      data: tenants
+    });
+  } catch (error) {
+    console.error('Error getting tenants:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve tenants',
+      error: error.message
+    });
+  }
+};
 
 // Export patients to PDF
 exports.exportPatientsToPdf = async (req, res) => {
@@ -1675,36 +1699,6 @@ const getSingleTenantVerificationStats = async (req, res) => {
 
 // ===== ORIGINAL ADMIN CONTROLLER FUNCTIONS =====
 
-// Dashboard data
-exports.getDashboardData = async (req, res) => {
-  try {
-    const totalUsers = await User.countDocuments({ role: 'user' });
-    const totalProfessionals = await User.countDocuments({ role: 'doctor' });
-    const pendingVerifications = await User.countDocuments({ 
-      role: 'doctor', 
-      isVerified: false 
-    });
-    const recentUsers = await User.find({ role: 'user' })
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .select('name email createdAt');
-    
-    return res.json({
-      success: true,
-      totalUsers,
-      totalProfessionals,
-      pendingVerifications,
-      recentUsers
-    });
-  } catch (error) {
-    console.error('Error fetching dashboard data:', error);
-    return res.status(500).json({
-      success: false, 
-      message: 'Server error',
-      error: error.message
-    });
-  }
-};
 
 // User management
 exports.getAllUsers = async (req, res) => {
@@ -2962,44 +2956,3 @@ exports.uploadTenantAsset = async (req, res) => {
         });
       }
     };
-
-  exports.getTenants = async (req, res) => {
-  try {
-    console.log('🔍 [TENANTS] getTenants method called');
-    console.log('🔍 [TENANTS] Multi-tenant mode:', process.env.ENABLE_MULTI_TENANT);
-    
-    // Get master connection
-    console.log('🔍 [TENANTS] Getting master connection...');
-    const masterConn = getMasterConnection();
-    
-    if (!masterConn) {
-      console.error('❌ [TENANTS] Master connection failed');
-      return res.status(500).json({
-        success: false,
-        message: 'Master database connection failed'
-      });
-    }
-    
-    console.log('✅ [TENANTS] Master connection successful');
-    const Tenant = masterConn.model('Tenant');
-    
-    console.log('🔍 [TENANTS] Querying for active tenants...');
-    const tenants = await Tenant.find({ active: true })
-      .select('name logoUrl primaryColor secondaryColor');
-    
-    console.log(`✅ [TENANTS] Found ${tenants.length} tenants`);
-    
-    return res.json({
-      success: true,
-      data: tenants
-    });
-  } catch (error) {
-    console.error('❌ [TENANTS] Error:', error.message);
-    console.error('❌ [TENANTS] Stack:', error.stack);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve tenants',
-      error: error.message
-    });
-  }
-};
