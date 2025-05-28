@@ -1,4 +1,4 @@
-// client/src/components/admin/SystemSettings.jsx - COMPLETE FIXED VERSION
+// client/src/pages/admin/settings.jsx - COMPLETE UPDATED VERSION WITH ALL FIXES
 import React, { useState, useEffect, useCallback } from 'react';
 
 const SystemSettings = () => {
@@ -8,6 +8,7 @@ const SystemSettings = () => {
   const [isLoadingTenants, setIsLoadingTenants] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
   
   // Settings state - EMPTY by default, filled from API
   const [settings, setSettings] = useState({
@@ -25,6 +26,49 @@ const SystemSettings = () => {
     secondaryColor: '',
     hirsSettings: []
   });
+
+  // ✅ FIXED: Individual setting save function
+  const saveIndividualSetting = async (settingType, value) => {
+    if (!selectedTenant) {
+      alert('Please select a clinic first');
+      return;
+    }
+
+    try {
+      console.log(`💾 Saving ${settingType}:`, value);
+      
+      // Create partial update object
+      const updateData = {
+        [settingType]: value
+      };
+      
+      const response = await fetch(`${process.env.REACT_APP_API_URL || ''}/api/admin/tenant-settings/${selectedTenant}`, {
+        method: 'PATCH', // Use PATCH for partial updates
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('adminToken')}`
+        },
+        body: JSON.stringify(updateData)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Save failed: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        alert(`✅ ${settingType.replace(/([A-Z])/g, ' $1').toLowerCase()} saved successfully!`);
+        console.log(`✅ ${settingType} saved`);
+      } else {
+        throw new Error(data.message || 'Save failed');
+      }
+    } catch (error) {
+      console.error(`❌ Error saving ${settingType}:`, error);
+      alert(`❌ Failed to save ${settingType}: ${error.message}`);
+    }
+  };
 
   // Create default settings if none exist - wrapped in useCallback to fix dependency warning
   const createDefaultTenantSettings = useCallback(async () => {
@@ -120,11 +164,11 @@ const SystemSettings = () => {
         ]
       };
 
-      const response = await fetch(`${process.env.REACT_APP_API_URL || ''}/admin/tenant-settings/${selectedTenant}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || ''}/api/admin/tenant-settings/${selectedTenant}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token') || localStorage.getItem('adminToken')}`
+          Authorization: `Bearer ${localStorage.getItem('adminToken')}`
         },
         body: JSON.stringify(defaultSettings)
       });
@@ -160,9 +204,9 @@ const SystemSettings = () => {
       setIsLoading(true);
       console.log(`🔍 Fetching settings for tenant: ${selectedTenant}`);
       
-      const response = await fetch(`${process.env.REACT_APP_API_URL || ''}/admin/tenant-settings/${selectedTenant}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || ''}/api/admin/tenant-settings/${selectedTenant}`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token') || localStorage.getItem('adminToken')}`
+          Authorization: `Bearer ${localStorage.getItem('adminToken')}`
         }
       });
       
@@ -202,9 +246,9 @@ const SystemSettings = () => {
         setIsLoadingTenants(true);
         console.log('🔍 Fetching tenants...');
         
-        const response = await fetch(`${process.env.REACT_APP_API_URL || ''}/admin/tenants`, {
+        const response = await fetch(`${process.env.REACT_APP_API_URL || ''}/api/admin/tenants`, {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('token') || localStorage.getItem('adminToken')}`
+            Authorization: `Bearer ${localStorage.getItem('adminToken')}`
           }
         });
         
@@ -248,8 +292,10 @@ const SystemSettings = () => {
     }));
   };
 
+  // ✅ FIXED: File upload function with proper error handling
   const handleFileUpload = async (field, file) => {
     try {
+      setIsUploadingFile(true);
       console.log(`📤 Uploading ${field} file:`, file.name);
       
       const formData = new FormData();
@@ -257,33 +303,45 @@ const SystemSettings = () => {
       formData.append('tenantId', selectedTenant);
       formData.append('uploadType', field);
 
-      const response = await fetch(`${process.env.REACT_APP_API_URL || ''}/admin/upload-tenant-asset`, {
+      // ✅ FIXED: Use correct endpoint and proper error handling
+      const response = await fetch(`${process.env.REACT_APP_API_URL || ''}/api/admin/upload-logo`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token') || localStorage.getItem('adminToken')}`
+          // ❌ DON'T include Content-Type for FormData - browser sets it automatically
+          Authorization: `Bearer ${localStorage.getItem('adminToken')}`
         },
         body: formData
       });
 
+      // ✅ FIXED: Check if response is ok before parsing JSON
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Upload failed: ${response.status} - ${errorText}`);
+      }
+
       const data = await response.json();
       
       if (data.success) {
+        // ✅ FIXED: Update state properly
         setSettings(prev => ({
           ...prev,
           [field]: {
             ...prev[field],
-            [file.name.includes('dark') ? 'dark' : 'light']: data.url
+            // Determine light/dark based on filename or user selection
+            [file.name.toLowerCase().includes('dark') ? 'dark' : 'light']: data.url || data.filePath
           }
         }));
-        alert('File uploaded successfully');
-        console.log('✅ File uploaded:', data.url);
+        
+        alert('✅ File uploaded successfully!');
+        console.log('✅ File uploaded:', data.url || data.filePath);
       } else {
-        alert('Failed to upload file: ' + (data.message || 'Unknown error'));
-        console.error('❌ Upload failed:', data.message);
+        throw new Error(data.message || 'Upload failed');
       }
     } catch (error) {
-      alert('Failed to upload file');
       console.error('❌ Error uploading file:', error);
+      alert(`❌ Failed to upload file: ${error.message}`);
+    } finally {
+      setIsUploadingFile(false);
     }
   };
 
@@ -309,27 +367,31 @@ const SystemSettings = () => {
       setIsSaving(true);
       console.log('💾 Saving settings for tenant:', selectedTenant);
       
-      const response = await fetch(`${process.env.REACT_APP_API_URL || ''}/admin/tenant-settings/${selectedTenant}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || ''}/api/admin/tenant-settings/${selectedTenant}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token') || localStorage.getItem('adminToken')}`
+          Authorization: `Bearer ${localStorage.getItem('adminToken')}`
         },
         body: JSON.stringify(settings)
       });
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Save failed: ${response.status} - ${errorText}`);
+      }
+
       const data = await response.json();
       
       if (data.success) {
-        alert('Settings saved successfully');
+        alert('✅ Settings saved successfully!');
         console.log('✅ Settings saved successfully');
       } else {
-        alert('Failed to save settings: ' + (data.message || 'Unknown error'));
-        console.error('❌ Save failed:', data.message);
+        throw new Error(data.message || 'Save failed');
       }
     } catch (error) {
-      alert('Failed to save settings');
       console.error('❌ Error saving settings:', error);
+      alert(`❌ Failed to save settings: ${error.message}`);
     } finally {
       setIsSaving(false);
     }
@@ -343,7 +405,14 @@ const SystemSettings = () => {
   };
 
   return (
-    <div style={{ fontFamily: 'Arial, sans-serif', backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+    <div className="system-settings-container" style={{ 
+      fontFamily: 'Arial, sans-serif', 
+      backgroundColor: '#f5f5f5', 
+      minHeight: '100vh',
+      maxHeight: '100vh',
+      overflowY: 'auto',
+      overflowX: 'hidden'
+    }}>
       {/* Header */}
       <div style={{ 
         backgroundColor: 'white', 
@@ -351,7 +420,10 @@ const SystemSettings = () => {
         borderBottom: '1px solid #e0e0e0',
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        alignItems: 'center',
+        position: 'sticky',
+        top: 0,
+        zIndex: 100
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <button 
@@ -388,7 +460,12 @@ const SystemSettings = () => {
         </button>
       </div>
 
-      <div style={{ padding: '20px', maxWidth: '1024px', margin: '0 auto' }}>
+      <div className="system-settings-content" style={{ 
+        padding: '20px', 
+        maxWidth: '1024px', 
+        margin: '0 auto',
+        minHeight: 'calc(100vh - 80px)'
+      }}>
         {/* Tenant Selection */}
         <div style={{ 
           backgroundColor: 'white', 
@@ -469,15 +546,18 @@ const SystemSettings = () => {
                           fontSize: '16px'
                         }}
                       />
-                      <button style={{
-                        backgroundColor: '#4CAF50',
-                        color: 'white',
-                        border: 'none',
-                        padding: '12px 20px',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        fontSize: '14px'
-                      }}>
+                      <button 
+                        onClick={() => saveIndividualSetting('platformName', settings.platformName)}
+                        style={{
+                          backgroundColor: '#4CAF50',
+                          color: 'white',
+                          border: 'none',
+                          padding: '12px 20px',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontSize: '14px'
+                        }}
+                      >
                         Save and Update
                       </button>
                     </div>
@@ -500,15 +580,18 @@ const SystemSettings = () => {
                           resize: 'vertical'
                         }}
                       />
-                      <button style={{
-                        backgroundColor: '#4CAF50',
-                        color: 'white',
-                        border: 'none',
-                        padding: '12px 20px',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        fontSize: '14px'
-                      }}>
+                      <button 
+                        onClick={() => saveIndividualSetting('platformDescription', settings.platformDescription)}
+                        style={{
+                          backgroundColor: '#4CAF50',
+                          color: 'white',
+                          border: 'none',
+                          padding: '12px 20px',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontSize: '14px'
+                        }}
+                      >
                         Save and Update
                       </button>
                     </div>
@@ -524,6 +607,18 @@ const SystemSettings = () => {
                   boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
                 }}>
                   <h2 style={{ margin: '0 0 24px 0', fontSize: '20px', fontWeight: '600' }}>Logo Settings</h2>
+                  
+                  {isUploadingFile && (
+                    <div style={{ 
+                      backgroundColor: '#e3f2fd', 
+                      padding: '12px 16px', 
+                      borderRadius: '8px', 
+                      marginBottom: '16px',
+                      color: '#1976d2'
+                    }}>
+                      📤 Uploading file... Please wait.
+                    </div>
+                  )}
                   
                   <div style={{ 
                     display: 'grid', 
@@ -564,11 +659,13 @@ const SystemSettings = () => {
                           padding: '8px 16px',
                           borderRadius: '6px',
                           cursor: 'pointer',
-                          fontSize: '14px'
+                          fontSize: '14px',
+                          opacity: isUploadingFile ? 0.6 : 1
                         }}
+                        disabled={isUploadingFile}
                         onClick={() => document.getElementById('light-logo-input').click()}
                       >
-                        Change Image
+                        {isUploadingFile ? 'Uploading...' : 'Change Image'}
                       </button>
                       <input
                         id="light-logo-input"
@@ -602,7 +699,7 @@ const SystemSettings = () => {
                             style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
                           />
                         ) : (
-                          <span style={{ fontSize: '48px' }}>🔗</span>
+                          <span style={{ fontSize: '48px', color: 'white' }}>🔗</span>
                         )}
                       </div>
                       <button 
@@ -613,11 +710,13 @@ const SystemSettings = () => {
                           padding: '8px 16px',
                           borderRadius: '6px',
                           cursor: 'pointer',
-                          fontSize: '14px'
+                          fontSize: '14px',
+                          opacity: isUploadingFile ? 0.6 : 1
                         }}
+                        disabled={isUploadingFile}
                         onClick={() => document.getElementById('dark-logo-input').click()}
                       >
-                        Change Image
+                        {isUploadingFile ? 'Uploading...' : 'Change Image'}
                       </button>
                       <input
                         id="dark-logo-input"
@@ -671,8 +770,14 @@ const SystemSettings = () => {
                     </div>
                   </div>
 
-                  {/* HIRS Table */}
-                  <div style={{ overflowX: 'auto' }}>
+                  {/* HIRS Table - ✅ FIXED: Scrollable container */}
+                  <div className="hirs-table-container" style={{ 
+                    overflowX: 'auto',
+                    overflowY: 'auto',
+                    maxHeight: '600px',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '8px'
+                  }}>
                     {/* Table Header */}
                     <div style={{
                       display: 'grid',
@@ -680,10 +785,11 @@ const SystemSettings = () => {
                       gap: '16px',
                       padding: '12px 16px',
                       backgroundColor: '#f8f9fa',
-                      borderRadius: '8px',
-                      marginBottom: '8px',
                       fontWeight: '600',
-                      fontSize: '14px'
+                      fontSize: '14px',
+                      position: 'sticky',
+                      top: 0,
+                      zIndex: 10
                     }}>
                       <div>Icon</div>
                       <div>Function / Menu Name</div>

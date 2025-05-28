@@ -1,10 +1,10 @@
-// server/src/routes/adminRoutes.js - COMPLETE FIXED VERSION WITH TENANT SETTINGS
+// server/src/routes/adminRoutes.js - FIXED VERSION (NO DUPLICATION)
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
 const adminAuth = require('../middleware/adminAuth');
 
-console.log('Loading admin routes with login functionality...');
+console.log('Loading admin routes with Cloudinary tenant settings...');
 
 // Test route
 router.get('/test', (req, res) => {
@@ -58,9 +58,13 @@ router.get('/reports/users', adminAuth, adminController.getUsersReport);
 router.get('/settings', adminAuth, adminController.getSystemSettings);
 router.put('/settings', adminAuth, adminController.updateSystemSettings);
 
-// ✅ NEW: TENANT SETTINGS ROUTES - Added for SystemSettings component
+// ✅ TENANT SETTINGS ROUTES - Updated for Cloudinary
 router.get('/tenant-settings/:tenantId', adminAuth, adminController.getTenantSettings);
 router.put('/tenant-settings/:tenantId', adminAuth, adminController.updateTenantSettings);
+router.patch('/tenant-settings/:tenantId', adminAuth, adminController.updateIndividualTenantSetting);
+router.post('/upload-logo', adminAuth, adminController.uploadTenantLogo);
+
+// Keep old route for backward compatibility
 router.post('/upload-tenant-asset', adminAuth, adminController.uploadTenantAsset);
 
 // Template Management
@@ -75,6 +79,6 @@ router.put('/feedback/status/:id', adminAuth, adminController.updateFeedbackStat
 // Data Export
 router.get('/backup', adminAuth, adminController.generateBackup);
 
-console.log('Admin routes with login functionality loaded successfully');
+console.log('Admin routes with Cloudinary tenant settings loaded successfully');
 
 module.exports = router;

@@ -1,4 +1,4 @@
-// server/index.js - RESTORED FULL FEATURES WITH MEMORY OPTIMIZATION
+// server/index.js - COMPLETE VERSION WITH CLOUDINARY SUPPORT
 
 const express = require('express');
 const mongoose = require('mongoose');
@@ -22,6 +22,7 @@ const PORT = process.env.PORT || 5000;
 console.log(`🚀 Starting Neurolex in ${process.env.NODE_ENV} mode`);
 console.log(`📊 Port: ${PORT}`);
 console.log(`🏢 Multi-tenant: ${process.env.ENABLE_MULTI_TENANT}`);
+console.log(`☁️ Cloudinary: ${process.env.CLOUDINARY_CLOUD_NAME ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
 
 // CRITICAL: Disable memory-intensive AI training on Heroku
 if (isProduction) {
@@ -158,7 +159,7 @@ try {
   console.log('✅ Appointment routes loaded');
   
   adminRoutes = require('./src/routes/adminRoutes');
-  console.log('✅ Admin routes loaded');
+  console.log('✅ Admin routes with Cloudinary tenant settings loaded');
   
   tenantRoutes = require('./src/routes/tenantRoutes');
   console.log('✅ Tenant routes loaded');
@@ -262,11 +263,57 @@ if (isProduction) {
   app.use(morgan('dev'));
 }
 
-// Static file serving for uploads
+// ============= STATIC FILE SERVING FOR UPLOADS =============
+console.log('📁 Setting up static file serving with Cloudinary support...');
+
+// ✅ ENHANCED: Static file serving for QR codes
 app.use('/uploads/qr-codes', express.static(path.join(__dirname, 'uploads/qr-codes'), {
   maxAge: '1d',
   etag: false
 }));
+
+// ✅ ADDED: Static file serving for general uploads (keep existing local uploads)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+  maxAge: '1d',
+  etag: false,
+  setHeaders: (res, filePath) => {
+    // Add CORS headers for uploaded files
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+}));
+
+// ✅ ADDED: Static file serving for admin tenant assets
+app.use('/uploads/admin', express.static(path.join(__dirname, 'uploads/admin'), {
+  maxAge: '1d',
+  etag: false,
+  setHeaders: (res, filePath) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+}));
+
+// ✅ ADDED: Static file serving for tenant-specific uploads (fallback for Cloudinary)
+app.use('/uploads/tenants', express.static(path.join(__dirname, 'uploads/tenants'), {
+  maxAge: '1d',
+  etag: false,
+  setHeaders: (res, filePath) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+}));
+
+// ✅ ADDED: Static file serving for logos (fallback for Cloudinary)
+app.use('/uploads/logos', express.static(path.join(__dirname, 'uploads/logos'), {
+  maxAge: '7d', // Longer cache for logos
+  etag: true,
+  setHeaders: (res, filePath) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+}));
+
+console.log('✅ Static file serving configured for uploads and Cloudinary fallbacks');
 
 // Attach io to request object for controllers to use
 app.use((req, res, next) => {
@@ -525,7 +572,7 @@ if (doctorRoutes) {
 // Mount admin routes
 if (adminRoutes) {
   app.use('/api/admin', adminRoutes);
-  console.log('✅ Admin routes mounted');
+  console.log('✅ Admin routes with Cloudinary support mounted');
 }
 
 // Mount journal routes
@@ -823,8 +870,8 @@ if (isProduction) {
         message: 'Neurolex API is running - Frontend build not found',
         environment: process.env.NODE_ENV,
         timestamp: new Date().toISOString(),
-        version: '1.0.0',
-        features: 'All features restored with memory optimization'
+        version: '1.0.0-cloudinary',
+        features: 'All features restored with Cloudinary support'
       });
     });
   }
@@ -832,10 +879,11 @@ if (isProduction) {
   app.get('/', (req, res) => {
     res.json({ 
       success: true,
-      message: 'Neurolex API Development Server',
+      message: 'Neurolex API Development Server with Cloudinary',
       environment: process.env.NODE_ENV,
       timestamp: new Date().toISOString(),
-      features: 'Full development features enabled'
+      features: 'Full development features enabled with Cloudinary support',
+      cloudinary: process.env.CLOUDINARY_CLOUD_NAME ? 'CONFIGURED' : 'NOT CONFIGURED'
     });
   });
 }
@@ -847,11 +895,16 @@ app.get('/api/test', (req, res) => {
   const memoryUsage = process.memoryUsage();
   res.json({ 
     success: true, 
-    message: 'Neurolex API is working perfectly! All features restored!',
+    message: 'Neurolex API is working perfectly! All features restored with Cloudinary!',
     timestamp: new Date(),
     environment: process.env.NODE_ENV,
-    version: '1.0.0-restored',
+    version: '1.0.0-cloudinary-restored',
     memoryOptimized: isProduction ? 'Yes - AI training disabled for Heroku' : 'No - Full features enabled',
+    cloudinary: {
+      configured: process.env.CLOUDINARY_CLOUD_NAME ? 'YES' : 'NO',
+      cloudName: process.env.CLOUDINARY_CLOUD_NAME || 'Not set',
+      status: process.env.CLOUDINARY_CLOUD_NAME ? 'READY' : 'NOT CONFIGURED'
+    },
     memory: {
       used: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)} MB`,
       total: `${Math.round(memoryUsage.heapTotal / 1024 / 1024)} MB`,
@@ -867,7 +920,8 @@ app.get('/api/test', (req, res) => {
       billing: billingRoutes ? 'ENABLED' : 'DISABLED',
       realTime: 'ENABLED',
       mobileAPIs: 'ENABLED',
-      aiSentiment: isProduction ? 'LIGHTWEIGHT' : 'FULL'
+      aiSentiment: isProduction ? 'LIGHTWEIGHT' : 'FULL',
+      imageUpload: 'CLOUDINARY + LOCAL FALLBACK'
     }
   });
 });
@@ -889,11 +943,41 @@ app.get('/api/health', (req, res) => {
     },
     timestamp: new Date(),
     database: 'connected',
+    cloudinary: {
+      configured: process.env.CLOUDINARY_CLOUD_NAME ? 'YES' : 'NO',
+      status: process.env.CLOUDINARY_CLOUD_NAME ? 'READY FOR UPLOADS' : 'LOCAL FALLBACK ONLY'
+    },
     features: {
-      restored: 'ALL FEATURES RESTORED',
+      restored: 'ALL FEATURES RESTORED WITH CLOUDINARY',
       optimization: isProduction ? 'Heroku memory optimized' : 'Full development mode',
-      aiTraining: process.env.DISABLE_AI_TRAINING === 'true' ? 'DISABLED' : 'ENABLED'
+      aiTraining: process.env.DISABLE_AI_TRAINING === 'true' ? 'DISABLED' : 'ENABLED',
+      imageStorage: process.env.CLOUDINARY_CLOUD_NAME ? 'CLOUDINARY + LOCAL' : 'LOCAL ONLY'
     }
+  });
+});
+
+// ✅ ADDED: Cloudinary configuration test endpoint
+app.get('/api/cloudinary/test', (req, res) => {
+  const cloudinaryConfig = {
+    configured: !!process.env.CLOUDINARY_CLOUD_NAME,
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME || null,
+    apiKey: process.env.CLOUDINARY_API_KEY ? 'SET' : 'NOT SET',
+    apiSecret: process.env.CLOUDINARY_API_SECRET ? 'SET' : 'NOT SET',
+    folder: process.env.CLOUDINARY_FOLDER || 'neurolex'
+  };
+
+  res.json({
+    success: true,
+    message: 'Cloudinary configuration status',
+    cloudinary: cloudinaryConfig,
+    status: cloudinaryConfig.configured ? 'READY' : 'NOT CONFIGURED',
+    uploadEndpoints: {
+      tenantLogo: '/api/admin/upload-logo',
+      fallbackLocal: '/uploads/tenants/'
+    },
+    testUploadUrl: cloudinaryConfig.configured 
+      ? `https://res.cloudinary.com/${cloudinaryConfig.cloudName}/image/upload/v1/neurolex/test.jpg`
+      : 'Cloudinary not configured - using local storage'
   });
 });
 
@@ -906,13 +990,17 @@ app.get('/api/debug/database', async (req, res) => {
     
     res.json({
       success: true,
-      message: 'Database connection working! All features restored!',
+      message: 'Database connection working! All features restored with Cloudinary!',
       environment: process.env.NODE_ENV,
       database: 'Connected',
       collections: {
         users: users.length,
         journalEntries: journalEntries.length,
         appointments: appointments.length
+      },
+      cloudinaryIntegration: {
+        configured: !!process.env.CLOUDINARY_CLOUD_NAME,
+        status: process.env.CLOUDINARY_CLOUD_NAME ? 'READY FOR IMAGE UPLOADS' : 'LOCAL FALLBACK ONLY'
       },
       memoryOptimization: {
         enabled: isProduction,
@@ -973,18 +1061,20 @@ if (process.env.ENABLE_MULTI_TENANT === 'true' && connectMaster) {
       const memoryUsedMB = Math.round(memoryUsage.heapUsed / 1024 / 1024);
       
       server.listen(PORT, '0.0.0.0', () => {
-        console.log('🎉 SUCCESS! Neurolex server running with ALL FEATURES RESTORED!');
+        console.log('🎉 SUCCESS! Neurolex server running with ALL FEATURES RESTORED + CLOUDINARY!');
         console.log(`🚀 Server running on port ${PORT}`);
         console.log(`📊 Environment: ${process.env.NODE_ENV}`);
         console.log(`🏢 Multi-tenant mode: ENABLED`);
+        console.log(`☁️ Cloudinary: ${process.env.CLOUDINARY_CLOUD_NAME ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
         console.log(`🧠 AI Training: ${process.env.DISABLE_AI_TRAINING === 'true' ? 'DISABLED (Memory optimization)' : 'ENABLED'}`);
         console.log(`💾 Memory Usage: ${memoryUsedMB} MB / 512 MB limit`);
         console.log(`🌐 Server URL: ${isProduction ? 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com' : 'http://localhost:' + PORT}`);
         console.log(`🔗 API Test: ${isProduction ? 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com' : 'http://localhost:' + PORT}/api/test`);
         console.log(`💚 Health Check: ${isProduction ? 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com' : 'http://localhost:' + PORT}/api/health`);
+        console.log(`☁️ Cloudinary Test: ${isProduction ? 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com' : 'http://localhost:' + PORT}/api/cloudinary/test`);
         console.log(`🗄️ Database Test: ${isProduction ? 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com' : 'http://localhost:' + PORT}/api/debug/database`);
         console.log('');
-        console.log('🎊 ALL FEATURES SUCCESSFULLY RESTORED!');
+        console.log('🎊 ALL FEATURES SUCCESSFULLY RESTORED WITH CLOUDINARY SUPPORT!');
         console.log('✅ User Authentication & Authorization');
         console.log('✅ Doctor Verification System');
         console.log('✅ Appointment Scheduling');
@@ -994,6 +1084,8 @@ if (process.env.ENABLE_MULTI_TENANT === 'true' && connectMaster) {
         console.log('✅ Mobile App APIs');
         console.log('✅ Billing System');
         console.log('✅ Admin Dashboard');
+        console.log('✅ Cloudinary Image Upload');
+        console.log('✅ Local File Storage Fallback');
         console.log('✅ Memory Optimized for Heroku');
       });
     })
@@ -1009,14 +1101,15 @@ if (process.env.ENABLE_MULTI_TENANT === 'true' && connectMaster) {
           const memoryUsedMB = Math.round(memoryUsage.heapUsed / 1024 / 1024);
           
           server.listen(PORT, '0.0.0.0', () => {
-            console.log('🎉 SUCCESS! Neurolex server running in fallback mode with features restored!');
+            console.log('🎉 SUCCESS! Neurolex server running in fallback mode with features restored + Cloudinary!');
             console.log(`🚀 Server running on port ${PORT}`);
             console.log(`📊 Environment: ${process.env.NODE_ENV}`);
             console.log(`🏢 Multi-tenant mode: DISABLED (fallback)`);
+            console.log(`☁️ Cloudinary: ${process.env.CLOUDINARY_CLOUD_NAME ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
             console.log(`🧠 AI Training: ${process.env.DISABLE_AI_TRAINING === 'true' ? 'DISABLED for memory optimization' : 'ENABLED'}`);
             console.log(`💾 Memory Usage: ${memoryUsedMB} MB / 512 MB limit`);
             console.log(`🌐 Server URL: ${isProduction ? 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com' : 'http://localhost:' + PORT}`);
-            console.log('🎊 CORE FEATURES RESTORED IN FALLBACK MODE!');
+            console.log('🎊 CORE FEATURES RESTORED IN FALLBACK MODE WITH CLOUDINARY!');
           });
         })
         .catch(fallbackErr => {
@@ -1036,17 +1129,19 @@ if (process.env.ENABLE_MULTI_TENANT === 'true' && connectMaster) {
       const memoryUsedMB = Math.round(memoryUsage.heapUsed / 1024 / 1024);
       
       server.listen(PORT, '0.0.0.0', () => {
-        console.log('🎉 SUCCESS! Neurolex server running with ALL FEATURES RESTORED!');
+        console.log('🎉 SUCCESS! Neurolex server running with ALL FEATURES RESTORED + CLOUDINARY!');
         console.log(`🚀 Server running on port ${PORT}`);
         console.log(`📊 Environment: ${process.env.NODE_ENV}`);
         console.log(`🏢 Multi-tenant mode: DISABLED`);
+        console.log(`☁️ Cloudinary: ${process.env.CLOUDINARY_CLOUD_NAME ? 'CONFIGURED ✅' : 'NOT CONFIGURED ⚠️'}`);
         console.log(`🧠 AI Training: ${process.env.DISABLE_AI_TRAINING === 'true' ? 'DISABLED (Memory optimization)' : 'ENABLED'}`);
         console.log(`💾 Memory Usage: ${memoryUsedMB} MB / 512 MB limit`);
         console.log(`🌐 Server URL: ${isProduction ? 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com' : 'http://localhost:' + PORT}`);
         console.log(`🔗 API Test: ${isProduction ? 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com' : 'http://localhost:' + PORT}/api/test`);
         console.log(`💚 Health Check: ${isProduction ? 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com' : 'http://localhost:' + PORT}/api/health`);
+        console.log(`☁️ Cloudinary Test: ${isProduction ? 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com' : 'http://localhost:' + PORT}/api/cloudinary/test`);
         console.log('');
-        console.log('🎊 ALL FEATURES SUCCESSFULLY RESTORED!');
+        console.log('🎊 ALL FEATURES SUCCESSFULLY RESTORED WITH CLOUDINARY SUPPORT!');
         console.log('✅ User Authentication & Authorization');
         console.log('✅ Doctor Verification System');  
         console.log('✅ Appointment Scheduling');
@@ -1054,7 +1149,19 @@ if (process.env.ENABLE_MULTI_TENANT === 'true' && connectMaster) {
         console.log('✅ Real-Time Features');
         console.log('✅ Mobile App APIs');
         console.log('✅ Admin Dashboard');
+        console.log('✅ Cloudinary Image Upload System');
+        console.log('✅ Local File Storage Fallback');
+        console.log('✅ Enhanced Static File Serving');
         console.log('✅ Memory Optimized for Heroku');
+        console.log('');
+        if (process.env.CLOUDINARY_CLOUD_NAME) {
+          console.log('🌟 CLOUDINARY INTEGRATION STATUS: READY FOR UPLOADS! 🌟');
+          console.log(`📁 Cloudinary Folder Structure: neurolex/tenants/TENANT_ID/logos/`);
+          console.log(`🔗 Test Cloudinary URL: https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/v1/neurolex/test.jpg`);
+        } else {
+          console.log('⚠️ CLOUDINARY NOT CONFIGURED - USING LOCAL STORAGE FALLBACK');
+          console.log('💡 Add CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET to .env');
+        }
       });
     })
     .catch(err => {

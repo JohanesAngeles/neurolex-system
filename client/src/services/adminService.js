@@ -544,7 +544,65 @@ const adminService = {
       console.error('adminService.getBackupHistory error:', error);
       throw error;
     }
+  },
+
+// Get tenant settings
+getTenantSettings: async (tenantId) => {
+  try {
+    console.log(`adminService.getTenantSettings called for tenant: ${tenantId}`);
+    const response = await api.get(`/admin/tenant-settings/${tenantId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching tenant settings:', error);
+    throw error;
   }
+},
+
+// Update tenant settings (full update)
+updateTenantSettings: async (tenantId, settings) => {
+  try {
+    console.log(`adminService.updateTenantSettings called for tenant: ${tenantId}`);
+    const response = await api.put(`/admin/tenant-settings/${tenantId}`, settings);
+    return response.data;
+  } catch (error) {
+    console.error('Error updating tenant settings:', error);
+    throw error;
+  }
+},
+
+// Update individual tenant setting (partial update)
+updateIndividualSetting: async (tenantId, settingData) => {
+  try {
+    console.log(`adminService.updateIndividualSetting called for tenant: ${tenantId}`);
+    const response = await api.patch(`/admin/tenant-settings/${tenantId}`, settingData);
+    return response.data;
+  } catch (error) {
+    console.error('Error updating individual setting:', error);
+    throw error;
+  }
+},
+
+// Upload logo/asset
+uploadTenantAsset: async (formData) => {
+  try {
+    console.log('adminService.uploadTenantAsset called');
+    
+    // Create a new axios instance without Content-Type header for FormData
+    const uploadApi = axios.create({
+      baseURL: API_URL,
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+      }
+    });
+    
+    const response = await uploadApi.post('/admin/upload-logo', formData);
+    return response.data;
+  } catch (error) {
+    console.error('Error uploading tenant asset:', error);
+    throw error;
+  }
+},
+
 };
 
 export default adminService;
