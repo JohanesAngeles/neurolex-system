@@ -5,6 +5,9 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
 
+// Import TenantProvider
+import { TenantProvider } from './context/TenantContext';
+
 // Socket Service Initialization
 import { initializeSocket } from './services/socketService';
 import NotificationHandler from './components/comunnication/NotificationHandler';
@@ -55,6 +58,9 @@ import DoctorAppointments from './components/doctors/Appointments/DoctorAppointm
 import AdminLayout from './components/admin/layout/AdminLayout';
 import AdminDashboard from './components/admin/AdminDashboard';
 import ProfessionalVerification from './components/admin/ProfessionalVerification';
+
+// ✅ NEW: Import SystemSettings component
+import SystemSettings from './components/admin/SystemSettings';
 
 // User Management Components
 import UserManagement from '../src/components/admin/UserManagement';
@@ -322,129 +328,132 @@ const App = () => {
   
   return (
     <GoogleOAuthProvider clientId={process.env.REACT_APP_GOOGLE_CLIENT_ID || ''}>
-      <AuthProvider>
-        <div className="app-container">
-          <Router>
-            {/* NotificationHandler listens for socket events and displays notifications */}
-            <NotificationHandler />
-            
-            <Routes>
-              {/* Auth routes */}
-              <Route path="/register" element={<Register />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/doctor-verification" element={<DoctorVerification />} />
+      <TenantProvider>
+        <AuthProvider>
+          <div className="app-container">
+            <Router>
+              {/* NotificationHandler listens for socket events and displays notifications */}
+              <NotificationHandler />
               
-              {/* Admin Login Route - Adding the dedicated admin login page */}
-              <Route path="/admin/login" element={<AdminLogin />} />
-              
-              {/* Doctor Registration Routes */}
-              <Route path="/doctor-register" element={<ProfessionalRegistration />} />
-              <Route path="/verification-pending" element={<VerificationPendingPage />} />
-              
-              {/* Verification routes */}
-              <Route path="/verify-email" element={<EmailVerificationWrapper />} />
-              <Route path="/verify-email/:token" element={<EmailVerification />} />
-              
-              {/* Other routes */}
-              <Route path="/privacy" element={<PlaceholderComponent name="Privacy Policy" />} />
-              <Route path="/terms" element={<PlaceholderComponent name="Terms of Service" />} />
-              <Route path="/contact" element={<PlaceholderComponent name="Contact Us" />} />
-              
-              {/* Token Test Route */}
-              <Route path="/token-test" element={<TokenTest />} />
-              
-              {/* Call route for video calls */}
-              <Route path="/call/:callId" element={
-                <ProtectedRoute>
-                  <CallPage />
-                </ProtectedRoute>
-              } />
-              
-              {/* Onboarding Route */}
-              <Route path="/onboarding" element={
-                <ProtectedRoute>
-                  <Onboarding />
-                </ProtectedRoute>
-              } />
+              <Routes>
+                {/* Auth routes */}
+                <Route path="/register" element={<Register />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/doctor-verification" element={<DoctorVerification />} />
+                
+                {/* Admin Login Route - Adding the dedicated admin login page */}
+                <Route path="/admin/login" element={<AdminLogin />} />
+                
+                {/* Doctor Registration Routes */}
+                <Route path="/doctor-register" element={<ProfessionalRegistration />} />
+                <Route path="/verification-pending" element={<VerificationPendingPage />} />
+                
+                {/* Verification routes */}
+                <Route path="/verify-email" element={<EmailVerificationWrapper />} />
+                <Route path="/verify-email/:token" element={<EmailVerification />} />
+                
+                {/* Other routes */}
+                <Route path="/privacy" element={<PlaceholderComponent name="Privacy Policy" />} />
+                <Route path="/terms" element={<PlaceholderComponent name="Terms of Service" />} />
+                <Route path="/contact" element={<PlaceholderComponent name="Contact Us" />} />
+                
+                {/* Token Test Route */}
+                <Route path="/token-test" element={<TokenTest />} />
+                
+                {/* Call route for video calls */}
+                <Route path="/call/:callId" element={
+                  <ProtectedRoute>
+                    <CallPage />
+                  </ProtectedRoute>
+                } />
+                
+                {/* Onboarding Route */}
+                <Route path="/onboarding" element={
+                  <ProtectedRoute>
+                    <Onboarding />
+                  </ProtectedRoute>
+                } />
 
-              {/* Patient Dashboard routes - only accessible to patients */}
-              <Route 
-                path="/dashboard" 
-                element={
-                  <ProtectedRoute requiredRole="patient">
-                    <DashboardLayout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<Dashboard />} />
-                <Route path="journal" element={<JournalInsights />} />
-                <Route path="journal/new" element={<JournalForm />} />
-                <Route path="find-doctor" element={<FindDoctor />} />
-                <Route path="messages" element={<Messages />} />
-                <Route path="other" element={<OtherPage />} />
-              </Route>
-              
-              {/* Doctor Routes - only accessible to doctors */}
-              <Route
-                path="/doctor"
-                element={
-                  <ProtectedRoute requiredRole="doctor">
-                    <DoctorLayout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<DoctorDashboard />} />
-                <Route path="appointments" element={<DoctorAppointments />} />
-                <Route path="form-templates" element={<FormTemplates />} />
-                <Route path="form-templates/create" element={<FormEditor />} />
-                <Route path="form-templates/:id/edit" element={<FormEditor />} />
-                <Route path="form-templates/:id/assign" element={<AssignTemplate />} />
-                <Route path="journal-entries" element={<JournalEntries />} />
-                <Route path="journal-entries/:id" element={<JournalEntryDetail />} />
-                {/* Patient Details route - IMPORTANT: This must come BEFORE the general patients route */}
-                <Route path="patients/:id" element={<PatientDetails />} />
-                <Route path="patients" element={<PatientList />} />
-              </Route>
-              
-              {/* Admin Routes - using ProtectedAdminRoute instead of ProtectedRoute */}
-              <Route
-                path="/admin"
-                element={
-                  <ProtectedAdminRoute>
-                    <AdminLayout />
-                  </ProtectedAdminRoute>
-                }
-              >
-                <Route index element={<AdminDashboard />} />
-                {/* User Management Routes */}
-                <Route path="users">
-                  <Route index element={<UserManagement />} />
-                  <Route path="add" element={<UserForm />} />
-                  <Route path=":id" element={<UserDetail />} />
-                  <Route path=":id/edit" element={<UserForm />} />
+                {/* Patient Dashboard routes - only accessible to patients */}
+                <Route 
+                  path="/dashboard" 
+                  element={
+                    <ProtectedRoute requiredRole="patient">
+                      <DashboardLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<Dashboard />} />
+                  <Route path="journal" element={<JournalInsights />} />
+                  <Route path="journal/new" element={<JournalForm />} />
+                  <Route path="find-doctor" element={<FindDoctor />} />
+                  <Route path="messages" element={<Messages />} />
+                  <Route path="other" element={<OtherPage />} />
                 </Route>
-                <Route path="professionals" element={<ProfessionalVerification />} />
-                <Route path="content" element={<PlaceholderComponent name="Content Moderation" />} />
-                <Route path="reports" element={<PlaceholderComponent name="Reports" />} />
-                <Route path="settings" element={<PlaceholderComponent name="System Settings" />} />
-                <Route path="templates" element={<PlaceholderComponent name="Template Management" />} />
-                <Route path="feedback" element={<PlaceholderComponent name="Feedback Tracking" />} />
-                <Route path="backup" element={<PlaceholderComponent name="System Backup" />} />
-              </Route>
-              
-              {/* Home redirect - will check role and redirect accordingly */}
-              <Route path="/" element={<HomeRedirect />} />
-              
-              {/* 404 page */}
-              <Route path="*" element={<PlaceholderComponent name="404 Not Found" />} />
-            </Routes>
-          </Router>
-          
-          {/* Toast notifications */}
-          <ToastContainer position="bottom-right" />
-        </div>
-      </AuthProvider>
+                
+                {/* Doctor Routes - only accessible to doctors */}
+                <Route
+                  path="/doctor"
+                  element={
+                    <ProtectedRoute requiredRole="doctor">
+                      <DoctorLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<DoctorDashboard />} />
+                  <Route path="appointments" element={<DoctorAppointments />} />
+                  <Route path="form-templates" element={<FormTemplates />} />
+                  <Route path="form-templates/create" element={<FormEditor />} />
+                  <Route path="form-templates/:id/edit" element={<FormEditor />} />
+                  <Route path="form-templates/:id/assign" element={<AssignTemplate />} />
+                  <Route path="journal-entries" element={<JournalEntries />} />
+                  <Route path="journal-entries/:id" element={<JournalEntryDetail />} />
+                  {/* Patient Details route - IMPORTANT: This must come BEFORE the general patients route */}
+                  <Route path="patients/:id" element={<PatientDetails />} />
+                  <Route path="patients" element={<PatientList />} />
+                </Route>
+                
+                {/* Admin Routes - using ProtectedAdminRoute instead of ProtectedRoute */}
+                <Route
+                  path="/admin"
+                  element={
+                    <ProtectedAdminRoute>
+                      <AdminLayout />
+                    </ProtectedAdminRoute>
+                  }
+                >
+                  <Route index element={<AdminDashboard />} />
+                  {/* User Management Routes */}
+                  <Route path="users">
+                    <Route index element={<UserManagement />} />
+                    <Route path="add" element={<UserForm />} />
+                    <Route path=":id" element={<UserDetail />} />
+                    <Route path=":id/edit" element={<UserForm />} />
+                  </Route>
+                  <Route path="professionals" element={<ProfessionalVerification />} />
+                  <Route path="content" element={<PlaceholderComponent name="Content Moderation" />} />
+                  <Route path="reports" element={<PlaceholderComponent name="Reports" />} />
+                  {/* ✅ CHANGED: System Settings now uses the actual SystemSettings component */}
+                  <Route path="settings" element={<SystemSettings />} />
+                  <Route path="templates" element={<PlaceholderComponent name="Template Management" />} />
+                  <Route path="feedback" element={<PlaceholderComponent name="Feedback Tracking" />} />
+                  <Route path="backup" element={<PlaceholderComponent name="System Backup" />} />
+                </Route>
+                
+                {/* Home redirect - will check role and redirect accordingly */}
+                <Route path="/" element={<HomeRedirect />} />
+                
+                {/* 404 page */}
+                <Route path="*" element={<PlaceholderComponent name="404 Not Found" />} />
+              </Routes>
+            </Router>
+            
+            {/* Toast notifications */}
+            <ToastContainer position="bottom-right" />
+          </div>
+        </AuthProvider>
+      </TenantProvider>
     </GoogleOAuthProvider>
   );
 };

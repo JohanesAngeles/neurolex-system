@@ -1,18 +1,26 @@
-// client/src/components/doctors/dashboard/DoctorDashboard.jsx - FIXED WITH REAL DATA
+// client/src/components/doctors/dashboard/DoctorDashboard.jsx - ENHANCED WITH DYNAMIC FEATURES
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useFeatureControl } from '../../hooks/useFeatureControl';
+import { useTenant } from '../../context/TenantContext';
+import FeatureWrapper from '../common/FeatureWrapper';
 
 import doctorService from '../../services/doctorService';
 import '../../styles/components/doctor/DoctorDashboard.css';
 
 const DoctorDashboard = () => {
+  // ✅ NEW: Add dynamic feature control
+  const featureControl = useFeatureControl();
+  const { currentTenant, getThemeStyles, platformName } = useTenant();
+  const theme = getThemeStyles();
+  
   const [stats, setStats] = useState({
     totalPatients: 0,
     totalAppointments: 0,
     pendingEntries: 0,
     newMessages: 0
   });
-  const [recentEntries, setRecentEntries] = useState([]);
+  const [, setRecentEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedTimeframe, setSelectedTimeframe] = useState('This Week');
   const [doctorInfo, setDoctorInfo] = useState({
@@ -22,8 +30,14 @@ const DoctorDashboard = () => {
   const [todayAppointments, setTodayAppointments] = useState([]);
   const navigate = useNavigate();
 
-  // ✅ NEW: Function to handle joining video meeting
+  // ✅ ENHANCED: Function to handle joining video meeting with feature check
   const handleJoinMeeting = (appointment) => {
+    // Check if Care/Report feature is enabled (appointments functionality)
+    if (!featureControl.isFeatureEnabled('Care / Report')) {
+      alert('Video meeting functionality is currently disabled for your clinic. Please contact your administrator.');
+      return;
+    }
+
     const meetingLink = appointment.meetingLink;
     
     if (!meetingLink) {
@@ -48,9 +62,10 @@ const DoctorDashboard = () => {
     
     const platform = getMeetingPlatform(meetingLink);
     
-    // Show confirmation dialog
+    // Show confirmation dialog with tenant branding
     const confirmed = window.confirm(
       `Join ${platform} session with ${appointment.patientName}?\n\n` +
+      `${platformName} - ${currentTenant?.name || 'Clinic'}\n` +
       `Session Platform: ${platform}\n` +
       `Patient: ${appointment.patientName}\n` +
       `Time: ${appointment.time}\n\n` +
@@ -61,11 +76,11 @@ const DoctorDashboard = () => {
       // Open meeting in new window/tab
       window.open(meetingLink, '_blank', 'noopener,noreferrer');
       
-      // Show success message
+      // Show success message with tenant branding
       setTimeout(() => {
         alert(
           `${platform} should now be opening in a new window.\n\n` +
-          `📋 Session Tips:\n` +
+          `📋 ${platformName} Session Tips:\n` +
           `• Ensure good internet connection\n` +
           `• Test your camera and microphone\n` +
           `• Both you and the patient will join the same room\n` +
@@ -75,7 +90,7 @@ const DoctorDashboard = () => {
     }
   };
 
-  // ✅ NEW: Function to check if appointment has active meeting
+  // Keep existing functions unchanged
   const isSessionActive = (appointment) => {
     if (!appointment.appointmentDate) return false;
     
@@ -83,14 +98,12 @@ const DoctorDashboard = () => {
     const now = new Date();
     const diffMinutes = (appointmentTime.getTime() - now.getTime()) / (1000 * 60);
     
-    // Session is considered active 15 minutes before to 2 hours after
     return diffMinutes <= 15 && diffMinutes >= -120;
   };
 
-  // ✅ NEW: Function to get session status
   const getSessionStatus = (appointment) => {
     if (!appointment.meetingLink) return { status: 'No Meeting', color: '#666' };
-    if (!appointment.appointmentDate) return { status: 'Scheduled', color: '#4CAF50' };
+    if (!appointment.appointmentDate) return { status: 'Scheduled', color: theme.primaryColor };
     
     const appointmentTime = new Date(appointment.appointmentDate);
     const now = new Date();
@@ -101,16 +114,15 @@ const DoctorDashboard = () => {
     } else if (diffMinutes <= 15 && diffMinutes > 5) {
       return { status: 'Starting Soon', color: '#FF9800' };
     } else if (diffMinutes > 15) {
-      return { status: 'Scheduled', color: '#4CAF50' };
+      return { status: 'Scheduled', color: theme.primaryColor };
     } else {
       return { status: 'Ended', color: '#666' };
     }
   };
 
-  // ✅ NEW: Function to get today's appointments from real data
   const getTodaysAppointments = (allAppointments) => {
     const today = new Date();
-    const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD format
+    const todayStr = today.toISOString().split('T')[0];
     
     console.log('🔍 Filtering appointments for today:', todayStr);
     console.log('🔍 All appointments received:', allAppointments.length);
@@ -120,8 +132,6 @@ const DoctorDashboard = () => {
       
       const apptDate = new Date(appt.appointmentDate);
       const apptDateStr = apptDate.toISOString().split('T')[0];
-      
-      console.log(`🔍 Comparing: ${apptDateStr} === ${todayStr}`, apptDateStr === todayStr);
       
       return apptDateStr === todayStr;
     });
@@ -149,10 +159,10 @@ const DoctorDashboard = () => {
   };
 
   useEffect(() => {
-    // ✅ FIXED: Fetch dashboard data with real appointments
+    // ✅ ENHANCED: Fetch dashboard data with feature-based filtering
     const fetchDashboardData = async () => {
       try {
-        console.log('🔍 Fetching real dashboard data...');
+        console.log('🔍 Fetching dashboard data with feature control...');
         
         // Fetch doctor profile information
         try {
@@ -170,105 +180,102 @@ const DoctorDashboard = () => {
           setDoctorInfo({ firstName: 'Doctor', lastName: '' });
         }
         
-        // ✅ FIXED: Fetch real appointments with meeting links
-        try {
-          console.log('🔍 Fetching real appointments...');
-          const appointmentsResponse = await doctorService.getAppointments();
-          
-          console.log('📊 Appointments response:', appointmentsResponse);
-          
-          // Handle different response structures
-          let appointments = [];
-          if (appointmentsResponse.success && appointmentsResponse.data) {
-            appointments = appointmentsResponse.data;
-          } else if (Array.isArray(appointmentsResponse)) {
-            appointments = appointmentsResponse;
-          } else if (appointmentsResponse.data && Array.isArray(appointmentsResponse.data)) {
-            appointments = appointmentsResponse.data;
-          }
-          
-          console.log('✅ Processed appointments:', appointments.length);
-          
-          // Get today's appointments from real data
-          const todaysAppointments = getTodaysAppointments(appointments);
-          setTodayAppointments(todaysAppointments);
-          
-          console.log('📅 Today\'s appointments set:', todaysAppointments.length);
-          
-          // Update stats with real data
-          setStats(prevStats => ({
-            ...prevStats,
-            totalAppointments: appointments.length
-          }));
-          
-        } catch (appointmentsError) {
-          console.error('❌ Error fetching appointments:', appointmentsError);
-          
-          // Set fallback data only if API fails
-          setTodayAppointments([
-            {
-              id: 'demo-1',
-              patientName: "Demo Patient",
-              patientType: "Patient",
-              appointmentDate: new Date().toISOString(),
-              time: "12:00 PM",
-              meetingLink: null, // No demo meeting link
-              status: "Scheduled",
-              meetingType: "jitsi"
+        // ✅ ENHANCED: Fetch appointments only if Care/Report feature is enabled
+        if (featureControl.isFeatureEnabled('Care / Report')) {
+          try {
+            console.log('🔍 Fetching appointments (feature enabled)...');
+            const appointmentsResponse = await doctorService.getAppointments();
+            
+            let appointments = [];
+            if (appointmentsResponse.success && appointmentsResponse.data) {
+              appointments = appointmentsResponse.data;
+            } else if (Array.isArray(appointmentsResponse)) {
+              appointments = appointmentsResponse;
+            } else if (appointmentsResponse.data && Array.isArray(appointmentsResponse.data)) {
+              appointments = appointmentsResponse.data;
             }
-          ]);
+            
+            console.log('✅ Processed appointments:', appointments.length);
+            
+            const todaysAppointments = getTodaysAppointments(appointments);
+            setTodayAppointments(todaysAppointments);
+            
+            setStats(prevStats => ({
+              ...prevStats,
+              totalAppointments: appointments.length
+            }));
+            
+          } catch (appointmentsError) {
+            console.error('❌ Error fetching appointments:', appointmentsError);
+            setTodayAppointments([]);
+          }
+        } else {
+          console.log('⚠️ Appointments feature disabled - skipping fetch');
+          setTodayAppointments([]);
+          setStats(prevStats => ({ ...prevStats, totalAppointments: 0 }));
         }
         
-        // Fetch patients
-        try {
-          const patientsResponse = await doctorService.getPatients();
-          const patients = patientsResponse.data || patientsResponse.patients || [];
-          
-          setStats(prevStats => ({
-            ...prevStats,
-            totalPatients: patients.length
-          }));
-          
-          console.log('✅ Patients loaded:', patients.length);
-        } catch (patientsError) {
-          console.error('❌ Error fetching patients:', patientsError);
+        // ✅ ENHANCED: Fetch patients only if User Profiles feature is enabled
+        if (featureControl.isFeatureEnabled('User Profiles')) {
+          try {
+            const patientsResponse = await doctorService.getPatients();
+            const patients = patientsResponse.data || patientsResponse.patients || [];
+            
+            setStats(prevStats => ({
+              ...prevStats,
+              totalPatients: patients.length
+            }));
+            
+            console.log('✅ Patients loaded:', patients.length);
+          } catch (patientsError) {
+            console.error('❌ Error fetching patients:', patientsError);
+            setStats(prevStats => ({ ...prevStats, totalPatients: 0 }));
+          }
+        } else {
+          console.log('⚠️ User Profiles feature disabled - skipping patients fetch');
           setStats(prevStats => ({ ...prevStats, totalPatients: 0 }));
         }
         
-        // Fetch journal entries that need review
-        try {
-          const entriesResponse = await doctorService.getJournalEntries({
-            analyzed: 'unanalyzed',
-            limit: 5
-          });
-          const entries = entriesResponse.data || [];
-          
-          setRecentEntries(entries);
-          setStats(prevStats => ({
-            ...prevStats,
-            pendingEntries: entries.length
-          }));
-          
-          console.log('✅ Journal entries loaded:', entries.length);
-        } catch (entriesError) {
-          console.error('❌ Error fetching journal entries:', entriesError);
+        // ✅ ENHANCED: Fetch journal entries only if Journal Entries feature is enabled
+        if (featureControl.isFeatureEnabled('Journal Entries')) {
+          try {
+            const entriesResponse = await doctorService.getJournalEntries({
+              analyzed: 'unanalyzed',
+              limit: 5
+            });
+            const entries = entriesResponse.data || [];
+            
+            setRecentEntries(entries);
+            setStats(prevStats => ({
+              ...prevStats,
+              pendingEntries: entries.length
+            }));
+            
+            console.log('✅ Journal entries loaded:', entries.length);
+          } catch (entriesError) {
+            console.error('❌ Error fetching journal entries:', entriesError);
+            setStats(prevStats => ({ ...prevStats, pendingEntries: 0 }));
+          }
+        } else {
+          console.log('⚠️ Journal Entries feature disabled - skipping fetch');
           setStats(prevStats => ({ ...prevStats, pendingEntries: 0 }));
         }
         
-        // Set default message count (you can implement this later)
-        setStats(prevStats => ({
-          ...prevStats,
-          newMessages: 0
-        }));
+        // ✅ ENHANCED: Messages only if Notifications feature is enabled
+        if (featureControl.isFeatureEnabled('Notifications')) {
+          // Implement message fetching when ready
+          setStats(prevStats => ({ ...prevStats, newMessages: 0 }));
+        } else {
+          setStats(prevStats => ({ ...prevStats, newMessages: 0 }));
+        }
         
         setLoading(false);
-        console.log('✅ Dashboard data loading complete');
+        console.log('✅ Dashboard data loading complete with feature control');
         
       } catch (error) {
         console.error('❌ Error in fetchDashboardData:', error);
         setLoading(false);
         
-        // Set fallback values if everything fails
         setDoctorInfo({ firstName: 'Doctor', lastName: '' });
         setTodayAppointments([]);
         setStats({
@@ -281,9 +288,9 @@ const DoctorDashboard = () => {
     };
     
     fetchDashboardData();
-  }, []);
+  }, [featureControl]); // Re-fetch when feature control changes
 
-  // Calendar state and functions (keep existing calendar code)
+  // Keep existing calendar functions unchanged
   const [calendarState, setCalendarState] = useState({
     currentDate: new Date(),
     viewMode: 'week',
@@ -432,232 +439,297 @@ const DoctorDashboard = () => {
     const monthYear = `${getMonthName(currentDate)} ${currentDate.getFullYear()}`;
     
     return (
-      <div className="weekly-calendar">
-        <div className="calendar-month-header">
-          <div className="month-title">{monthYear}</div>
-          <div className="month-navigation">
-            <button className="month-nav-button view-toggle" onClick={toggleViewMode}>
-              {isMonthView ? 'Week View' : 'Month View'}
-            </button>
-            <button className="month-nav-button prev" onClick={goToPreviousPeriod}>&#10094;</button>
-            <button className="month-nav-button next" onClick={goToNextPeriod}>&#10095;</button>
-          </div>
-        </div>
-        
-        {isMonthView ? (
-          <div className="month-grid">
-            <div className="day-names-row">
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((dayName, index) => (
-                <div key={`header-${index}`} className="day-name-cell">{dayName}</div>
-              ))}
+      <FeatureWrapper feature="Care / Report" showMessage={true}>
+        <div className="weekly-calendar">
+          <div className="calendar-month-header">
+            <div className="month-title">{monthYear}</div>
+            <div className="month-navigation">
+              <button 
+                className="month-nav-button view-toggle" 
+                onClick={toggleViewMode}
+                style={{ backgroundColor: theme.primaryColor, color: 'white' }}
+              >
+                {isMonthView ? 'Week View' : 'Month View'}
+              </button>
+              <button className="month-nav-button prev" onClick={goToPreviousPeriod}>&#10094;</button>
+              <button className="month-nav-button next" onClick={goToNextPeriod}>&#10095;</button>
             </div>
-            <div className="month-days-grid">
+          </div>
+          
+          {isMonthView ? (
+            <div className="month-grid">
+              <div className="day-names-row">
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((dayName, index) => (
+                  <div key={`header-${index}`} className="day-name-cell">{dayName}</div>
+                ))}
+              </div>
+              <div className="month-days-grid">
+                {days.map((day, index) => (
+                  <div 
+                    key={`day-${index}`} 
+                    className={`month-day ${!day.isCurrentMonth ? 'other-month' : ''} 
+                                ${isToday(day.date) ? 'today' : ''} 
+                                ${hasAppointments(day.date) ? 'has-appointment' : ''}`}
+                    style={isToday(day.date) ? { borderColor: theme.primaryColor } : {}}
+                  >
+                    <div className="month-day-number">{day.number}</div>
+                    {hasAppointments(day.date) && (
+                      <div className="month-day-indicators">
+                        <div 
+                          className="day-appointment-dot"
+                          style={{ backgroundColor: theme.primaryColor }}
+                        ></div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="week-row">
               {days.map((day, index) => (
                 <div 
-                  key={`day-${index}`} 
-                  className={`month-day ${!day.isCurrentMonth ? 'other-month' : ''} 
-                              ${isToday(day.date) ? 'today' : ''} 
-                              ${hasAppointments(day.date) ? 'has-appointment' : ''}`}
+                  key={`week-day-${index}`} 
+                  className={`week-day ${hasAppointments(day.date) ? 'has-appointment' : ''} 
+                              ${isToday(day.date) ? 'today' : ''}`}
+                  style={isToday(day.date) ? { borderColor: theme.primaryColor } : {}}
                 >
-                  <div className="month-day-number">{day.number}</div>
-                  {hasAppointments(day.date) && (
-                    <div className="month-day-indicators">
-                      <div className="day-appointment-dot"></div>
-                    </div>
-                  )}
+                  <div className="week-day-header">
+                    <div className="day-name">{day.name}</div>
+                    <div className="day-number">{day.number}</div>
+                  </div>
+                  <div className="day-event-container">
+                    {hasAppointments(day.date) && (
+                      <>
+                        <div 
+                          className="appointment-indicator"
+                          style={{ backgroundColor: theme.primaryColor }}
+                        >
+                          Appointment
+                        </div>
+                        <div 
+                          className="review-indicator"
+                          style={{ backgroundColor: theme.secondaryColor }}
+                        >
+                          Review Journal
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
-          </div>
-        ) : (
-          <div className="week-row">
-            {days.map((day, index) => (
-              <div 
-                key={`week-day-${index}`} 
-                className={`week-day ${hasAppointments(day.date) ? 'has-appointment' : ''} 
-                            ${isToday(day.date) ? 'today' : ''}`}
-              >
-                <div className="week-day-header">
-                  <div className="day-name">{day.name}</div>
-                  <div className="day-number">{day.number}</div>
-                </div>
-                <div className="day-event-container">
-                  {hasAppointments(day.date) && (
-                    <>
-                      <div className="appointment-indicator">Appointment</div>
-                      <div className="review-indicator">Review Journal</div>
-                    </>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+          )}
+        </div>
+      </FeatureWrapper>
+    );
+  };
+
+  // ✅ ENHANCED: StatCard with feature-based styling and conditional rendering
+  const StatCard = ({ title, value, subtitle, feature, onClick }) => {
+    const isFeatureEnabled = feature ? featureControl.isFeatureEnabled(feature) : true;
+    
+    if (feature && !isFeatureEnabled) {
+      return (
+        <div className="stat-card disabled" onClick={onClick} style={{ opacity: 0.5, cursor: 'not-allowed' }}>
+          <h3 className="stat-title">{title}</h3>
+          <div className="stat-value">--</div>
+          <div className="stat-subtitle">Feature Disabled</div>
+        </div>
+      );
+    }
+    
+    return (
+      <div 
+        className="stat-card" 
+        onClick={onClick}
+        style={{ 
+          borderTop: `4px solid ${theme.primaryColor}`,
+          cursor: onClick ? 'pointer' : 'default'
+        }}
+      >
+        <h3 className="stat-title">{title}</h3>
+        <div className="stat-value" style={{ color: theme.primaryColor }}>{value}</div>
+        <div className="stat-subtitle">{subtitle}</div>
       </div>
     );
   };
 
-  const StatCard = ({ title, value, subtitle }) => (
-    <div className="stat-card">
-      <h3 className="stat-title">{title}</h3>
-      <div className="stat-value">{value}</div>
-      <div className="stat-subtitle">{subtitle}</div>
-    </div>
-  );
-
-  // ✅ UPDATED: Enhanced today's appointments with video meeting support using REAL data
+  // ✅ ENHANCED: Today's appointments with feature wrapper
   const renderTodayAppointments = () => {
     return (
-      <div className="todays-appointments">
-        <div className="today-appointment-header">
-          <h3 className="section-title">Today's Appointments</h3>
-          <p className="appointments-count">
-            {todayAppointments.length} appointment{todayAppointments.length !== 1 ? 's' : ''} today
-          </p>
-        </div>
-        
-        {todayAppointments.length === 0 ? (
-          <div className="no-appointments">
-            <p>🗓️ No appointments scheduled for today</p>
-            <p className="no-appointments-subtitle">Enjoy your free time!</p>
+      <FeatureWrapper feature="Care / Report" showMessage={true}>
+        <div className="todays-appointments">
+          <div className="today-appointment-header">
+            <h3 className="section-title" style={{ color: theme.primaryColor }}>
+              Today's Appointments
+            </h3>
+            <p className="appointments-count">
+              {todayAppointments.length} appointment{todayAppointments.length !== 1 ? 's' : ''} today
+            </p>
           </div>
-        ) : (
-          todayAppointments.map((appointment, index) => {
-            const sessionStatus = getSessionStatus(appointment);
-            const isActive = isSessionActive(appointment);
-            
-            return (
-              <div key={appointment.id || index} className="today-appointment-card">
-                <div className="today-appointment-patient">
-                  <div className="patient-avatar">
-                    {appointment.patientName.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="patient-info">
-                    <h4 className="patient-name-label">{appointment.patientName}</h4>
-                    <p className="patient-type-label">{appointment.appointmentType}</p>
-                    {/* ✅ NEW: Session status indicator */}
-                    <div className="session-status" style={{ color: sessionStatus.color }}>
-                      🎥 {sessionStatus.status}
+          
+          {todayAppointments.length === 0 ? (
+            <div className="no-appointments">
+              <p>🗓️ No appointments scheduled for today</p>
+              <p className="no-appointments-subtitle">Enjoy your free time!</p>
+            </div>
+          ) : (
+            todayAppointments.map((appointment, index) => {
+              const sessionStatus = getSessionStatus(appointment);
+              const isActive = isSessionActive(appointment);
+              
+              return (
+                <div key={appointment.id || index} className="today-appointment-card">
+                  <div className="today-appointment-patient">
+                    <div 
+                      className="patient-avatar"
+                      style={{ backgroundColor: theme.primaryColor }}
+                    >
+                      {appointment.patientName.charAt(0).toUpperCase()}
                     </div>
-                  </div>
-                </div>
-                
-                <div className="appointment-meta">
-                  <div className="appointment-date-time">
-                    <div className="meta-group">
-                      <span className="meta-icon">📅</span>
-                      <span>Today</span>
-                    </div>
-                    <div className="meta-group">
-                      <span className="meta-icon">🕛</span>
-                      <span>{appointment.time}</span>
-                    </div>
-                    <div className="meta-group">
-                      <span className="meta-icon">⏱️</span>
-                      <span>{appointment.duration} min</span>
-                    </div>
-                    {/* ✅ NEW: Meeting platform indicator */}
-                    {appointment.meetingLink && (
-                      <div className="meta-group">
-                        <span className="meta-icon">📹</span>
-                        <span>{appointment.meetingType === 'jitsi' ? 'Jitsi Meet' : 'Video Call'}</span>
+                    <div className="patient-info">
+                      <h4 className="patient-name-label">{appointment.patientName}</h4>
+                      <p className="patient-type-label">{appointment.appointmentType}</p>
+                      <div className="session-status" style={{ color: sessionStatus.color }}>
+                        🎥 {sessionStatus.status}
                       </div>
+                    </div>
+                  </div>
+                  
+                  <div className="appointment-meta">
+                    <div className="appointment-date-time">
+                      <div className="meta-group">
+                        <span className="meta-icon">📅</span>
+                        <span>Today</span>
+                      </div>
+                      <div className="meta-group">
+                        <span className="meta-icon">🕛</span>
+                        <span>{appointment.time}</span>
+                      </div>
+                      <div className="meta-group">
+                        <span className="meta-icon">⏱️</span>
+                        <span>{appointment.duration} min</span>
+                      </div>
+                      {appointment.meetingLink && (
+                        <div className="meta-group">
+                          <span className="meta-icon">📹</span>
+                          <span>{appointment.meetingType === 'jitsi' ? 'Jitsi Meet' : 'Video Call'}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="appointment-actions">
+                    {appointment.meetingLink ? (
+                      <button 
+                        className={`join-meeting-button ${isActive ? 'active' : ''}`}
+                        onClick={() => handleJoinMeeting(appointment)}
+                        style={{
+                          backgroundColor: isActive ? '#FF4444' : theme.primaryColor,
+                          marginRight: '8px'
+                        }}
+                      >
+                        {isActive ? '🔴 Join Now' : '📹 Join Meeting'}
+                      </button>
+                    ) : (
+                      <button 
+                        className="join-meeting-button disabled"
+                        style={{
+                          backgroundColor: '#ccc',
+                          marginRight: '8px',
+                          cursor: 'not-allowed'
+                        }}
+                        disabled
+                      >
+                        📹 No Meeting Link
+                      </button>
                     )}
+                    
+                    <button 
+                      className="view-details-button"
+                      onClick={() => navigate(`/doctor/appointments/${appointment.id}`)}
+                      style={{ 
+                        borderColor: theme.secondaryColor,
+                        color: theme.secondaryColor
+                      }}
+                    >
+                      View Details
+                    </button>
                   </div>
                 </div>
-                
-                <div className="appointment-actions">
-                  {/* ✅ NEW: Join Meeting Button */}
-                  {appointment.meetingLink ? (
-                    <button 
-                      className={`join-meeting-button ${isActive ? 'active' : ''}`}
-                      onClick={() => handleJoinMeeting(appointment)}
-                      style={{
-                        backgroundColor: isActive ? '#FF4444' : '#4CAF50',
-                        marginRight: '8px'
-                      }}
-                    >
-                      {isActive ? '🔴 Join Now' : '📹 Join Meeting'}
-                    </button>
-                  ) : (
-                    <button 
-                      className="join-meeting-button disabled"
-                      style={{
-                        backgroundColor: '#ccc',
-                        marginRight: '8px',
-                        cursor: 'not-allowed'
-                      }}
-                      disabled
-                    >
-                      📹 No Meeting Link
-                    </button>
-                  )}
-                  
-                  <button 
-                    className="view-details-button"
-                    onClick={() => navigate(`/doctor/appointments/${appointment.id}`)}
-                  >
-                    View Details
-                  </button>
-                </div>
-              </div>
-            );
-          })
-        )}
-        
-        {/* ✅ NEW: Instructions for doctors */}
-        {todayAppointments.some(appt => appt.meetingLink) && (
-          <div className="meeting-instructions">
-            <h4>📋 Video Session Instructions:</h4>
-            <ul>
-              <li>• Click "Join Meeting" to start the video session</li>
-              <li>• Both you and your patient will join the same room</li>
-              <li>• No account registration required for Jitsi Meet</li>
-              <li>• Ensure good internet connection and test audio/video</li>
-            </ul>
-          </div>
-        )}
-      </div>
+              );
+            })
+          )}
+          
+          {todayAppointments.some(appt => appt.meetingLink) && (
+            <div className="meeting-instructions" style={{ borderLeft: `4px solid ${theme.primaryColor}` }}>
+              <h4>📋 {platformName} Video Session Instructions:</h4>
+              <ul>
+                <li>• Click "Join Meeting" to start the video session</li>
+                <li>• Both you and your patient will join the same room</li>
+                <li>• No account registration required for Jitsi Meet</li>
+                <li>• Ensure good internet connection and test audio/video</li>
+              </ul>
+            </div>
+          )}
+        </div>
+      </FeatureWrapper>
     );
   };
 
   if (loading) {
     return (
       <div className="loading-container">
-        <div className="loading-spinner">Loading dashboard...</div>
+        <div className="loading-spinner" style={{ color: theme.primaryColor }}>
+          Loading {platformName} dashboard...
+        </div>
       </div>
     );
   }
 
   return (
     <div className="dashboard-wrapper">
-      <div className="dashboard-header">
+      {/* ✅ ENHANCED: Header with tenant branding */}
+      <div className="dashboard-header" style={{ borderBottom: `3px solid ${theme.primaryColor}` }}>
         <div className="welcome-message">
-          <h1 className="welcome-title">
+          <h1 className="welcome-title" style={{ color: theme.primaryColor }}>
             Welcome back, Dr. {doctorInfo.firstName} {doctorInfo.lastName}.
           </h1>
           <p className="welcome-subtitle">
-            Thank you for being here. Here's a gentle overview to guide your day.
+            {currentTenant?.name ? `${currentTenant.name} - ` : ''}{platformName} Medical Dashboard. 
+            Here's a gentle overview to guide your day.
           </p>
         </div>
         <div className="header-actions">
-          <button className="search-button">🔍</button>
-          <button className="notification-button">🔔</button>
+          <FeatureWrapper feature="Config">
+            <button className="search-button" style={{ color: theme.primaryColor }}>🔍</button>
+          </FeatureWrapper>
+          <FeatureWrapper feature="Notifications">
+            <button className="notification-button" style={{ color: theme.primaryColor }}>🔔</button>
+          </FeatureWrapper>
           <div className="user-avatar">
-            <div className="avatar-placeholder">
+            <div 
+              className="avatar-placeholder"
+              style={{ backgroundColor: theme.primaryColor, color: 'white' }}
+            >
               {doctorInfo.firstName.charAt(0)}{doctorInfo.lastName.charAt(0)}
             </div>
           </div>
         </div>
       </div>
       
+      {/* ✅ ENHANCED: Overview section with feature-based stats */}
       <div className="overview-section">
         <div className="section-header">
-          <h2 className="section-title">Patient and Appointment Overview</h2>
+          <h2 className="section-title" style={{ color: theme.primaryColor }}>
+            Patient and Appointment Overview
+          </h2>
           <div className="timeframe-selector">
             <select 
               value={selectedTimeframe} 
               onChange={(e) => setSelectedTimeframe(e.target.value)}
+              style={{ borderColor: theme.primaryColor }}
             >
               <option value="This Week">This Week</option>
               <option value="This Month">This Month</option>
@@ -671,25 +743,34 @@ const DoctorDashboard = () => {
             title="Total Patients"
             value={stats.totalPatients}
             subtitle="Patients in Your Care"
+            feature="User Profiles"
+            onClick={() => featureControl.isFeatureEnabled('User Profiles') && navigate('/doctor/patients')}
           />
           <StatCard
             title="Total Appointments"
             value={stats.totalAppointments}
             subtitle="All Scheduled Sessions"
+            feature="Care / Report"
+            onClick={() => featureControl.isFeatureEnabled('Care / Report') && navigate('/doctor/appointments')}
           />
           <StatCard
             title="Pending Review"
             value={stats.pendingEntries}
             subtitle="Journal Entries to Review"
+            feature="Journal Entries"
+            onClick={() => featureControl.isFeatureEnabled('Journal Entries') && navigate('/doctor/journal-entries')}
           />
           <StatCard
             title="Messages"
             value={stats.newMessages}
             subtitle="New Messages"
+            feature="Notifications"
+            onClick={() => featureControl.isFeatureEnabled('Notifications') && navigate('/doctor/messages')}
           />
         </div>
       </div>
       
+      {/* ✅ ENHANCED: Main content with feature wrappers */}
       <div className="main-content">
         <div className="calendar-section">
           {renderCalendar()}
@@ -698,6 +779,161 @@ const DoctorDashboard = () => {
           {renderTodayAppointments()}
         </div>
       </div>
+
+      {/* ✅ NEW: Feature Status Indicator (Development Mode) */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="dev-feature-panel" style={{
+          position: 'fixed',
+          bottom: '20px',
+          right: '20px',
+          background: 'white',
+          padding: '15px',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          borderLeft: `4px solid ${theme.primaryColor}`,
+          minWidth: '250px',
+          fontSize: '12px'
+        }}>
+          <h4 style={{ margin: '0 0 10px 0', color: theme.primaryColor }}>
+            🔧 Dev: Feature Status
+          </h4>
+          <div style={{ display: 'grid', gap: '4px' }}>
+            {[
+              { name: 'User Dashboard', feature: 'User Dashboard' },
+              { name: 'User Profiles', feature: 'User Profiles' },
+              { name: 'Journal Entries', feature: 'Journal Entries' },
+              { name: 'Care / Report', feature: 'Care / Report' },
+              { name: 'Dr Mental Assessments', feature: 'Dr Mental Assessments' },
+              { name: 'Notifications', feature: 'Notifications' },
+              { name: 'Data Analytics', feature: 'Data Analytics' },
+              { name: 'Config', feature: 'Config' }
+            ].map(({ name, feature }) => (
+              <div key={feature} style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '2px 0'
+              }}>
+                <div style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: featureControl.isFeatureEnabled(feature) ? '#4CAF50' : '#f44336'
+                }}/>
+                <span style={{
+                  color: featureControl.isFeatureEnabled(feature) ? '#333' : '#999'
+                }}>
+                  {name}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div style={{ 
+            marginTop: '10px', 
+            paddingTop: '8px', 
+            borderTop: '1px solid #eee',
+            color: '#666',
+            fontSize: '10px'
+          }}>
+            Tenant: {currentTenant?.name || 'Default'}
+          </div>
+        </div>
+      )}
+
+      {/* ✅ NEW: Quick Actions Panel (Feature-based) */}
+      <div className="quick-actions-panel" style={{
+        position: 'fixed',
+        bottom: '20px',
+        left: '20px',
+        display: 'flex',
+        gap: '10px',
+        flexDirection: 'column'
+      }}>
+        <FeatureWrapper feature="Journal Entries">
+          <button 
+            className="quick-action-btn"
+            onClick={() => navigate('/doctor/journal-entries')}
+            style={{
+              backgroundColor: theme.primaryColor,
+              color: 'white',
+              border: 'none',
+              padding: '12px',
+              borderRadius: '50%',
+              width: '50px',
+              height: '50px',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              fontSize: '18px'
+            }}
+            title="Review Journal Entries"
+          >
+            📝
+          </button>
+        </FeatureWrapper>
+
+        <FeatureWrapper feature="User Profiles">
+          <button 
+            className="quick-action-btn"
+            onClick={() => navigate('/doctor/patients')}
+            style={{
+              backgroundColor: theme.secondaryColor,
+              color: 'white',
+              border: 'none',
+              padding: '12px',
+              borderRadius: '50%',
+              width: '50px',
+              height: '50px',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              fontSize: '18px'
+            }}
+            title="Manage Patients"
+          >
+            👥
+          </button>
+        </FeatureWrapper>
+
+        <FeatureWrapper feature="Dr Mental Assessments">
+          <button 
+            className="quick-action-btn"
+            onClick={() => navigate('/doctor/assessments')}
+            style={{
+              backgroundColor: '#FF9800',
+              color: 'white',
+              border: 'none',
+              padding: '12px',
+              borderRadius: '50%',
+              width: '50px',
+              height: '50px',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              fontSize: '18px'
+            }}
+            title="Mental Assessments"
+          >
+            🧠
+          </button>
+        </FeatureWrapper>
+      </div>
+
+      {/* ✅ NEW: Feature Disabled Overlay (if too many features are disabled) */}
+      {featureControl.getDisabledFeatures().length > 5 && (
+        <div className="feature-warning-banner" style={{
+          position: 'fixed',
+          top: '0',
+          left: '0',
+          right: '0',
+          backgroundColor: '#fff3cd',
+          borderBottom: '1px solid #ffeaa7',
+          padding: '10px 20px',
+          textAlign: 'center',
+          fontSize: '14px',
+          color: '#856404',
+          zIndex: 1000
+        }}>
+          ⚠️ Multiple features have been disabled for your clinic. Contact your administrator to enable additional functionality.
+        </div>
+      )}
     </div>
   );
 };

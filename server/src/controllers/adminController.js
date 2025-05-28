@@ -2123,6 +2123,7 @@ exports.generateBackup = async (req, res) => {
 };
 
 // Get dashboard data with proper counts
+// Get dashboard data with proper counts - FIXED VERSION
 exports.getDashboardData = async (req, res) => {
   try {
     console.log('Getting admin dashboard data...');
@@ -2213,6 +2214,238 @@ exports.getDashboardData = async (req, res) => {
       success: false,
       message: 'Failed to retrieve dashboard data',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// ===== TENANT SETTINGS FUNCTIONS =====
+
+// Get tenant settings
+exports.getTenantSettings = async (req, res) => {
+  try {
+    const { tenantId } = req.params;
+    console.log(`🔍 Getting tenant settings for: ${tenantId}`);
+    
+    // Get master connection
+    const masterConn = getMasterConnection();
+    const Tenant = masterConn.model('Tenant');
+    
+    // Find tenant and return its settings
+    const tenant = await Tenant.findById(tenantId);
+    
+    if (!tenant) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tenant not found'
+      });
+    }
+    
+    // Return tenant settings (use existing tenant data or defaults)
+    const settings = {
+      platformName: tenant.name || 'NEUROLEX',
+      platformDescription: tenant.description || 'AI-powered mental wellness platform',
+      systemLogo: tenant.logoUrl ? { light: tenant.logoUrl, dark: null } : { light: null, dark: null },
+      favicon: { light: null, dark: null },
+      primaryColor: tenant.primaryColor || '#4CAF50',
+      secondaryColor: tenant.secondaryColor || '#2196F3',
+      hirsSettings: tenant.hirsSettings || [
+        {
+          id: 1,
+          icon: 'HR',
+          name: 'User Dashboard',
+          description: 'Controls the displays, names, and icons used by End Users on the Dashboard.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
+        },
+        {
+          id: 2,
+          icon: 'JE', 
+          name: 'Journal Entries',
+          description: 'Control what journal prompts are available for users.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
+        },
+        {
+          id: 3,
+          icon: 'DR',
+          name: 'Mood Tracking-Dr',
+          description: 'Set up mood tracking functionality for doctors and patients.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
+        },
+        {
+          id: 4,
+          icon: 'MA',
+          name: 'Dr Mental Assessments', 
+          description: 'Mental health assessment tools for healthcare professionals.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
+        },
+        {
+          id: 5,
+          icon: 'SM',
+          name: 'Stress Managing',
+          description: 'Stress management tools and resources.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
+        },
+        {
+          id: 6,
+          icon: 'PS',
+          name: 'User Profiles',
+          description: 'User profile management and customization.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
+        },
+        {
+          id: 7,
+          icon: 'NT',
+          name: 'Notifications',
+          description: 'Push notifications and alert system.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
+        },
+        {
+          id: 8,
+          icon: 'DA',
+          name: 'Data Analytics',
+          description: 'Analytics dashboard and reporting tools.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
+        },
+        {
+          id: 9,
+          icon: 'CA',
+          name: 'Care / Report',
+          description: 'Care management and reporting functionality.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
+        },
+        {
+          id: 10,
+          icon: 'CF',
+          name: 'Config',
+          description: 'System configuration and settings.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
+        }
+      ]
+    };
+    
+    console.log('✅ Tenant settings retrieved successfully');
+    res.json({
+      success: true,
+      data: settings
+    });
+  } catch (error) {
+    console.error('❌ Error getting tenant settings:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get tenant settings',
+      error: error.message
+    });
+  }
+};
+
+// Update tenant settings
+exports.updateTenantSettings = async (req, res) => {
+  try {
+    const { tenantId } = req.params;
+    const settings = req.body;
+    console.log(`💾 Updating tenant settings for: ${tenantId}`);
+    
+    // Get master connection
+    const masterConn = getMasterConnection();
+    const Tenant = masterConn.model('Tenant');
+    
+    // Prepare update object
+    const updateData = {};
+    
+    if (settings.platformName) {
+      updateData.name = settings.platformName;
+    }
+    
+    if (settings.platformDescription) {  
+      updateData.description = settings.platformDescription;
+    }
+    
+    if (settings.primaryColor) {
+      updateData.primaryColor = settings.primaryColor;
+    }
+    
+    if (settings.secondaryColor) {
+      updateData.secondaryColor = settings.secondaryColor;
+    }
+    
+    if (settings.hirsSettings) {
+      updateData.hirsSettings = settings.hirsSettings;
+    }
+    
+    if (settings.systemLogo?.light) {
+      updateData.logoUrl = settings.systemLogo.light;
+    }
+    
+    // Update tenant with new settings
+    const updatedTenant = await Tenant.findByIdAndUpdate(
+      tenantId,
+      { $set: updateData },
+      { new: true, runValidators: false }
+    );
+    
+    if (!updatedTenant) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tenant not found'
+      });
+    }
+    
+    console.log('✅ Tenant settings updated successfully');
+    res.json({
+      success: true,
+      message: 'Tenant settings updated successfully',
+      data: updatedTenant
+    });
+  } catch (error) {
+    console.error('❌ Error updating tenant settings:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update tenant settings',
+      error: error.message
+    });
+  }
+};
+
+// Upload tenant asset (logo, favicon, etc.)
+exports.uploadTenantAsset = async (req, res) => {
+  try {
+    const { tenantId, uploadType } = req.body;
+    console.log(`📤 Mock upload for tenant: ${tenantId}, type: ${uploadType}`);
+    
+    if (!tenantId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tenant ID is required'
+      });
+    }
+    
+    // Return mock URL for now (you can implement real file upload later)
+    const timestamp = Date.now();
+    const mockUrl = `https://neurolex-platform-9b4c40c0e2da.herokuapp.com/uploads/${tenantId}/${uploadType}/${timestamp}-mock-image.jpg`;
+    
+    console.log('✅ File upload simulated successfully');
+    res.json({
+      success: true,
+      message: 'File uploaded successfully',
+      url: mockUrl,
+      uploadType,
+      tenantId
+    });
+  } catch (error) {
+    console.error('❌ Error uploading tenant asset:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload file',
+      error: error.message
     });
   }
 };

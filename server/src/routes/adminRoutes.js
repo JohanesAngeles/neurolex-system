@@ -1,4 +1,4 @@
-// server/src/routes/adminRoutes.js - FIXED VERSION WITH LOGIN
+// server/src/routes/adminRoutes.js - COMPLETE FIXED VERSION WITH TENANT SETTINGS
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
@@ -15,7 +15,7 @@ router.get('/test', (req, res) => {
   });
 });
 
-// ADMIN AUTHENTICATION ROUTES (ADDED)
+// ADMIN AUTHENTICATION ROUTES
 router.post('/login', adminController.adminLogin);
 router.post('/logout', adminAuth, adminController.adminLogout);
 router.get('/profile', adminAuth, adminController.getAdminProfile);
@@ -34,7 +34,7 @@ router.get('/doctors/pending', adminAuth, adminController.getPendingDoctors);
 router.get('/doctors/approved', adminAuth, adminController.getVerifiedDoctors);
 router.get('/doctors/rejected', adminAuth, adminController.getRejectedDoctors);
 router.get('/doctors/:id', adminAuth, adminController.getDoctorDetails);
-router.post('/doctors/:id/verify', adminAuth, adminController.verifyDoctor); // ✅ FIXED URL
+router.post('/doctors/:id/verify', adminAuth, adminController.verifyDoctor);
 router.get('/doctor-verification-stats', adminAuth, adminController.getDoctorVerificationStats);
 
 // User Management
@@ -42,7 +42,7 @@ router.get('/users', adminAuth, adminController.getAllUsers);
 router.put('/users/status/:id', adminAuth, adminController.updateUserStatus);
 router.delete('/users/:id', adminAuth, adminController.deleteUser);
 
-// Professional Verification
+// Professional Verification (Legacy - keeping for compatibility)
 router.get('/professionals', adminAuth, adminController.getAllProfessionals);
 router.put('/professionals/verify/:id', adminAuth, adminController.verifyProfessional);
 
@@ -54,9 +54,14 @@ router.put('/content/status/:id', adminAuth, adminController.updateContentStatus
 router.get('/reports/system', adminAuth, adminController.getSystemReport);
 router.get('/reports/users', adminAuth, adminController.getUsersReport);
 
-// System Settings
+// System Settings (Legacy - keeping for compatibility)
 router.get('/settings', adminAuth, adminController.getSystemSettings);
 router.put('/settings', adminAuth, adminController.updateSystemSettings);
+
+// ✅ NEW: TENANT SETTINGS ROUTES - Added for SystemSettings component
+router.get('/tenant-settings/:tenantId', adminAuth, adminController.getTenantSettings);
+router.put('/tenant-settings/:tenantId', adminAuth, adminController.updateTenantSettings);
+router.post('/upload-tenant-asset', adminAuth, adminController.uploadTenantAsset);
 
 // Template Management
 router.get('/templates', adminAuth, adminController.getAllTemplates);
