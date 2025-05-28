@@ -1,5 +1,6 @@
-// client/src/pages/admin/settings.jsx - COMPLETE UPDATED VERSION WITH ALL FIXES
+// client/src/pages/admin/settings.jsx - COMPLETE FIXED VERSION
 import React, { useState, useEffect, useCallback } from 'react';
+import adminService from '../../services/adminService';
 
 const SystemSettings = () => {
   // State management
@@ -27,7 +28,7 @@ const SystemSettings = () => {
     hirsSettings: []
   });
 
-  // ✅ FIXED: Individual setting save function
+  // ✅ FIXED: Individual setting save function using adminService
   const saveIndividualSetting = async (settingType, value) => {
     if (!selectedTenant) {
       alert('Please select a clinic first');
@@ -42,21 +43,8 @@ const SystemSettings = () => {
         [settingType]: value
       };
       
-      const response = await fetch(`${process.env.REACT_APP_API_URL || ''}/api/admin/tenant-settings/${selectedTenant}`, {
-        method: 'PATCH', // Use PATCH for partial updates
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('adminToken')}`
-        },
-        body: JSON.stringify(updateData)
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Save failed: ${response.status} - ${errorText}`);
-      }
-
-      const data = await response.json();
+      // ✅ FIXED: Use adminService instead of fetch
+      const data = await adminService.updateIndividualSetting(selectedTenant, updateData);
       
       if (data.success) {
         alert(`✅ ${settingType.replace(/([A-Z])/g, ' $1').toLowerCase()} saved successfully!`);
@@ -66,7 +54,7 @@ const SystemSettings = () => {
       }
     } catch (error) {
       console.error(`❌ Error saving ${settingType}:`, error);
-      alert(`❌ Failed to save ${settingType}: ${error.message}`);
+      alert(`❌ Failed to save ${settingType}: ${error.response?.data?.message || error.message}`);
     }
   };
 
@@ -164,16 +152,8 @@ const SystemSettings = () => {
         ]
       };
 
-      const response = await fetch(`${process.env.REACT_APP_API_URL || ''}/api/admin/tenant-settings/${selectedTenant}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('adminToken')}`
-        },
-        body: JSON.stringify(defaultSettings)
-      });
-
-      const data = await response.json();
+      // ✅ FIXED: Use adminService instead of fetch
+      const data = await adminService.updateTenantSettings(selectedTenant, defaultSettings);
       
       if (data.success) {
         setSettings(defaultSettings);
@@ -204,13 +184,8 @@ const SystemSettings = () => {
       setIsLoading(true);
       console.log(`🔍 Fetching settings for tenant: ${selectedTenant}`);
       
-      const response = await fetch(`${process.env.REACT_APP_API_URL || ''}/api/admin/tenant-settings/${selectedTenant}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('adminToken')}`
-        }
-      });
-      
-      const data = await response.json();
+      // ✅ FIXED: Use adminService instead of fetch
+      const data = await adminService.getTenantSettings(selectedTenant);
       console.log('📊 Tenant settings response:', data);
       
       if (data.success) {
@@ -246,13 +221,8 @@ const SystemSettings = () => {
         setIsLoadingTenants(true);
         console.log('🔍 Fetching tenants...');
         
-        const response = await fetch(`${process.env.REACT_APP_API_URL || ''}/api/admin/tenants`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('adminToken')}`
-          }
-        });
-        
-        const data = await response.json();
+        // ✅ FIXED: Use adminService instead of fetch
+        const data = await adminService.getTenants();
         console.log('📊 Tenants response:', data);
         
         if (data.success) {
@@ -292,7 +262,7 @@ const SystemSettings = () => {
     }));
   };
 
-  // ✅ FIXED: File upload function with proper error handling
+  // ✅ FIXED: File upload function using adminService
   const handleFileUpload = async (field, file) => {
     try {
       setIsUploadingFile(true);
@@ -303,23 +273,8 @@ const SystemSettings = () => {
       formData.append('tenantId', selectedTenant);
       formData.append('uploadType', field);
 
-      // ✅ FIXED: Use correct endpoint and proper error handling
-      const response = await fetch(`${process.env.REACT_APP_API_URL || ''}/api/admin/upload-logo`, {
-        method: 'POST',
-        headers: {
-          // ❌ DON'T include Content-Type for FormData - browser sets it automatically
-          Authorization: `Bearer ${localStorage.getItem('adminToken')}`
-        },
-        body: formData
-      });
-
-      // ✅ FIXED: Check if response is ok before parsing JSON
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Upload failed: ${response.status} - ${errorText}`);
-      }
-
-      const data = await response.json();
+      // ✅ FIXED: Use adminService instead of fetch
+      const data = await adminService.uploadTenantAsset(formData);
       
       if (data.success) {
         // ✅ FIXED: Update state properly
@@ -339,7 +294,7 @@ const SystemSettings = () => {
       }
     } catch (error) {
       console.error('❌ Error uploading file:', error);
-      alert(`❌ Failed to upload file: ${error.message}`);
+      alert(`❌ Failed to upload file: ${error.response?.data?.message || error.message}`);
     } finally {
       setIsUploadingFile(false);
     }
@@ -367,21 +322,8 @@ const SystemSettings = () => {
       setIsSaving(true);
       console.log('💾 Saving settings for tenant:', selectedTenant);
       
-      const response = await fetch(`${process.env.REACT_APP_API_URL || ''}/api/admin/tenant-settings/${selectedTenant}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('adminToken')}`
-        },
-        body: JSON.stringify(settings)
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Save failed: ${response.status} - ${errorText}`);
-      }
-
-      const data = await response.json();
+      // ✅ FIXED: Use adminService instead of fetch
+      const data = await adminService.updateTenantSettings(selectedTenant, settings);
       
       if (data.success) {
         alert('✅ Settings saved successfully!');
@@ -391,7 +333,7 @@ const SystemSettings = () => {
       }
     } catch (error) {
       console.error('❌ Error saving settings:', error);
-      alert(`❌ Failed to save settings: ${error.message}`);
+      alert(`❌ Failed to save settings: ${error.response?.data?.message || error.message}`);
     } finally {
       setIsSaving(false);
     }
@@ -770,7 +712,7 @@ const SystemSettings = () => {
                     </div>
                   </div>
 
-                  {/* HIRS Table - ✅ FIXED: Scrollable container */}
+                  {/* HIRS Table */}
                   <div className="hirs-table-container" style={{ 
                     overflowX: 'auto',
                     overflowY: 'auto',
