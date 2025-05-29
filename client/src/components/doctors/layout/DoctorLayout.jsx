@@ -12,7 +12,7 @@ import patientsIcon from '../../../assets/icons/UserManagement_Icon.svg';
 import journalIcon from '../../../assets/icons/JournalManagement_Icon.svg';
 import templatesIcon from '../../../assets/icons/JournalManagement_Icon.svg';
 import appointmentsIcon from '../../../assets/icons/appointment_icon.svg';
-import messageIcon from '../../../assets/icons/messages_icon.svggit '; // 🔄 CHANGED: Settings to Message icon
+import messageIcon from '../../../assets/icons/messages_icon.svg'; // 🔄 CHANGED: Settings to Message icon
 
 const DoctorLayout = () => {
   const navigate = useNavigate();
