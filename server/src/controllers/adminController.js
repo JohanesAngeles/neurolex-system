@@ -2612,18 +2612,23 @@ exports.updateIndividualTenantSetting = async (req, res) => {
 // ✅ ADD: Cloudinary upload method
 exports.uploadTenantLogo = async (req, res) => {
   try {
-    console.log('📤 [ADMIN] Upload called - responding immediately');
+    console.log('📤 [ADMIN] Upload tenant logo - JSON response guaranteed');
     
-    // Respond immediately to test
+    // Set JSON response headers first
+    res.setHeader('Content-Type', 'application/json');
+    
     return res.status(200).json({
       success: true,
-      message: 'Upload endpoint is working',
-      url: 'https://via.placeholder.com/300x200.png?text=Test+Upload',
-      publicId: 'test_upload_' + Date.now()
+      message: 'Upload endpoint working with proper JSON',
+      url: 'https://via.placeholder.com/400x300.png?text=Test+Logo+Upload',
+      publicId: 'test_upload_' + Date.now(),
+      uploadType: 'logo',
+      variant: 'light'
     });
     
   } catch (error) {
     console.error('❌ Upload error:', error);
+    res.setHeader('Content-Type', 'application/json');
     return res.status(500).json({
       success: false,
       message: 'Upload failed',
