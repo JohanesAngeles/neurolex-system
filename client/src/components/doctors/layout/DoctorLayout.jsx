@@ -193,24 +193,12 @@ const DoctorLayout = () => {
       {/* Left Sidebar - All styling moved to CSS */}
       <div className="doctor-sidebar">
         <div className="sidebar-header">
-          {/* Dynamic logo based on tenant settings */}
+          {/* ONLY THE LOGO - No platform name or clinic name */}
           <img 
             src={theme.systemLogo?.light || theme.logo || logoImage} 
-            alt={`${platformName} Logo`} 
+            alt="Logo" 
             className="doctor-logo" 
           />
-          
-          {/* Show dynamic platform name from tenant settings */}
-          <div className="platform-name">
-            {platformName}
-          </div>
-          
-          {/* Show tenant name if multi-tenant */}
-          {currentTenant && (
-            <div className="tenant-indicator">
-              {currentTenant.name}
-            </div>
-          )}
         </div>
         
         <div className="sidebar-menu">
@@ -266,11 +254,7 @@ const DoctorLayout = () => {
             <div className="doctor-details">
               <p className="doctor-name">{doctorInfo.name}</p>
               <p className="doctor-role">{doctorInfo.role}</p>
-              {currentTenant && (
-                <p className="doctor-clinic">
-                  {currentTenant.name}
-                </p>
-              )}
+              {/* REMOVED: clinic name text */}
             </div>
           </div>
           <button className="logout-button" onClick={handleLogout}>
@@ -281,27 +265,7 @@ const DoctorLayout = () => {
       
       {/* Main Content Area - All styling moved to CSS */}
       <div className="doctor-content">
-        {/* Dynamic tenant branding header */}
-        {currentTenant && (
-          <div className="content-header">
-            <div className="header-info">
-              <h4 className="header-title">
-                {platformName} - Medical Dashboard
-              </h4>
-              <p className="header-subtitle">
-                {currentTenant.name} | {doctorInfo.role}
-              </p>
-            </div>
-            
-            {/* Feature count indicator */}
-            <div className="header-stats">
-              <span className="feature-count">
-                {featureControl.getActiveFeatures().length} features active
-              </span>
-              <div className="status-dot"/>
-            </div>
-          </div>
-        )}
+        {/* REMOVED: Dynamic tenant branding header with platform name and clinic name */}
         
         <div className="doctor-content-container">
           <Outlet />
