@@ -1,4 +1,4 @@
-// client/src/pages/admin/settings.jsx - COMPLETE FIXED VERSION
+
 import React, { useState, useEffect, useCallback } from 'react';
 import adminService from '../../services/adminService';
 
@@ -264,41 +264,50 @@ const SystemSettings = () => {
 
   // ✅ FIXED: File upload function using adminService
   const handleFileUpload = async (field, file) => {
-    try {
-      setIsUploadingFile(true);
-      console.log(`📤 Uploading ${field} file:`, file.name);
-      
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('tenantId', selectedTenant);
-      formData.append('uploadType', field);
+  try {
+    setIsUploadingFile(true);
+    console.log(`📤 Uploading ${field} file:`, file.name);
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('tenantId', selectedTenant);
+    formData.append('uploadType', field);
 
-      // ✅ FIXED: Use adminService instead of fetch
-      const data = await adminService.uploadTenantAsset(formData);
+    // ✅ FIXED: Use direct fetch instead of adminService
+    const response = await fetch('/api/admin/upload-logo', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        // Don't set Content-Type for FormData - let browser set it
+      },
+      body: formData
+    });
+
+    const data = await response.json();
+    
+    if (data.success) {
+      // ✅ FIXED: Update state properly
+      setSettings(prev => ({
+        ...prev,
+        [field]: {
+          ...prev[field],
+          // Determine light/dark based on filename or user selection
+          [file.name.toLowerCase().includes('dark') ? 'dark' : 'light']: data.url
+        }
+      }));
       
-      if (data.success) {
-        // ✅ FIXED: Update state properly
-        setSettings(prev => ({
-          ...prev,
-          [field]: {
-            ...prev[field],
-            // Determine light/dark based on filename or user selection
-            [file.name.toLowerCase().includes('dark') ? 'dark' : 'light']: data.url || data.filePath
-          }
-        }));
-        
-        alert('✅ File uploaded successfully!');
-        console.log('✅ File uploaded:', data.url || data.filePath);
-      } else {
-        throw new Error(data.message || 'Upload failed');
-      }
-    } catch (error) {
-      console.error('❌ Error uploading file:', error);
-      alert(`❌ Failed to upload file: ${error.response?.data?.message || error.message}`);
-    } finally {
-      setIsUploadingFile(false);
+      alert('✅ File uploaded successfully!');
+      console.log('✅ File uploaded:', data.url);
+    } else {
+      throw new Error(data.message || 'Upload failed');
     }
-  };
+  } catch (error) {
+    console.error('❌ Error uploading file:', error);
+    alert(`❌ Failed to upload file: ${error.message}`);
+  } finally {
+    setIsUploadingFile(false);
+  }
+};
 
   const handleHirsToggle = (hirsId) => {
     setSettings(prev => ({
