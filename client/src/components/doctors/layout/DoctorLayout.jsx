@@ -369,16 +369,7 @@ const DoctorLayout = () => {
         </div>
         
         <div className="sidebar-footer">
-          {/* 🔄 UPDATED: Removed onClick handler - doctor info display only */}
-          <div className="doctor-info">
-            <div className="doctor-avatar">
-              <span>{doctorInfo.initials}</span>
-            </div>
-            <div className="doctor-details">
-              <p className="doctor-name">{doctorInfo.name}</p>
-              <p className="doctor-role">{doctorInfo.role}</p>
-            </div>
-          </div>
+          {/* 🔄 REMOVED: Doctor profile section completely removed - will be implemented later */}
           <button className="logout-button" onClick={handleLogout}>
             <span>Logout</span>
           </button>
