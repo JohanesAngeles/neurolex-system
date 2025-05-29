@@ -2612,20 +2612,21 @@ exports.updateIndividualTenantSetting = async (req, res) => {
 // ✅ ADD: Cloudinary upload method
 exports.uploadTenantLogo = async (req, res) => {
   try {
-    console.log('📤 [ADMIN] Safe upload test');
+    console.log('📤 [ADMIN] Upload called - responding immediately');
     
-    // Just return success for now to test
-    res.json({
+    // Respond immediately to test
+    return res.status(200).json({
       success: true,
-      message: 'Upload test - app not crashing',
-      url: 'https://via.placeholder.com/400x400.png?text=Test+Logo'
+      message: 'Upload endpoint is working',
+      url: 'https://via.placeholder.com/300x200.png?text=Test+Upload',
+      publicId: 'test_upload_' + Date.now()
     });
     
   } catch (error) {
-    console.error('❌ Safe upload error:', error.message);
-    res.status(500).json({
+    console.error('❌ Upload error:', error);
+    return res.status(500).json({
       success: false,
-      message: 'Safe error handling',
+      message: 'Upload failed',
       error: error.message
     });
   }
