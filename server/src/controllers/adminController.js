@@ -2612,65 +2612,149 @@ exports.updateIndividualTenantSetting = async (req, res) => {
 // ✅ ADD: Cloudinary upload method
 exports.uploadTenantLogo = async (req, res) => {
   try {
-    console.log('📤 [ADMIN] Safe upload with error handling');
+    console.log('📤 [ADMIN] Upload tenant logo - FIXED VERSION');
+    console.log('📋 Request details:', {
+      method: req.method,
+      contentType: req.headers['content-type'],
+      hasFile: !!req.file,
+      body: req.body,
+      params: req.params,
+      query: req.query
+    });
     
+    // Ensure JSON response
     res.setHeader('Content-Type', 'application/json');
     
-    const upload = multer({
-      storage: multer.memoryStorage(),
-      limits: { fileSize: 10 * 1024 * 1024 },
-      fileFilter: (req, file, cb) => {
-        if (file.mimetype.startsWith('image/')) {
-          cb(null, true);
-        } else {
-          cb(new Error('Only image files allowed'));
+    // Check if file was uploaded
+    if (!req.file) {
+      console.log('❌ No file in request');
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded. Please select an image file.',
+        error: 'NO_FILE'
+      });
+    }
+    
+    console.log('📁 File details:', {
+      fieldname: req.file.fieldname,
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      buffer: req.file.buffer ? 'Present' : 'Missing'
+    });
+    
+    // Validate file type
+    if (!req.file.mimetype.startsWith('image/')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid file type. Only image files are allowed.',
+        error: 'INVALID_FILE_TYPE'
+      });
+    }
+    
+    // Validate file size (10MB limit)
+    if (req.file.size > 10 * 1024 * 1024) {
+      return res.status(400).json({
+        success: false,
+        message: 'File too large. Maximum size is 10MB.',
+        error: 'FILE_TOO_LARGE'
+      });
+    }
+    
+    // Get upload parameters
+    const logoType = req.body.logoType || 'light'; // Default to light
+    const tenantId = req.body.tenantId || req.query.tenantId;
+    
+    console.log('🎯 Upload parameters:', {
+      logoType,
+      tenantId,
+      filename: req.file.originalname
+    });
+    
+    if (!tenantId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tenant ID is required',
+        error: 'NO_TENANT_ID'
+      });
+    }
+    
+    // For now, return a working response while you set up Cloudinary
+    const mockUrl = `https://via.placeholder.com/400x300.png?text=${encodeURIComponent(req.file.originalname)}`;
+    
+    console.log('✅ Upload successful (mock)');
+    
+    return res.status(200).json({
+      success: true,
+      message: 'File upload endpoint working - Ready for Cloudinary integration',
+      url: mockUrl,
+      publicId: `test_${tenantId}_${logoType}_${Date.now()}`,
+      uploadType: 'logo',
+      variant: logoType,
+      fileInfo: {
+        originalName: req.file.originalname,
+        size: req.file.size,
+        type: req.file.mimetype
+      },
+      note: 'This is a mock response. Configure Cloudinary credentials in your .env file to enable actual uploads.'
+    });
+    
+    // TODO: Replace the above mock response with actual Cloudinary upload
+    /*
+    const cloudinary = require('cloudinary').v2;
+    
+    // Configure Cloudinary (add to your .env file):
+    // CLOUDINARY_CLOUD_NAME=your_cloud_name
+    // CLOUDINARY_API_KEY=your_api_key
+    // CLOUDINARY_API_SECRET=your_api_secret
+    
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET
+    });
+    
+    // Upload to Cloudinary
+    const uploadResult = await new Promise((resolve, reject) => {
+      cloudinary.uploader.upload_stream(
+        {
+          folder: `tenants/${tenantId}/logos`,
+          public_id: `${logoType}_logo_${Date.now()}`,
+          resource_type: 'image',
+          format: 'png',
+          transformation: [
+            { width: 400, height: 300, crop: 'limit' },
+            { quality: 'auto' }
+          ]
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
         }
-      }
+      ).end(req.file.buffer);
     });
-
-    upload.single('file')(req, res, async (err) => {
-      if (err) {
-        return res.status(400).json({
-          success: false,
-          message: err.message
-        });
-      }
-
-      if (!req.file) {
-        return res.status(400).json({
-          success: false,
-          message: 'No file uploaded'
-        });
-      }
-
-      try {
-        // Return placeholder for now to prevent crashes
-        return res.status(200).json({
-          success: true,
-          message: 'Upload endpoint working - Cloudinary credentials need fixing',
-          url: 'https://via.placeholder.com/400x300.png?text=Upload+Working+' + req.file.originalname,
-          publicId: 'test_upload_' + Date.now(),
-          uploadType: 'logo',
-          variant: 'light'
-        });
-
-      } catch (cloudinaryError) {
-        console.error('❌ Cloudinary error (handled):', cloudinaryError);
-        return res.status(500).json({
-          success: false,
-          message: 'Cloudinary configuration error',
-          error: cloudinaryError.message
-        });
-      }
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Logo uploaded successfully',
+      url: uploadResult.secure_url,
+      publicId: uploadResult.public_id,
+      uploadType: 'logo',
+      variant: logoType
     });
-
+    */
+    
   } catch (error) {
-    console.error('❌ Upload error (handled):', error);
+    console.error('❌ Upload error:', error);
+    
+    // Ensure JSON response even on error
     res.setHeader('Content-Type', 'application/json');
+    
     return res.status(500).json({
       success: false,
       message: 'Upload failed',
-      error: error.message
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 };

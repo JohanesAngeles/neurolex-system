@@ -278,122 +278,135 @@ const SystemSettings = () => {
 
   // 🎯 COMPLETELY FIXED: File upload function with immediate preview
   const handleFileUpload = async (logoType, file) => {
-    if (!file) return;
-    
-    if (!selectedTenant) {
-      alert('Please select a clinic first');
-      return;
-    }
+  if (!file) return;
+  
+  if (!selectedTenant) {
+    alert('Please select a clinic first');
+    return;
+  }
 
-    try {
-      setIsUploadingFile(true);
-      console.log(`📤 Uploading ${logoType} file:`, {
-        name: file.name,
-        size: file.size,
-        type: file.type
-      });
-      
-      // Validate file before upload
-      if (!file.type.startsWith('image/')) {
-        throw new Error('Please select an image file');
-      }
-      
-      if (file.size > 10 * 1024 * 1024) { // 10MB limit
-        throw new Error('File size must be less than 10MB');
-      }
-      
-      const formData = new FormData();
-      formData.append('logo', file);
-      formData.append('logoType', logoType);
-      formData.append('tenantId', selectedTenant);
-      
-      console.log('🚀 Sending upload request...');
-      
-      const response = await fetch('/api/admin/upload-logo', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
-          // Don't set Content-Type for FormData - browser handles it
-        },
-        body: formData
-      });
-      
-      console.log('📥 Response status:', response.status);
-      
-      // Handle different response types
-      let data;
-      const contentType = response.headers.get('content-type');
-      
-      if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
-      } else {
-        // If we get HTML instead of JSON, it's an error
-        const text = await response.text();
-        console.error('❌ Received HTML instead of JSON:', text.substring(0, 200));
-        throw new Error('Server returned HTML instead of JSON. Check server logs.');
-      }
-      
+  try {
+    setIsUploadingFile(true);
+    console.log(`📤 Uploading ${logoType} file:`, {
+      name: file.name,
+      size: file.size,
+      type: file.type
+    });
+    
+    // Validate file before upload
+    if (!file.type.startsWith('image/')) {
+      throw new Error('Please select an image file');
+    }
+    
+    if (file.size > 10 * 1024 * 1024) { // 10MB limit
+      throw new Error('File size must be less than 10MB');
+    }
+    
+    // ✅ FIXED: Create FormData with correct field names
+    const formData = new FormData();
+    formData.append('logo', file);  // Match the multer.single('logo') configuration
+    formData.append('logoType', logoType);
+    formData.append('tenantId', selectedTenant);
+    
+    console.log('🚀 Sending upload request to /api/admin/upload-logo...');
+    console.log('📋 FormData contents:', {
+      logo: file.name,
+      logoType: logoType,
+      tenantId: selectedTenant
+    });
+    
+    const response = await fetch('/api/admin/upload-logo', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        // ✅ IMPORTANT: Don't set Content-Type for FormData - browser handles it automatically
+      },
+      body: formData
+    });
+    
+    console.log('📥 Response status:', response.status);
+    console.log('📥 Response headers:', {
+      contentType: response.headers.get('content-type'),
+      contentLength: response.headers.get('content-length')
+    });
+    
+    // ✅ FIXED: Better response handling
+    let data;
+    const contentType = response.headers.get('content-type');
+    
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
       console.log('📊 Upload response:', data);
+    } else {
+      // If we get HTML instead of JSON, it means there's a server error
+      const text = await response.text();
+      console.error('❌ Received non-JSON response:', text.substring(0, 500));
+      throw new Error(`Server error: Expected JSON but received ${contentType}. Check server logs.`);
+    }
+    
+    if (data.success && response.ok) {
+      console.log('✅ File uploaded successfully:', data.url);
       
-      if (data.success && response.ok) {
-        console.log('✅ File uploaded successfully:', data.url);
-        
-        // 🎯 IMMEDIATE UI UPDATE: Update preview URLs instantly
-        const variant = logoType === 'light' ? 'lightLogo' : 'darkLogo';
-        setPreviewUrls(prev => ({
-          ...prev,
-          [variant]: data.url
-        }));
-        
-        // 🎯 Update settings state
-        setSettings(prev => ({
-          ...prev,
+      // 🎯 IMMEDIATE UI UPDATE: Update preview URLs instantly
+      const variant = logoType === 'light' ? 'lightLogo' : 'darkLogo';
+      setPreviewUrls(prev => ({
+        ...prev,
+        [variant]: data.url
+      }));
+      
+      // 🎯 Update settings state
+      setSettings(prev => ({
+        ...prev,
+        systemLogo: {
+          ...prev.systemLogo,
+          [logoType]: data.url
+        }
+      }));
+      
+      // ✅ Show success message
+      alert('✅ File uploaded successfully!');
+      
+      // 🎯 Optional: Save to database immediately (if you want auto-save)
+      try {
+        const updateData = {
           systemLogo: {
-            ...prev.systemLogo,
+            ...settings.systemLogo,
             [logoType]: data.url
           }
-        }));
+        };
         
-        // ✅ Show success message
-        alert('✅ File uploaded successfully!');
-        
-        // 🎯 Save to database immediately
-        try {
-          const updateData = {
-            systemLogo: {
-              ...settings.systemLogo,
-              [logoType]: data.url
-            }
-          };
-          
-          await adminService.updateIndividualSetting(selectedTenant, updateData);
-          console.log('✅ Logo URL saved to database');
-        } catch (saveError) {
-          console.warn('⚠️ Upload successful but failed to save to database:', saveError);
-          // Don't show error to user since upload worked
+        const saveResult = await adminService.updateIndividualSetting(selectedTenant, updateData);
+        if (saveResult.success) {
+          console.log('✅ Logo URL saved to database automatically');
         }
-      } else {
-        throw new Error(data.message || 'Upload failed');
+      } catch (saveError) {
+        console.warn('⚠️ Upload successful but auto-save failed:', saveError);
+        // Don't show error to user since upload worked
       }
-      
-    } catch (error) {
-      console.error('❌ Error uploading file:', error);
-      
-      let errorMessage = 'Failed to upload file';
-      
-      if (error.message.includes('HTML instead of JSON')) {
-        errorMessage = 'Server configuration error. Please contact administrator.';
-      } else if (error.message.includes('Network')) {
-        errorMessage = 'Network error. Please check your connection.';
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      alert(`❌ Upload failed: ${errorMessage}`);
-    } finally {
-      setIsUploadingFile(false);
+    } else {
+      throw new Error(data.message || `Upload failed with status ${response.status}`);
     }
-  };
+    
+  } catch (error) {
+    console.error('❌ Error uploading file:', error);
+    
+    let errorMessage = 'Failed to upload file';
+    
+    if (error.message.includes('Expected JSON but received')) {
+      errorMessage = 'Server configuration error. Please contact administrator.';
+    } else if (error.message.includes('Failed to fetch')) {
+      errorMessage = 'Network error. Please check your connection and try again.';
+    } else if (error.message.includes('413')) {
+      errorMessage = 'File too large. Please choose a smaller image.';
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    alert(`❌ Upload failed: ${errorMessage}`);
+  } finally {
+    setIsUploadingFile(false);
+  }
+};
 
   const handleHirsToggle = (hirsId) => {
     setSettings(prev => ({
