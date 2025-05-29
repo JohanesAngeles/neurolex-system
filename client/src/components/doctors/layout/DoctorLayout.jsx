@@ -22,7 +22,7 @@ const DoctorLayout = () => {
   // Get tenant theme styles - this will now be dynamic from system settings
   const theme = getThemeStyles();
 
-  // Load current doctor info
+  // 🔧 FIXED: Load current doctor info ONLY ONCE
   useEffect(() => {
     const loadDoctorInfo = () => {
       try {
@@ -37,9 +37,9 @@ const DoctorLayout = () => {
     };
 
     loadDoctorInfo();
-  }, []);
+  }, []); // 🔧 EMPTY DEPENDENCY - RUNS ONLY ONCE
 
-  // Apply dynamic tenant styles to CSS variables when theme changes
+  // 🔧 FIXED: Apply CSS variables ONLY when specific theme properties change
   useEffect(() => {
     if (theme && typeof document !== 'undefined') {
       const root = document.documentElement;
@@ -50,80 +50,78 @@ const DoctorLayout = () => {
       root.style.setProperty('--tenant-primary-rgb', hexToRgb(theme.primaryColor || '#4CAF50'));
       root.style.setProperty('--tenant-secondary-rgb', hexToRgb(theme.secondaryColor || '#2196F3'));
     }
-  }, [theme]);
+  }, [theme?.primaryColor, theme?.secondaryColor]); // 🔧 SPECIFIC DEPENDENCIES ONLY
 
   // Helper function to convert hex to RGB for CSS variables
   const hexToRgb = (hex) => {
+    if (!hex) return '76, 175, 80';
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result 
       ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`
       : '76, 175, 80'; // Default green fallback
   };
 
-  // Define all possible menu items with feature mapping
-  const getAllMenuItems = () => [
-    { 
-      id: 'dashboard', 
-      label: 'Dashboard', 
-      path: '/doctor', 
-      icon: dashboardIcon,
-      feature: 'User Dashboard',
-      alwaysShow: true // Dashboard should always be available
-    },
-    { 
-      id: 'patients', 
-      label: 'Patients', 
-      path: '/doctor/patients', 
-      icon: patientsIcon,
-      feature: 'User Profiles' // Maps to User Profiles HIRS setting
-    },
-    { 
-      id: 'journal', 
-      label: 'Journal Entries', 
-      path: '/doctor/journal-entries', 
-      icon: journalIcon,
-      feature: 'Journal Entries'
-    },
-    { 
-      id: 'templates', 
-      label: 'Form Templates', 
-      path: '/doctor/form-templates', 
-      icon: templatesIcon,
-      feature: 'Journal Entries' // Templates are part of journal functionality
-    },
-    { 
-      id: 'appointments', 
-      label: 'Appointments', 
-      path: '/doctor/appointments', 
-      icon: appointmentsIcon,
-      feature: 'Care / Report' // Appointments are part of care management
-    },
-    { 
-      id: 'assessments', 
-      label: 'Mental Assessments', 
-      path: '/doctor/assessments', 
-      icon: dashboardIcon, // You can add a specific assessment icon
-      feature: 'Dr Mental Assessments'
-    },
-    { 
-      id: 'analytics', 
-      label: 'Analytics', 
-      path: '/doctor/analytics', 
-      icon: dashboardIcon, // You can add a specific analytics icon
-      feature: 'Data Analytics'
-    },
-    { 
-      id: 'settings', 
-      label: 'Settings', 
-      path: '/doctor/settings', 
-      icon: settingsIcon,
-      feature: 'Config'
-    }
-  ];
-
-  // Filter menu items based on tenant feature settings
-  const getFilteredMenuItems = () => {
-    const allItems = getAllMenuItems();
+  // 🔧 MEMOIZED: Define menu items to prevent recreation on every render
+  const menuItems = React.useMemo(() => {
+    const allItems = [
+      { 
+        id: 'dashboard', 
+        label: 'Dashboard', 
+        path: '/doctor', 
+        icon: dashboardIcon,
+        feature: 'User Dashboard',
+        alwaysShow: true // Dashboard should always be available
+      },
+      { 
+        id: 'patients', 
+        label: 'Patients', 
+        path: '/doctor/patients', 
+        icon: patientsIcon,
+        feature: 'User Profiles' // Maps to User Profiles HIRS setting
+      },
+      { 
+        id: 'journal', 
+        label: 'Journal Entries', 
+        path: '/doctor/journal-entries', 
+        icon: journalIcon,
+        feature: 'Journal Entries'
+      },
+      { 
+        id: 'templates', 
+        label: 'Form Templates', 
+        path: '/doctor/form-templates', 
+        icon: templatesIcon,
+        feature: 'Journal Entries' // Templates are part of journal functionality
+      },
+      { 
+        id: 'appointments', 
+        label: 'Appointments', 
+        path: '/doctor/appointments', 
+        icon: appointmentsIcon,
+        feature: 'Care / Report' // Appointments are part of care management
+      },
+      { 
+        id: 'assessments', 
+        label: 'Mental Assessments', 
+        path: '/doctor/assessments', 
+        icon: dashboardIcon, // You can add a specific assessment icon
+        feature: 'Dr Mental Assessments'
+      },
+      { 
+        id: 'analytics', 
+        label: 'Analytics', 
+        path: '/doctor/analytics', 
+        icon: dashboardIcon, // You can add a specific analytics icon
+        feature: 'Data Analytics'
+      },
+      { 
+        id: 'settings', 
+        label: 'Settings', 
+        path: '/doctor/settings', 
+        icon: settingsIcon,
+        feature: 'Config'
+      }
+    ];
     
     return allItems.filter(item => {
       // Always show dashboard and items marked as alwaysShow
@@ -132,11 +130,9 @@ const DoctorLayout = () => {
       }
       
       // Check if feature is enabled for this tenant
-      return featureControl.isFeatureEnabled(item.feature);
+      return featureControl.isFeatureEnabled && featureControl.isFeatureEnabled(item.feature);
     });
-  };
-
-  const menuItems = getFilteredMenuItems();
+  }, [featureControl]); // 🔧 MEMOIZED WITH SPECIFIC DEPENDENCY
 
   const handleLogout = () => {
     // Clear all stored data
@@ -151,8 +147,8 @@ const DoctorLayout = () => {
     navigate('/login');
   };
 
-  // Get doctor display info
-  const getDoctorDisplayInfo = () => {
+  // 🔧 MEMOIZED: Doctor info to prevent recalculation
+  const doctorInfo = React.useMemo(() => {
     if (currentUser) {
       return {
         name: `Dr. ${currentUser.firstName} ${currentUser.lastName}`,
@@ -166,9 +162,7 @@ const DoctorLayout = () => {
       role: 'Doctor',
       initials: 'DR'
     };
-  };
-
-  const doctorInfo = getDoctorDisplayInfo();
+  }, [currentUser]); // 🔧 MEMOIZED WITH SPECIFIC DEPENDENCY
 
   // Show loading state if tenant data is still loading
   if (isLoading) {
@@ -194,7 +188,7 @@ const DoctorLayout = () => {
       <div className="doctor-sidebar">
         <div className="sidebar-header">
           <img 
-            src={theme.systemLogo?.light || theme.logo || logoImage} 
+            src={theme?.systemLogo?.light || theme?.logo || logoImage} 
             alt="Logo" 
             className="doctor-logo" 
           />
@@ -213,7 +207,7 @@ const DoctorLayout = () => {
                   <span className="nav-label">{item.label}</span>
                   
                   {/* Show feature status indicator in development */}
-                  {process.env.NODE_ENV === 'development' && (
+                  {process.env.NODE_ENV === 'development' && featureControl.isFeatureEnabled && (
                     <span 
                       className={`feature-indicator ${featureControl.isFeatureEnabled(item.feature) ? 'enabled' : 'disabled'}`}
                       title={`Feature: ${item.feature} - ${featureControl.isFeatureEnabled(item.feature) ? 'Enabled' : 'Disabled'}`}
@@ -225,7 +219,7 @@ const DoctorLayout = () => {
           </ul>
 
           {/* Feature Status Panel (Development Only) */}
-          {process.env.NODE_ENV === 'development' && (
+          {process.env.NODE_ENV === 'development' && featureControl.getActiveFeatures && (
             <div className="dev-feature-status">
               <strong className="dev-title">🔧 Dev: Active Features</strong>
               <div className="feature-list">
@@ -246,6 +240,15 @@ const DoctorLayout = () => {
         </div>
         
         <div className="sidebar-footer">
+          <div className="doctor-info" onClick={() => navigate('/doctor/profile')}>
+            <div className="doctor-avatar">
+              <span>{doctorInfo.initials}</span>
+            </div>
+            <div className="doctor-details">
+              <p className="doctor-name">{doctorInfo.name}</p>
+              <p className="doctor-role">{doctorInfo.role}</p>
+            </div>
+          </div>
           <button className="logout-button" onClick={handleLogout}>
             <span>Logout</span>
           </button>
