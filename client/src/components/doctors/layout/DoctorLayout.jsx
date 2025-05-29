@@ -12,7 +12,7 @@ import patientsIcon from '../../../assets/icons/UserManagement_Icon.svg';
 import journalIcon from '../../../assets/icons/JournalManagement_Icon.svg';
 import templatesIcon from '../../../assets/icons/JournalManagement_Icon.svg';
 import appointmentsIcon from '../../../assets/icons/appointment_icon.svg';
-import settingsIcon from '../../../assets/icons/Settings_icon.svg';
+import messageIcon from '../../../assets/icons/message_icon.svg'; // 🔄 CHANGED: Settings to Message icon
 
 const DoctorLayout = () => {
   const navigate = useNavigate();
@@ -122,7 +122,7 @@ const DoctorLayout = () => {
       : '76, 175, 80'; // Default green fallback
   };
 
-  // 🔧 MEMOIZED: Define menu items to prevent recreation on every render
+  // 🔧 UPDATED: Only 6 navigation menu items as requested
   const menuItems = React.useMemo(() => {
     const allItems = [
       { 
@@ -131,67 +131,63 @@ const DoctorLayout = () => {
         path: '/doctor', 
         icon: dashboardIcon,
         feature: 'User Dashboard',
-        alwaysShow: true // Dashboard should always be available
+        alwaysShow: true, // Dashboard should always be available
+        implemented: true
       },
       { 
         id: 'patients', 
         label: 'Patients', 
         path: '/doctor/patients', 
         icon: patientsIcon,
-        feature: 'User Profiles' // Maps to User Profiles HIRS setting
+        feature: 'User Profiles',
+        implemented: true
       },
       { 
-        id: 'journal', 
-        label: 'Journal Entries', 
+        id: 'patient-journal', 
+        label: 'Patient Journal Management', 
         path: '/doctor/journal-entries', 
         icon: journalIcon,
-        feature: 'Journal Entries'
+        feature: 'Journal Entries',
+        implemented: true
       },
       { 
-        id: 'templates', 
-        label: 'Form Templates', 
+        id: 'journal-templates', 
+        label: 'Journal Template Management', 
         path: '/doctor/form-templates', 
         icon: templatesIcon,
-        feature: 'Journal Entries' // Templates are part of journal functionality
+        feature: 'Journal Entries', // Templates are part of journal functionality
+        implemented: true
       },
       { 
         id: 'appointments', 
         label: 'Appointments', 
         path: '/doctor/appointments', 
         icon: appointmentsIcon,
-        feature: 'Care / Report' // Appointments are part of care management
+        feature: 'Care / Report',
+        implemented: true
       },
       { 
-        id: 'assessments', 
-        label: 'Mental Assessments', 
-        path: '/doctor/assessments', 
-        icon: dashboardIcon, // You can add a specific assessment icon
-        feature: 'Dr Mental Assessments'
-      },
-      { 
-        id: 'analytics', 
-        label: 'Analytics', 
-        path: '/doctor/analytics', 
-        icon: dashboardIcon, // You can add a specific analytics icon
-        feature: 'Data Analytics'
-      },
-      { 
-        id: 'settings', 
-        label: 'Settings', 
-        path: '/doctor/settings', 
-        icon: settingsIcon,
-        feature: 'Config'
+        id: 'messages', 
+        label: 'Messages', 
+        path: '/doctor/messages', 
+        icon: messageIcon, // 🔄 FIXED: Now using proper message icon
+        feature: 'Notifications', // Map to notifications feature
+        implemented: false // Not yet implemented
       }
     ];
     
+    // Return only the 6 specified menu items
     return allItems.filter(item => {
       // Always show dashboard and items marked as alwaysShow
       if (item.alwaysShow) {
         return true;
       }
       
-      // Check if feature is enabled for this tenant
-      return featureControl.isFeatureEnabled && featureControl.isFeatureEnabled(item.feature);
+      // Show all 6 items regardless of implementation status for now
+      return true;
+      
+      // Later you can uncomment this to filter by feature control:
+      // return featureControl.isFeatureEnabled && featureControl.isFeatureEnabled(item.feature);
     });
   }, [featureControl]); // 🔧 MEMOIZED WITH SPECIFIC DEPENDENCY
 
@@ -208,7 +204,7 @@ const DoctorLayout = () => {
     navigate('/login');
   };
 
-  // 🔧 MEMOIZED: Doctor info to prevent recalculation
+  // 🔧 MEMOIZED: Doctor info to prevent recalculation (keeping for future use)
   const doctorInfo = React.useMemo(() => {
     if (currentUser) {
       return {
@@ -318,16 +314,26 @@ const DoctorLayout = () => {
                   to={item.path}
                   className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}
                   end={item.path === '/doctor'}
+                  style={{
+                    opacity: item.implemented ? 1 : 0.6 // Slightly fade unimplemented items
+                  }}
                 >
                   <img src={item.icon} alt={item.label} className="nav-icon" />
                   <span className="nav-label">{item.label}</span>
                   
-                  {/* Show feature status indicator in development */}
-                  {process.env.NODE_ENV === 'development' && featureControl.isFeatureEnabled && (
+                  {/* Show implementation status in development */}
+                  {process.env.NODE_ENV === 'development' && (
                     <span 
-                      className={`feature-indicator ${featureControl.isFeatureEnabled(item.feature) ? 'enabled' : 'disabled'}`}
-                      title={`Feature: ${item.feature} - ${featureControl.isFeatureEnabled(item.feature) ? 'Enabled' : 'Disabled'}`}
-                    />
+                      className={`implementation-indicator ${item.implemented ? 'implemented' : 'not-implemented'}`}
+                      title={`${item.label} - ${item.implemented ? 'Implemented' : 'Not Yet Implemented'}`}
+                      style={{
+                        marginLeft: '8px',
+                        fontSize: '10px',
+                        color: item.implemented ? '#4CAF50' : '#ff9800'
+                      }}
+                    >
+                      {item.implemented ? '✅' : '🚧'}
+                    </span>
                   )}
                 </NavLink>
               </li>
@@ -337,19 +343,20 @@ const DoctorLayout = () => {
           {/* Feature Status Panel (Development Only) */}
           {process.env.NODE_ENV === 'development' && featureControl.getActiveFeatures && (
             <div className="dev-feature-status">
-              <strong className="dev-title">🔧 Dev: Active Features</strong>
+              <strong className="dev-title">🔧 Dev: Menu Status</strong>
               <div className="feature-list">
-                {featureControl.getActiveFeatures().slice(0, 4).map(feature => (
-                  <div key={feature.id} className="feature-item">
-                    <span className="feature-dot active"/>
-                    <span className="feature-name">{feature.name}</span>
-                  </div>
-                ))}
-                {featureControl.getActiveFeatures().length > 4 && (
-                  <div className="feature-more">
-                    +{featureControl.getActiveFeatures().length - 4} more...
-                  </div>
-                )}
+                <div className="feature-item">
+                  <span className="feature-dot active"/>
+                  <span className="feature-name">6 Menu Items Active</span>
+                </div>
+                <div className="feature-item">
+                  <span className="feature-dot" style={{ backgroundColor: '#4CAF50' }}/>
+                  <span className="feature-name">5 Implemented</span>
+                </div>
+                <div className="feature-item">
+                  <span className="feature-dot" style={{ backgroundColor: '#ff9800' }}/>
+                  <span className="feature-name">1 Pending (Messages)</span>
+                </div>
               </div>
               
               {/* 🔄 NEW: Settings update indicator */}
