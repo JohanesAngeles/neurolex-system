@@ -2533,52 +2533,10 @@ exports.updateIndividualTenantSetting = async (req, res) => {
 exports.uploadTenantLogo = async (req, res) => {
   try {
     console.log('📤 [ADMIN] Upload tenant logo to Cloudinary');
-    console.log('Body:', req.body);
-
-    const { tenantId, uploadType, variant } = req.body;
-
-    if (!tenantId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Tenant ID is required'
-      });
-    }
-
-    // Validate tenantId format
-    if (!tenantId.match(/^[0-9a-fA-F]{24}$/)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid tenant ID format'
-      });
-    }
-
-    // Get master connection and check if tenant exists
-    const masterConn = getMasterConnection();
-    if (!masterConn) {
-      throw new Error('Failed to connect to master database');
-    }
-
-    const Tenant = masterConn.model('Tenant');
-    const existingTenant = await Tenant.findById(tenantId);
     
-    if (!existingTenant) {
-      return res.status(404).json({
-        success: false,
-        message: 'Tenant not found'
-      });
-    }
-
-    // Choose storage based on upload type
-    let storage;
-    if (uploadType === 'favicon') {
-      storage = faviconStorage(tenantId);
-    } else {
-      storage = logoStorage(tenantId); // Default to logo
-    }
-
-    // Create multer upload middleware
+    // ✅ FIXED: Create multer middleware FIRST, then get form data
     const upload = multer({
-      storage: storage,
+      storage: multer.memoryStorage(), // Use memory storage temporarily
       limits: {
         fileSize: 10 * 1024 * 1024 // 10MB limit
       },
@@ -2590,8 +2548,8 @@ exports.uploadTenantLogo = async (req, res) => {
         }
       }
     });
-    
-    // Use multer middleware
+
+    // Use multer middleware to process form data
     upload.single('file')(req, res, async (err) => {
       if (err) {
         console.error('❌ Multer error:', err);
@@ -2609,11 +2567,55 @@ exports.uploadTenantLogo = async (req, res) => {
       }
 
       try {
-        console.log('✅ File uploaded to Cloudinary:', req.file.path);
+        // ✅ FIXED: Now get form data AFTER multer processes it
+        const { tenantId, uploadType, variant } = req.body;
+        console.log('Form data:', { tenantId, uploadType, variant });
 
-        // Get Cloudinary URL and public ID
-        const cloudinaryUrl = req.file.path;
-        const publicId = req.file.filename;
+        if (!tenantId) {
+          return res.status(400).json({
+            success: false,
+            message: 'Tenant ID is required'
+          });
+        }
+
+        // Validate tenantId format
+        if (!tenantId.match(/^[0-9a-fA-F]{24}$/)) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid tenant ID format'
+          });
+        }
+
+        // Get master connection and check if tenant exists
+        const masterConn = getMasterConnection();
+        if (!masterConn) {
+          throw new Error('Failed to connect to master database');
+        }
+
+        const Tenant = masterConn.model('Tenant');
+        const existingTenant = await Tenant.findById(tenantId);
+        
+        if (!existingTenant) {
+          return res.status(404).json({
+            success: false,
+            message: 'Tenant not found'
+          });
+        }
+
+        // ✅ FIXED: Upload to Cloudinary directly
+        const { uploadToCloudinary } = require('../services/cloudinary');
+        
+        // Create upload options
+        const uploadOptions = {
+          folder: `tenants/${tenantId}/${uploadType || 'logos'}`,
+          public_id: `${uploadType || 'logo'}_${variant || 'light'}_${Date.now()}`,
+          overwrite: true,
+          resource_type: 'auto'
+        };
+
+        // Upload to Cloudinary
+        const result = await uploadToCloudinary(req.file.buffer, uploadOptions);
+        console.log('✅ File uploaded to Cloudinary:', result.secure_url);
 
         // Prepare update data for tenant
         const updateData = {
@@ -2628,20 +2630,20 @@ exports.uploadTenantLogo = async (req, res) => {
           
           if (isLight) {
             oldImageUrl = existingTenant.logoUrl;
-            updateData.logoUrl = cloudinaryUrl;
+            updateData.logoUrl = result.secure_url;
           } else {
             oldImageUrl = existingTenant.darkLogoUrl;
-            updateData.darkLogoUrl = cloudinaryUrl;
+            updateData.darkLogoUrl = result.secure_url;
           }
         } else if (uploadType === 'favicon') {
           const isLight = variant !== 'dark' && !req.file.originalname.toLowerCase().includes('dark');
           
           if (isLight) {
             oldImageUrl = existingTenant.faviconUrl;
-            updateData.faviconUrl = cloudinaryUrl;
+            updateData.faviconUrl = result.secure_url;
           } else {
             oldImageUrl = existingTenant.darkFaviconUrl;
-            updateData.darkFaviconUrl = cloudinaryUrl;
+            updateData.darkFaviconUrl = result.secure_url;
           }
         }
 
@@ -2659,6 +2661,7 @@ exports.uploadTenantLogo = async (req, res) => {
           
           // Delete old image from Cloudinary if it exists
           if (oldImageUrl && oldImageUrl.includes('cloudinary.com')) {
+            const { extractPublicId, deleteCloudinaryImage } = require('../services/cloudinary');
             const oldPublicId = extractPublicId(oldImageUrl);
             if (oldPublicId) {
               await deleteCloudinaryImage(oldPublicId);
@@ -2669,28 +2672,28 @@ exports.uploadTenantLogo = async (req, res) => {
         res.json({
           success: true,
           message: 'File uploaded successfully to Cloudinary',
-          url: cloudinaryUrl,
-          publicId: publicId,
+          url: result.secure_url,
+          publicId: result.public_id,
           uploadType: uploadType || 'logo',
           variant: variant || (req.file.originalname.toLowerCase().includes('dark') ? 'dark' : 'light'),
           tenantId
         });
 
-      } catch (updateError) {
-        console.error('❌ Error updating tenant after Cloudinary upload:', updateError);
+      } catch (uploadError) {
+        console.error('❌ Error uploading to Cloudinary:', uploadError);
         res.status(500).json({
           success: false,
-          message: 'File uploaded to Cloudinary but failed to update tenant record',
-          error: updateError.message
+          message: 'Failed to upload file to Cloudinary',
+          error: uploadError.message
         });
       }
     });
 
   } catch (error) {
-    console.error('❌ Error in upload tenant logo to Cloudinary:', error);
+    console.error('❌ Error in upload tenant logo:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to upload file to Cloudinary',
+      message: 'Failed to process upload request',
       error: error.message
     });
   }
