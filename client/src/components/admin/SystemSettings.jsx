@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import adminService from '../../services/adminService';
 
@@ -10,6 +9,12 @@ const SystemSettings = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
+  
+  // 🎯 NEW: Preview URLs state for immediate image display
+  const [previewUrls, setPreviewUrls] = useState({
+    lightLogo: '',
+    darkLogo: ''
+  });
   
   // Settings state - EMPTY by default, filled from API
   const [settings, setSettings] = useState({
@@ -190,7 +195,7 @@ const SystemSettings = () => {
       
       if (data.success) {
         // Use the fetched data, with fallbacks only if data is missing
-        setSettings({
+        const fetchedSettings = {
           platformName: data.data.platformName || 'NEUROLEX',
           platformDescription: data.data.platformDescription || 'Mental wellness platform',
           systemLogo: data.data.systemLogo || { light: null, dark: null },
@@ -198,7 +203,16 @@ const SystemSettings = () => {
           primaryColor: data.data.primaryColor || '#4CAF50',
           secondaryColor: data.data.secondaryColor || '#2196F3',
           hirsSettings: data.data.hirsSettings || []
+        };
+        
+        setSettings(fetchedSettings);
+        
+        // 🎯 Set preview URLs from existing data
+        setPreviewUrls({
+          lightLogo: fetchedSettings.systemLogo?.light || '',
+          darkLogo: fetchedSettings.systemLogo?.dark || ''
         });
+        
         console.log('✅ Settings loaded successfully');
       } else {
         console.error('❌ Failed to fetch settings:', data.message);
@@ -262,83 +276,93 @@ const SystemSettings = () => {
     }));
   };
 
-  // ✅ FIXED: File upload function using adminService
-  const handleFileUpload = async (field, file) => {
-  try {
-    setIsUploadingFile(true);
-    console.log(`📤 Uploading ${field} file:`, {
-      name: file.name,
-      size: file.size,
-      type: file.type
-    });
+  // 🎯 COMPLETELY FIXED: File upload function with immediate preview
+  const handleFileUpload = async (logoType, file) => {
+    if (!file) return;
     
-    // Validate file before upload
-    if (!file.type.startsWith('image/')) {
-      throw new Error('Please select an image file');
+    if (!selectedTenant) {
+      alert('Please select a clinic first');
+      return;
     }
-    
-    if (file.size > 10 * 1024 * 1024) { // 10MB limit
-      throw new Error('File size must be less than 10MB');
-    }
-    
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('tenantId', selectedTenant);
-    formData.append('uploadType', field);
-    
-    // Determine variant from filename
-    const variant = file.name.toLowerCase().includes('dark') ? 'dark' : 'light';
-    formData.append('variant', variant);
-    
-    console.log('🚀 Sending upload request...');
-    
-    const response = await fetch('/api/admin/upload-logo', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
-        // Don't set Content-Type for FormData - browser handles it
-      },
-      body: formData
-    });
-    
-    console.log('📥 Response status:', response.status);
-    console.log('📥 Response headers:', Object.fromEntries(response.headers.entries()));
-    
-    // Handle different response types
-    let data;
-    const contentType = response.headers.get('content-type');
-    
-    if (contentType && contentType.includes('application/json')) {
-      data = await response.json();
-    } else {
-      // If we get HTML instead of JSON, it's an error
-      const text = await response.text();
-      console.error('❌ Received HTML instead of JSON:', text.substring(0, 200));
-      throw new Error('Server returned HTML instead of JSON. Check server logs.');
-    }
-    
-    console.log('📊 Upload response:', data);
-    
-    if (data.success) {
-      // Update the settings state properly
-      setSettings(prev => ({
-        ...prev,
-        [field]: {
-          ...prev[field],
-          [data.variant || variant]: data.url
-        }
-      }));
+
+    try {
+      setIsUploadingFile(true);
+      console.log(`📤 Uploading ${logoType} file:`, {
+        name: file.name,
+        size: file.size,
+        type: file.type
+      });
       
-      console.log('✅ File uploaded successfully:', data.url);
-      alert('✅ File uploaded successfully!');
+      // Validate file before upload
+      if (!file.type.startsWith('image/')) {
+        throw new Error('Please select an image file');
+      }
       
-      // Optional: Save the updated logo URL to database immediately
-      if (data.url) {
+      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+        throw new Error('File size must be less than 10MB');
+      }
+      
+      const formData = new FormData();
+      formData.append('logo', file);
+      formData.append('logoType', logoType);
+      formData.append('tenantId', selectedTenant);
+      
+      console.log('🚀 Sending upload request...');
+      
+      const response = await fetch('/api/admin/upload-logo', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+          // Don't set Content-Type for FormData - browser handles it
+        },
+        body: formData
+      });
+      
+      console.log('📥 Response status:', response.status);
+      
+      // Handle different response types
+      let data;
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        // If we get HTML instead of JSON, it's an error
+        const text = await response.text();
+        console.error('❌ Received HTML instead of JSON:', text.substring(0, 200));
+        throw new Error('Server returned HTML instead of JSON. Check server logs.');
+      }
+      
+      console.log('📊 Upload response:', data);
+      
+      if (data.success && response.ok) {
+        console.log('✅ File uploaded successfully:', data.url);
+        
+        // 🎯 IMMEDIATE UI UPDATE: Update preview URLs instantly
+        const variant = logoType === 'light' ? 'lightLogo' : 'darkLogo';
+        setPreviewUrls(prev => ({
+          ...prev,
+          [variant]: data.url
+        }));
+        
+        // 🎯 Update settings state
+        setSettings(prev => ({
+          ...prev,
+          systemLogo: {
+            ...prev.systemLogo,
+            [logoType]: data.url
+          }
+        }));
+        
+        // ✅ Show success message
+        alert('✅ File uploaded successfully!');
+        
+        // 🎯 Save to database immediately
         try {
           const updateData = {
-            [field]: {
-              ...settings[field],
-              [data.variant || variant]: data.url
+            systemLogo: {
+              ...settings.systemLogo,
+              [logoType]: data.url
             }
           };
           
@@ -348,30 +372,28 @@ const SystemSettings = () => {
           console.warn('⚠️ Upload successful but failed to save to database:', saveError);
           // Don't show error to user since upload worked
         }
+      } else {
+        throw new Error(data.message || 'Upload failed');
       }
-    } else {
-      throw new Error(data.message || 'Upload failed');
+      
+    } catch (error) {
+      console.error('❌ Error uploading file:', error);
+      
+      let errorMessage = 'Failed to upload file';
+      
+      if (error.message.includes('HTML instead of JSON')) {
+        errorMessage = 'Server configuration error. Please contact administrator.';
+      } else if (error.message.includes('Network')) {
+        errorMessage = 'Network error. Please check your connection.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      alert(`❌ Upload failed: ${errorMessage}`);
+    } finally {
+      setIsUploadingFile(false);
     }
-    
-  } catch (error) {
-    console.error('❌ Error uploading file:', error);
-    
-    let errorMessage = 'Failed to upload file';
-    
-    if (error.message.includes('HTML instead of JSON')) {
-      errorMessage = 'Server configuration error. Please contact administrator.';
-    } else if (error.message.includes('Network')) {
-      errorMessage = 'Network error. Please check your connection.';
-    } else if (error.message) {
-      errorMessage = error.message;
-    }
-    
-    alert(`❌ Upload failed: ${errorMessage}`);
-  } finally {
-    setIsUploadingFile(false);
-  }
-};
-
+  };
 
   const handleHirsToggle = (hirsId) => {
     setSettings(prev => ({
@@ -613,7 +635,7 @@ const SystemSettings = () => {
                   </div>
                 </div>
 
-                {/* Logo Settings */}
+                {/* Logo Settings - FIXED */}
                 <div style={{ 
                   backgroundColor: 'white', 
                   padding: '24px', 
@@ -640,7 +662,7 @@ const SystemSettings = () => {
                     gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
                     gap: '24px' 
                   }}>
-                    {/* Light Logo */}
+                    {/* Light Logo - FIXED with preview */}
                     <div style={{ textAlign: 'center' }}>
                       <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '500' }}>
                         System Logo (Light)
@@ -654,16 +676,26 @@ const SystemSettings = () => {
                         alignItems: 'center',
                         justifyContent: 'center',
                         margin: '0 auto 16px auto',
-                        backgroundColor: '#f9f9f9'
+                        backgroundColor: '#f9f9f9',
+                        overflow: 'hidden'
                       }}>
-                        {settings.systemLogo?.light ? (
+                        {(previewUrls.lightLogo || settings.systemLogo?.light) ? (
                           <img 
-                            src={settings.systemLogo.light} 
+                            src={previewUrls.lightLogo || settings.systemLogo.light} 
                             alt="Light Logo" 
-                            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                            style={{ 
+                              maxWidth: '100%', 
+                              maxHeight: '100%', 
+                              objectFit: 'contain',
+                              borderRadius: '4px'
+                            }}
+                            onError={(e) => {
+                              console.warn('Light logo failed to load:', e.target.src);
+                              e.target.style.display = 'none';
+                            }}
                           />
                         ) : (
-                          <span style={{ fontSize: '48px' }}>🔗</span>
+                          <span style={{ fontSize: '48px', color: '#ccc' }}>🔗</span>
                         )}
                       </div>
                       <button 
@@ -686,12 +718,12 @@ const SystemSettings = () => {
                         id="light-logo-input"
                         type="file"
                         accept="image/*"
-                        onChange={(e) => e.target.files[0] && handleFileUpload('systemLogo', e.target.files[0])}
+                        onChange={(e) => e.target.files[0] && handleFileUpload('light', e.target.files[0])}
                         style={{ display: 'none' }}
                       />
                     </div>
 
-                    {/* Dark Logo */}
+                    {/* Dark Logo - FIXED with preview */}
                     <div style={{ textAlign: 'center' }}>
                       <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '500' }}>
                         System Logo (Dark)
@@ -705,16 +737,26 @@ const SystemSettings = () => {
                         alignItems: 'center',
                         justifyContent: 'center',
                         margin: '0 auto 16px auto',
-                        backgroundColor: '#2a2a2a'
+                        backgroundColor: '#2a2a2a',
+                        overflow: 'hidden'
                       }}>
-                        {settings.systemLogo?.dark ? (
+                        {(previewUrls.darkLogo || settings.systemLogo?.dark) ? (
                           <img 
-                            src={settings.systemLogo.dark} 
+                            src={previewUrls.darkLogo || settings.systemLogo.dark} 
                             alt="Dark Logo" 
-                            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                            style={{ 
+                              maxWidth: '100%', 
+                              maxHeight: '100%', 
+                              objectFit: 'contain',
+                              borderRadius: '4px'
+                            }}
+                            onError={(e) => {
+                              console.warn('Dark logo failed to load:', e.target.src);
+                              e.target.style.display = 'none';
+                            }}
                           />
                         ) : (
-                          <span style={{ fontSize: '48px', color: 'white' }}>🔗</span>
+                          <span style={{ fontSize: '48px', color: '#888' }}>🔗</span>
                         )}
                       </div>
                       <button 
@@ -737,7 +779,7 @@ const SystemSettings = () => {
                         id="dark-logo-input"
                         type="file"
                         accept="image/*"
-                        onChange={(e) => e.target.files[0] && handleFileUpload('systemLogo', e.target.files[0])}
+                        onChange={(e) => e.target.files[0] && handleFileUpload('dark', e.target.files[0])}
                         style={{ display: 'none' }}
                       />
                     </div>
