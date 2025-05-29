@@ -14,7 +14,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
 const multer = require('multer');
-const { logoStorage, faviconStorage, deleteCloudinaryImage, extractPublicId } = require('../services/cloudinary');
+const cloudinary = require('cloudinary').v2;
 
 
 // ===== PATIENT MANAGEMENT FUNCTIONS (NEW) =====
@@ -2609,8 +2609,6 @@ exports.updateIndividualTenantSetting = async (req, res) => {
   }
 };
 
-// ✅ ADD: Cloudinary upload method
-const cloudinary = require('cloudinary').v2;
 
 exports.uploadTenantLogo = async (req, res) => {
   try {
