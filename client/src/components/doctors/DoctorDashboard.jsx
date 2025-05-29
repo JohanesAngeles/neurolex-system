@@ -447,7 +447,6 @@ const DoctorDashboard = () => {
               <button 
                 className="month-nav-button view-toggle" 
                 onClick={toggleViewMode}
-                style={{ backgroundColor: theme.primaryColor, color: 'white' }}
               >
                 {isMonthView ? 'Week View' : 'Month View'}
               </button>
@@ -470,15 +469,11 @@ const DoctorDashboard = () => {
                     className={`month-day ${!day.isCurrentMonth ? 'other-month' : ''} 
                                 ${isToday(day.date) ? 'today' : ''} 
                                 ${hasAppointments(day.date) ? 'has-appointment' : ''}`}
-                    style={isToday(day.date) ? { borderColor: theme.primaryColor } : {}}
                   >
                     <div className="month-day-number">{day.number}</div>
                     {hasAppointments(day.date) && (
                       <div className="month-day-indicators">
-                        <div 
-                          className="day-appointment-dot"
-                          style={{ backgroundColor: theme.primaryColor }}
-                        ></div>
+                        <div className="day-appointment-dot"></div>
                       </div>
                     )}
                   </div>
@@ -492,7 +487,6 @@ const DoctorDashboard = () => {
                   key={`week-day-${index}`} 
                   className={`week-day ${hasAppointments(day.date) ? 'has-appointment' : ''} 
                               ${isToday(day.date) ? 'today' : ''}`}
-                  style={isToday(day.date) ? { borderColor: theme.primaryColor } : {}}
                 >
                   <div className="week-day-header">
                     <div className="day-name">{day.name}</div>
@@ -501,16 +495,10 @@ const DoctorDashboard = () => {
                   <div className="day-event-container">
                     {hasAppointments(day.date) && (
                       <>
-                        <div 
-                          className="appointment-indicator"
-                          style={{ backgroundColor: theme.primaryColor }}
-                        >
+                        <div className="appointment-indicator">
                           Appointment
                         </div>
-                        <div 
-                          className="review-indicator"
-                          style={{ backgroundColor: theme.secondaryColor }}
-                        >
+                        <div className="review-indicator">
                           Review Journal
                         </div>
                       </>
@@ -531,7 +519,7 @@ const DoctorDashboard = () => {
     
     if (feature && !isFeatureEnabled) {
       return (
-        <div className="stat-card disabled" onClick={onClick} style={{ opacity: 0.5, cursor: 'not-allowed' }}>
+        <div className="stat-card disabled" onClick={onClick}>
           <h3 className="stat-title">{title}</h3>
           <div className="stat-value">--</div>
           <div className="stat-subtitle">Feature Disabled</div>
@@ -540,16 +528,9 @@ const DoctorDashboard = () => {
     }
     
     return (
-      <div 
-        className="stat-card" 
-        onClick={onClick}
-        style={{ 
-          borderTop: `4px solid ${theme.primaryColor}`,
-          cursor: onClick ? 'pointer' : 'default'
-        }}
-      >
+      <div className="stat-card" onClick={onClick}>
         <h3 className="stat-title">{title}</h3>
-        <div className="stat-value" style={{ color: theme.primaryColor }}>{value}</div>
+        <div className="stat-value">{value}</div>
         <div className="stat-subtitle">{subtitle}</div>
       </div>
     );
@@ -561,7 +542,7 @@ const DoctorDashboard = () => {
       <FeatureWrapper feature="Care / Report" showMessage={true}>
         <div className="todays-appointments">
           <div className="today-appointment-header">
-            <h3 className="section-title" style={{ color: theme.primaryColor }}>
+            <h3 className="section-title">
               Today's Appointments
             </h3>
             <p className="appointments-count">
@@ -582,16 +563,16 @@ const DoctorDashboard = () => {
               return (
                 <div key={appointment.id || index} className="today-appointment-card">
                   <div className="today-appointment-patient">
-                    <div 
-                      className="patient-avatar"
-                      style={{ backgroundColor: theme.primaryColor }}
-                    >
+                    <div className="patient-avatar">
                       {appointment.patientName.charAt(0).toUpperCase()}
                     </div>
                     <div className="patient-info">
                       <h4 className="patient-name-label">{appointment.patientName}</h4>
                       <p className="patient-type-label">{appointment.appointmentType}</p>
-                      <div className="session-status" style={{ color: sessionStatus.color }}>
+                      <div 
+                        className="session-status" 
+                        data-status={sessionStatus.status.toLowerCase().replace(/\s+/g, '-')}
+                      >
                         🎥 {sessionStatus.status}
                       </div>
                     </div>
@@ -625,23 +606,11 @@ const DoctorDashboard = () => {
                       <button 
                         className={`join-meeting-button ${isActive ? 'active' : ''}`}
                         onClick={() => handleJoinMeeting(appointment)}
-                        style={{
-                          backgroundColor: isActive ? '#FF4444' : theme.primaryColor,
-                          marginRight: '8px'
-                        }}
                       >
                         {isActive ? '🔴 Join Now' : '📹 Join Meeting'}
                       </button>
                     ) : (
-                      <button 
-                        className="join-meeting-button disabled"
-                        style={{
-                          backgroundColor: '#ccc',
-                          marginRight: '8px',
-                          cursor: 'not-allowed'
-                        }}
-                        disabled
-                      >
+                      <button className="join-meeting-button disabled" disabled>
                         📹 No Meeting Link
                       </button>
                     )}
@@ -649,10 +618,6 @@ const DoctorDashboard = () => {
                     <button 
                       className="view-details-button"
                       onClick={() => navigate(`/doctor/appointments/${appointment.id}`)}
-                      style={{ 
-                        borderColor: theme.secondaryColor,
-                        color: theme.secondaryColor
-                      }}
                     >
                       View Details
                     </button>
@@ -663,7 +628,7 @@ const DoctorDashboard = () => {
           )}
           
           {todayAppointments.some(appt => appt.meetingLink) && (
-            <div className="meeting-instructions" style={{ borderLeft: `4px solid ${theme.primaryColor}` }}>
+            <div className="meeting-instructions">
               <h4>📋 {platformName} Video Session Instructions:</h4>
               <ul>
                 <li>• Click "Join Meeting" to start the video session</li>
@@ -681,7 +646,7 @@ const DoctorDashboard = () => {
   if (loading) {
     return (
       <div className="loading-container">
-        <div className="loading-spinner" style={{ color: theme.primaryColor }}>
+        <div className="loading-spinner">
           Loading {platformName} dashboard...
         </div>
       </div>
@@ -691,9 +656,9 @@ const DoctorDashboard = () => {
   return (
     <div className="dashboard-wrapper">
       {/* ✅ ENHANCED: Header with tenant branding */}
-      <div className="dashboard-header" style={{ borderBottom: `3px solid ${theme.primaryColor}` }}>
+      <div className="dashboard-header">
         <div className="welcome-message">
-          <h1 className="welcome-title" style={{ color: theme.primaryColor }}>
+          <h1 className="welcome-title">
             Welcome back, Dr. {doctorInfo.firstName} {doctorInfo.lastName}.
           </h1>
           <p className="welcome-subtitle">
@@ -703,16 +668,13 @@ const DoctorDashboard = () => {
         </div>
         <div className="header-actions">
           <FeatureWrapper feature="Config">
-            <button className="search-button" style={{ color: theme.primaryColor }}>🔍</button>
+            <button className="search-button">🔍</button>
           </FeatureWrapper>
           <FeatureWrapper feature="Notifications">
-            <button className="notification-button" style={{ color: theme.primaryColor }}>🔔</button>
+            <button className="notification-button">🔔</button>
           </FeatureWrapper>
           <div className="user-avatar">
-            <div 
-              className="avatar-placeholder"
-              style={{ backgroundColor: theme.primaryColor, color: 'white' }}
-            >
+            <div className="avatar-placeholder">
               {doctorInfo.firstName.charAt(0)}{doctorInfo.lastName.charAt(0)}
             </div>
           </div>
@@ -722,14 +684,14 @@ const DoctorDashboard = () => {
       {/* ✅ ENHANCED: Overview section with feature-based stats */}
       <div className="overview-section">
         <div className="section-header">
-          <h2 className="section-title" style={{ color: theme.primaryColor }}>
+          <h2 className="section-title">
             Patient and Appointment Overview
           </h2>
           <div className="timeframe-selector">
             <select 
               value={selectedTimeframe} 
               onChange={(e) => setSelectedTimeframe(e.target.value)}
-              style={{ borderColor: theme.primaryColor }}
+              className="timeframe-select"
             >
               <option value="This Week">This Week</option>
               <option value="This Month">This Month</option>
@@ -782,22 +744,11 @@ const DoctorDashboard = () => {
 
       {/* ✅ NEW: Feature Status Indicator (Development Mode) */}
       {process.env.NODE_ENV === 'development' && (
-        <div className="dev-feature-panel" style={{
-          position: 'fixed',
-          bottom: '20px',
-          right: '20px',
-          background: 'white',
-          padding: '15px',
-          borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-          borderLeft: `4px solid ${theme.primaryColor}`,
-          minWidth: '250px',
-          fontSize: '12px'
-        }}>
-          <h4 style={{ margin: '0 0 10px 0', color: theme.primaryColor }}>
+        <div className="dev-feature-panel">
+          <h4 className="dev-panel-title">
             🔧 Dev: Feature Status
           </h4>
-          <div style={{ display: 'grid', gap: '4px' }}>
+          <div className="dev-feature-list">
             {[
               { name: 'User Dashboard', feature: 'User Dashboard' },
               { name: 'User Profiles', feature: 'User Profiles' },
@@ -808,63 +759,26 @@ const DoctorDashboard = () => {
               { name: 'Data Analytics', feature: 'Data Analytics' },
               { name: 'Config', feature: 'Config' }
             ].map(({ name, feature }) => (
-              <div key={feature} style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '2px 0'
-              }}>
-                <div style={{
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  backgroundColor: featureControl.isFeatureEnabled(feature) ? '#4CAF50' : '#f44336'
-                }}/>
-                <span style={{
-                  color: featureControl.isFeatureEnabled(feature) ? '#333' : '#999'
-                }}>
+              <div key={feature} className="dev-feature-item">
+                <div className={`feature-status-dot ${featureControl.isFeatureEnabled(feature) ? 'enabled' : 'disabled'}`}/>
+                <span className={`feature-name ${featureControl.isFeatureEnabled(feature) ? 'enabled' : 'disabled'}`}>
                   {name}
                 </span>
               </div>
             ))}
           </div>
-          <div style={{ 
-            marginTop: '10px', 
-            paddingTop: '8px', 
-            borderTop: '1px solid #eee',
-            color: '#666',
-            fontSize: '10px'
-          }}>
+          <div className="dev-tenant-info">
             Tenant: {currentTenant?.name || 'Default'}
           </div>
         </div>
       )}
 
       {/* ✅ NEW: Quick Actions Panel (Feature-based) */}
-      <div className="quick-actions-panel" style={{
-        position: 'fixed',
-        bottom: '20px',
-        left: '20px',
-        display: 'flex',
-        gap: '10px',
-        flexDirection: 'column'
-      }}>
+      <div className="quick-actions-panel">
         <FeatureWrapper feature="Journal Entries">
           <button 
-            className="quick-action-btn"
+            className="quick-action-btn journal-entries"
             onClick={() => navigate('/doctor/journal-entries')}
-            style={{
-              backgroundColor: theme.primaryColor,
-              color: 'white',
-              border: 'none',
-              padding: '12px',
-              borderRadius: '50%',
-              width: '50px',
-              height: '50px',
-              cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-              fontSize: '18px'
-            }}
             title="Review Journal Entries"
           >
             📝
@@ -873,20 +787,8 @@ const DoctorDashboard = () => {
 
         <FeatureWrapper feature="User Profiles">
           <button 
-            className="quick-action-btn"
+            className="quick-action-btn user-profiles"
             onClick={() => navigate('/doctor/patients')}
-            style={{
-              backgroundColor: theme.secondaryColor,
-              color: 'white',
-              border: 'none',
-              padding: '12px',
-              borderRadius: '50%',
-              width: '50px',
-              height: '50px',
-              cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-              fontSize: '18px'
-            }}
             title="Manage Patients"
           >
             👥
@@ -895,20 +797,8 @@ const DoctorDashboard = () => {
 
         <FeatureWrapper feature="Dr Mental Assessments">
           <button 
-            className="quick-action-btn"
+            className="quick-action-btn mental-assessments"
             onClick={() => navigate('/doctor/assessments')}
-            style={{
-              backgroundColor: '#FF9800',
-              color: 'white',
-              border: 'none',
-              padding: '12px',
-              borderRadius: '50%',
-              width: '50px',
-              height: '50px',
-              cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-              fontSize: '18px'
-            }}
             title="Mental Assessments"
           >
             🧠
@@ -918,19 +808,7 @@ const DoctorDashboard = () => {
 
       {/* ✅ NEW: Feature Disabled Overlay (if too many features are disabled) */}
       {featureControl.getDisabledFeatures().length > 5 && (
-        <div className="feature-warning-banner" style={{
-          position: 'fixed',
-          top: '0',
-          left: '0',
-          right: '0',
-          backgroundColor: '#fff3cd',
-          borderBottom: '1px solid #ffeaa7',
-          padding: '10px 20px',
-          textAlign: 'center',
-          fontSize: '14px',
-          color: '#856404',
-          zIndex: 1000
-        }}>
+        <div className="feature-warning-banner">
           ⚠️ Multiple features have been disabled for your clinic. Contact your administrator to enable additional functionality.
         </div>
       )}
