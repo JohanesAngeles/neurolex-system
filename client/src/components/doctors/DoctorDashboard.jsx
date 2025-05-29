@@ -1,4 +1,4 @@
-// client/src/components/doctors/dashboard/DoctorDashboard.jsx - ENHANCED WITH DYNAMIC FEATURES
+// client/src/components/doctors/dashboard/DoctorDashboard.jsx - FIXED INFINITE LOOP
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFeatureControl } from '../../hooks/useFeatureControl';
@@ -103,7 +103,7 @@ const DoctorDashboard = () => {
 
   const getSessionStatus = (appointment) => {
     if (!appointment.meetingLink) return { status: 'No Meeting', color: '#666' };
-    if (!appointment.appointmentDate) return { status: 'Scheduled', color: theme.primaryColor };
+    if (!appointment.appointmentDate) return { status: 'Scheduled', color: theme?.primaryColor || '#4CAF50' };
     
     const appointmentTime = new Date(appointment.appointmentDate);
     const now = new Date();
@@ -114,7 +114,7 @@ const DoctorDashboard = () => {
     } else if (diffMinutes <= 15 && diffMinutes > 5) {
       return { status: 'Starting Soon', color: '#FF9800' };
     } else if (diffMinutes > 15) {
-      return { status: 'Scheduled', color: theme.primaryColor };
+      return { status: 'Scheduled', color: theme?.primaryColor || '#4CAF50' };
     } else {
       return { status: 'Ended', color: '#666' };
     }
@@ -158,6 +158,7 @@ const DoctorDashboard = () => {
     }));
   };
 
+  // 🔧 FIXED: useEffect with proper dependencies to prevent infinite loop
   useEffect(() => {
     // ✅ ENHANCED: Fetch dashboard data with feature-based filtering
     const fetchDashboardData = async () => {
@@ -181,7 +182,7 @@ const DoctorDashboard = () => {
         }
         
         // ✅ ENHANCED: Fetch appointments only if Care/Report feature is enabled
-        if (featureControl.isFeatureEnabled('Care / Report')) {
+        if (featureControl.isFeatureEnabled && featureControl.isFeatureEnabled('Care / Report')) {
           try {
             console.log('🔍 Fetching appointments (feature enabled)...');
             const appointmentsResponse = await doctorService.getAppointments();
@@ -216,7 +217,7 @@ const DoctorDashboard = () => {
         }
         
         // ✅ ENHANCED: Fetch patients only if User Profiles feature is enabled
-        if (featureControl.isFeatureEnabled('User Profiles')) {
+        if (featureControl.isFeatureEnabled && featureControl.isFeatureEnabled('User Profiles')) {
           try {
             const patientsResponse = await doctorService.getPatients();
             const patients = patientsResponse.data || patientsResponse.patients || [];
@@ -237,7 +238,7 @@ const DoctorDashboard = () => {
         }
         
         // ✅ ENHANCED: Fetch journal entries only if Journal Entries feature is enabled
-        if (featureControl.isFeatureEnabled('Journal Entries')) {
+        if (featureControl.isFeatureEnabled && featureControl.isFeatureEnabled('Journal Entries')) {
           try {
             const entriesResponse = await doctorService.getJournalEntries({
               analyzed: 'unanalyzed',
@@ -262,7 +263,7 @@ const DoctorDashboard = () => {
         }
         
         // ✅ ENHANCED: Messages only if Notifications feature is enabled
-        if (featureControl.isFeatureEnabled('Notifications')) {
+        if (featureControl.isFeatureEnabled && featureControl.isFeatureEnabled('Notifications')) {
           // Implement message fetching when ready
           setStats(prevStats => ({ ...prevStats, newMessages: 0 }));
         } else {
@@ -287,8 +288,11 @@ const DoctorDashboard = () => {
       }
     };
     
-    fetchDashboardData();
-  }, [featureControl]); // Re-fetch when feature control changes
+    // 🔧 CRITICAL FIX: Only fetch data once when component mounts
+    if (featureControl.isFeatureEnabled) {
+      fetchDashboardData();
+    }
+  }, []); // 🔧 EMPTY DEPENDENCY ARRAY - RUNS ONLY ONCE!
 
   // Keep existing calendar functions unchanged
   const [calendarState, setCalendarState] = useState({
@@ -515,7 +519,7 @@ const DoctorDashboard = () => {
 
   // ✅ ENHANCED: StatCard with feature-based styling and conditional rendering
   const StatCard = ({ title, value, subtitle, feature, onClick }) => {
-    const isFeatureEnabled = feature ? featureControl.isFeatureEnabled(feature) : true;
+    const isFeatureEnabled = feature ? (featureControl.isFeatureEnabled && featureControl.isFeatureEnabled(feature)) : true;
     
     if (feature && !isFeatureEnabled) {
       return (
@@ -706,28 +710,28 @@ const DoctorDashboard = () => {
             value={stats.totalPatients}
             subtitle="Patients in Your Care"
             feature="User Profiles"
-            onClick={() => featureControl.isFeatureEnabled('User Profiles') && navigate('/doctor/patients')}
+            onClick={() => featureControl.isFeatureEnabled && featureControl.isFeatureEnabled('User Profiles') && navigate('/doctor/patients')}
           />
           <StatCard
             title="Total Appointments"
             value={stats.totalAppointments}
             subtitle="All Scheduled Sessions"
             feature="Care / Report"
-            onClick={() => featureControl.isFeatureEnabled('Care / Report') && navigate('/doctor/appointments')}
+            onClick={() => featureControl.isFeatureEnabled && featureControl.isFeatureEnabled('Care / Report') && navigate('/doctor/appointments')}
           />
           <StatCard
             title="Pending Review"
             value={stats.pendingEntries}
             subtitle="Journal Entries to Review"
             feature="Journal Entries"
-            onClick={() => featureControl.isFeatureEnabled('Journal Entries') && navigate('/doctor/journal-entries')}
+            onClick={() => featureControl.isFeatureEnabled && featureControl.isFeatureEnabled('Journal Entries') && navigate('/doctor/journal-entries')}
           />
           <StatCard
             title="Messages"
             value={stats.newMessages}
             subtitle="New Messages"
             feature="Notifications"
-            onClick={() => featureControl.isFeatureEnabled('Notifications') && navigate('/doctor/messages')}
+            onClick={() => featureControl.isFeatureEnabled && featureControl.isFeatureEnabled('Notifications') && navigate('/doctor/messages')}
           />
         </div>
       </div>
@@ -743,7 +747,7 @@ const DoctorDashboard = () => {
       </div>
 
       {/* ✅ NEW: Feature Status Indicator (Development Mode) */}
-      {process.env.NODE_ENV === 'development' && (
+      {process.env.NODE_ENV === 'development' && featureControl.getActiveFeatures && (
         <div className="dev-feature-panel">
           <h4 className="dev-panel-title">
             🔧 Dev: Feature Status
@@ -760,8 +764,8 @@ const DoctorDashboard = () => {
               { name: 'Config', feature: 'Config' }
             ].map(({ name, feature }) => (
               <div key={feature} className="dev-feature-item">
-                <div className={`feature-status-dot ${featureControl.isFeatureEnabled(feature) ? 'enabled' : 'disabled'}`}/>
-                <span className={`feature-name ${featureControl.isFeatureEnabled(feature) ? 'enabled' : 'disabled'}`}>
+                <div className={`feature-status-dot ${featureControl.isFeatureEnabled && featureControl.isFeatureEnabled(feature) ? 'enabled' : 'disabled'}`}/>
+                <span className={`feature-name ${featureControl.isFeatureEnabled && featureControl.isFeatureEnabled(feature) ? 'enabled' : 'disabled'}`}>
                   {name}
                 </span>
               </div>
@@ -807,7 +811,7 @@ const DoctorDashboard = () => {
       </div>
 
       {/* ✅ NEW: Feature Disabled Overlay (if too many features are disabled) */}
-      {featureControl.getDisabledFeatures().length > 5 && (
+      {featureControl.getDisabledFeatures && featureControl.getDisabledFeatures().length > 5 && (
         <div className="feature-warning-banner">
           ⚠️ Multiple features have been disabled for your clinic. Contact your administrator to enable additional functionality.
         </div>
