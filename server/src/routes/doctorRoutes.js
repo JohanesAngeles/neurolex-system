@@ -1,21 +1,24 @@
-// server/src/routes/doctorRoutes.js - COMPLETE VERSION WITH BILLING ROUTES
+// server/src/routes/doctorRoutes.js - 
 const express = require('express');
 const router = express.Router();
 const doctorController = require('../controllers/doctorController');
 const journalController = require('../controllers/journalController');
-const billingController = require('../controllers/billingController'); // ✅ ADDED - This was missing!
+const billingController = require('../controllers/billingController');
 const { protect, restrictTo } = require('../middleware/auth');
 const tenantMiddleware = require('../middleware/tenantMiddleware');
 const multer = require('multer');
 
-console.log('Loading complete doctor routes with billing functionality...');
+
+console.log('Loading complete fixed doctor routes...');
+
 
 // Configure multer for file uploads
 const storage = multer.memoryStorage();
-const upload = multer({ 
+const upload = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 }
 });
+
 
 const doctorUploadFields = upload.fields([
   { name: 'licenseDocument', maxCount: 1 },
@@ -23,10 +26,10 @@ const doctorUploadFields = upload.fields([
   { name: 'certifications', maxCount: 5 }
 ]);
 
-// Configure multer for QR code uploads - ✅ ADDED
+
 const qrUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
@@ -36,75 +39,86 @@ const qrUpload = multer({
   }
 });
 
+
 // Test route
 router.get('/test', (req, res) => {
-  res.json({ 
-    success: true, 
+  res.json({
+    success: true,
     message: 'Doctor routes working',
     timestamp: new Date()
   });
 });
 
-// Public routes - no authentication required
+
+// ===== PUBLIC ROUTES - No authentication required =====
 router.post('/register', doctorUploadFields, doctorController.register);
+router.post('/login', doctorController.login);
 router.get('/verification-status/:id', doctorController.getVerificationStatus);
 
-// Get available doctors - SIMPLIFIED VERSION
-router.get('/available', async (req, res, next) => {
-  try {
-    console.log('Available doctors route called');
-    const { tenantId } = req.query;
-    
-    if (tenantId) {
-      const dbManager = require('../utils/dbManager');
-      const connection = await dbManager.connectTenant(tenantId);
-      
-      if (connection) {
-        const User = connection.model('User');
-        const doctors = await User.find({ 
-          role: 'doctor', 
-          verificationStatus: 'approved' 
-        })
-        .select('firstName lastName specialty profilePicture consultationFee')
-        .lean();
-        
-        return res.status(200).json({
-          success: true,
-          data: doctors,
-          source: 'tenant'
-        });
-      }
-    }
-    
-    // Fallback to controller
-    next();
-  } catch (error) {
-    console.error('Available doctors error:', error);
-    next();
-  }
-}, doctorController.getAvailableDoctors);
 
-// Apply base middleware for authenticated routes
+// ===== AUTHENTICATED ROUTES - But accessible by both patients and doctors =====
+// Apply authentication but NO role restriction yet
 router.use(protect);
 router.use(tenantMiddleware);
 
-// Mixed access routes (both patients and doctors can access)
-router.get('/profile/:id', doctorController.getDoctorProfile);
+
+// CRITICAL FIX: These endpoints need to be accessible by PATIENTS
+// Get available doctors - patients need this to browse doctors
+router.get('/available', doctorController.getAvailableDoctors);
+
+
+// Get doctor list - patients need this to see all doctors
+router.get('/list', doctorController.getDoctorList);
+
+
+// Connect with doctor - patients need this to connect
 router.post('/connect', doctorController.connectWithDoctor);
+
+
+// Get doctor profiles - patients need this to view doctor info
+router.get('/profile/:id', doctorController.getDoctorProfile);
 router.get('/profile-by-id/:id', doctorController.getDoctorProfileById);
+
+
+// Get connected doctors for current user - patients need this
+router.get('/connected', doctorController.getConnectedDoctors);
+
+
+// Get current doctor for user - patients need this
+router.get('/current', doctorController.getCurrentDoctorForUser);
+
+
+// Get doctor payment methods - patients need this for payments
 router.get('/payment-methods/:doctorId', doctorController.getDoctorPaymentMethods);
+
+
+// Get specific patient - Allow both doctors and patients (with proper access control in controller)
 router.get('/patients/:id', doctorController.getPatient);
 
-// Apply doctor role restriction for routes below
+
+// Schedule appointment - patients need this
+router.post('/schedule', doctorController.scheduleAppointment);
+
+
+// ===== DOCTOR-ONLY ROUTES - Apply doctor role restriction =====
+// Everything below this line requires doctor role
 router.use(restrictTo('doctor'));
 
-// Doctor-only routes
+
+console.log('Applying doctor role restriction to routes below...');
+
+
+// Doctor's own profile and dashboard
 router.get('/profile', doctorController.getCurrentDoctorProfile);
 router.get('/dashboard/stats', doctorController.getDashboardStats);
+
+
+// Patient management for doctors
 router.get('/patients', doctorController.getPatients);
 router.post('/assign-template', doctorController.assignTemplate);
 
-// Templates
+
+// Templates - doctor only
 router.get('/templates', doctorController.getTemplates);
 router.get('/templates/:id', doctorController.getTemplate);
 router.post('/templates', doctorController.createTemplate);
@@ -112,21 +126,23 @@ router.put('/templates/:id', doctorController.updateTemplate);
 router.delete('/templates/:id', doctorController.deleteTemplate);
 router.post('/templates/assign/:id', doctorController.assignTemplate);
 
-// Journal entries routes
+
+// Journal entries routes - doctor only
 router.get('/journal-entries', journalController.getDoctorJournalEntries || doctorController.getJournalEntries);
 router.get('/journal-entries/:id', journalController.getDoctorJournalEntry || doctorController.getJournalEntry);
 router.post('/journal-entries/analyze/:id', journalController.analyzeJournalEntry || doctorController.analyzeJournalEntry);
 router.post('/journal-entries/notes/:id', journalController.addDoctorNoteToJournalEntry || doctorController.addNoteToJournalEntry);
 
-// Simplified appointment routes for doctors
+
+// Appointments for doctors
 router.get('/appointments', async (req, res) => {
   try {
     const Appointment = req.tenantConnection ? req.tenantConnection.model('Appointment') : require('../models/Appointment');
-    
+   
     const appointments = await Appointment.find({ doctor: req.user.id })
       .populate('patient', 'firstName lastName email profilePicture')
       .sort({ appointmentDate: 1 });
-    
+   
     res.status(200).json({
       success: true,
       data: appointments
@@ -141,17 +157,18 @@ router.get('/appointments', async (req, res) => {
   }
 });
 
+
 router.get('/appointments/pending', async (req, res) => {
   try {
     const Appointment = req.tenantConnection ? req.tenantConnection.model('Appointment') : require('../models/Appointment');
-    
-    const appointments = await Appointment.find({ 
-      doctor: req.user.id, 
-      status: 'Pending' 
+   
+    const appointments = await Appointment.find({
+      doctor: req.user.id,
+      status: 'Pending'
     })
     .populate('patient', 'firstName lastName email profilePicture')
     .sort({ createdAt: -1 });
-    
+   
     res.status(200).json({
       success: true,
       data: appointments
@@ -166,21 +183,20 @@ router.get('/appointments/pending', async (req, res) => {
   }
 });
 
-// ============================================================================
-// BILLING ROUTES - THESE WERE COMPLETELY MISSING FROM YOUR FILE!
-// ============================================================================
-console.log('Adding billing routes...');
 
-// Payment Methods Management
+// ===== BILLING ROUTES - Doctor only =====
+console.log('Adding billing routes for doctors...');
+
+
 router.get('/billing/payment-methods', billingController.getPaymentMethods);
 router.put('/billing/payment-methods', billingController.updatePaymentMethods);
 router.post('/billing/upload-qr', qrUpload.single('qrCode'), billingController.uploadQRCode);
 
-// Bank Accounts Management
+
 router.post('/billing/bank-accounts', billingController.addBankAccount);
 router.delete('/billing/bank-accounts/:accountId', billingController.removeBankAccount);
 
-// Billing Records Management
+
 router.get('/billing', billingController.getBillingRecords);
 router.get('/billing/stats', billingController.getBillingStats);
 router.get('/billing/report', billingController.generateBillingReport);
@@ -189,12 +205,8 @@ router.post('/billing', billingController.createBillingRecord);
 router.put('/billing/:billingId/status', billingController.updateBillingStatus);
 router.put('/billing/:billingId/mark-paid', billingController.markAsPaid);
 
-console.log('Billing routes added successfully');
 
-// ============================================================================
-// END OF BILLING ROUTES
-// ============================================================================
+console.log('Complete fixed doctor routes loaded successfully');
 
-console.log('Complete doctor routes with billing functionality loaded successfully');
 
 module.exports = router;
