@@ -9,7 +9,7 @@ import '../../../styles/components/doctor/DoctorLayout.css';
 import logoImage from '../../../assets/images/Neurolex_Logo_New.png';
 import dashboardIcon from '../../../assets/icons/dashboard_icon.svg';
 import patientsIcon from '../../../assets/icons/UserManagement_Icon.svg';
-import journalIcon from '../../../assets/icons/JournalManagement_Icon.svg';
+import journalIcon from '../../../assets/icons/journal_icon.svg';
 import templatesIcon from '../../../assets/icons/JournalManagement_Icon.svg';
 import appointmentsIcon from '../../../assets/icons/appointment_icon.svg';
 import messageIcon from '../../../assets/icons/messages_icon.svg'; // 🔄 CHANGED: Settings to Message icon
