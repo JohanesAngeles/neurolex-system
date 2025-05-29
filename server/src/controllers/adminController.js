@@ -2610,9 +2610,12 @@ exports.updateIndividualTenantSetting = async (req, res) => {
 };
 
 // ✅ ADD: Cloudinary upload method
+const cloudinary = require('cloudinary').v2;
+
+// ✅ REAL CLOUDINARY UPLOAD: Replace the mock version
 exports.uploadTenantLogo = async (req, res) => {
   try {
-    console.log('📤 [ADMIN] Upload tenant logo - FIXED VERSION');
+    console.log('📤 [ADMIN] Real Cloudinary upload started');
     console.log('📋 Request details:', {
       method: req.method,
       contentType: req.headers['content-type'],
@@ -2679,73 +2682,120 @@ exports.uploadTenantLogo = async (req, res) => {
       });
     }
     
-    // For now, return a working response while you set up Cloudinary
-    const mockUrl = `https://via.placeholder.com/400x300.png?text=${encodeURIComponent(req.file.originalname)}`;
-    
-    console.log('✅ Upload successful (mock)');
-    
-    return res.status(200).json({
-      success: true,
-      message: 'File upload endpoint working - Ready for Cloudinary integration',
-      url: mockUrl,
-      publicId: `test_${tenantId}_${logoType}_${Date.now()}`,
-      uploadType: 'logo',
-      variant: logoType,
-      fileInfo: {
-        originalName: req.file.originalname,
-        size: req.file.size,
-        type: req.file.mimetype
-      },
-      note: 'This is a mock response. Configure Cloudinary credentials in your .env file to enable actual uploads.'
-    });
-    
-    // TODO: Replace the above mock response with actual Cloudinary upload
-    /*
-    const cloudinary = require('cloudinary').v2;
-    
-    // Configure Cloudinary (add to your .env file):
-    // CLOUDINARY_CLOUD_NAME=your_cloud_name
-    // CLOUDINARY_API_KEY=your_api_key
-    // CLOUDINARY_API_SECRET=your_api_secret
-    
+    // ✅ CONFIGURE CLOUDINARY - Use your credentials
     cloudinary.config({
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dm7gxemt1', // Your cloud name from the images
       api_key: process.env.CLOUDINARY_API_KEY,
       api_secret: process.env.CLOUDINARY_API_SECRET
     });
     
-    // Upload to Cloudinary
-    const uploadResult = await new Promise((resolve, reject) => {
-      cloudinary.uploader.upload_stream(
-        {
-          folder: `tenants/${tenantId}/logos`,
-          public_id: `${logoType}_logo_${Date.now()}`,
-          resource_type: 'image',
-          format: 'png',
-          transformation: [
-            { width: 400, height: 300, crop: 'limit' },
-            { quality: 'auto' }
-          ]
-        },
-        (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
-        }
-      ).end(req.file.buffer);
+    console.log('☁️ Cloudinary config:', {
+      cloud_name: cloudinary.config().cloud_name,
+      api_key: cloudinary.config().api_key ? 'SET' : 'NOT SET',
+      api_secret: cloudinary.config().api_secret ? 'SET' : 'NOT SET'
     });
     
-    return res.status(200).json({
-      success: true,
-      message: 'Logo uploaded successfully',
-      url: uploadResult.secure_url,
-      publicId: uploadResult.public_id,
-      uploadType: 'logo',
-      variant: logoType
-    });
-    */
+    // Check if Cloudinary credentials are configured
+    if (!process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+      console.warn('⚠️ Cloudinary credentials not found in environment variables');
+      return res.status(500).json({
+        success: false,
+        message: 'Cloudinary not configured. Please add CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET to your .env file.',
+        error: 'CLOUDINARY_NOT_CONFIGURED',
+        helpText: 'Go to your Cloudinary dashboard > Settings > API Keys to get your credentials'
+      });
+    }
+    
+    try {
+      console.log('🚀 Uploading to Cloudinary...');
+      
+      // ✅ REAL CLOUDINARY UPLOAD
+      const uploadResult = await new Promise((resolve, reject) => {
+        cloudinary.uploader.upload_stream(
+          {
+            folder: `neurolex/tenants/${tenantId}/logos`, // Organized folder structure
+            public_id: `${logoType}_logo_${Date.now()}`, // Unique filename
+            resource_type: 'image',
+            format: 'png', // Convert to PNG for consistency
+            transformation: [
+              { width: 800, height: 600, crop: 'limit' }, // Resize if too large
+              { quality: 'auto:good' }, // Optimize quality
+              { fetch_format: 'auto' } // Auto format selection
+            ],
+            // Additional options
+            overwrite: true, // Allow overwriting
+            invalidate: true, // Invalidate CDN cache
+            use_filename: false, // Don't use original filename
+            unique_filename: true // Ensure unique filenames
+          },
+          (error, result) => {
+            if (error) {
+              console.error('❌ Cloudinary upload error:', error);
+              reject(error);
+            } else {
+              console.log('✅ Cloudinary upload success:', {
+                public_id: result.public_id,
+                secure_url: result.secure_url,
+                format: result.format,
+                bytes: result.bytes
+              });
+              resolve(result);
+            }
+          }
+        ).end(req.file.buffer);
+      });
+      
+      console.log('🎉 Upload completed successfully!');
+      
+      // ✅ RETURN REAL CLOUDINARY URL
+      return res.status(200).json({
+        success: true,
+        message: 'Logo uploaded successfully to Cloudinary',
+        url: uploadResult.secure_url, // This is the real Cloudinary URL
+        publicId: uploadResult.public_id,
+        uploadType: 'logo',
+        variant: logoType,
+        cloudinaryInfo: {
+          format: uploadResult.format,
+          size: uploadResult.bytes,
+          width: uploadResult.width,
+          height: uploadResult.height,
+          created_at: uploadResult.created_at
+        },
+        fileInfo: {
+          originalName: req.file.originalname,
+          originalSize: req.file.size,
+          originalType: req.file.mimetype
+        }
+      });
+      
+    } catch (cloudinaryError) {
+      console.error('❌ Cloudinary upload failed:', cloudinaryError);
+      
+      // Handle specific Cloudinary errors
+      let errorMessage = 'Cloudinary upload failed';
+      
+      if (cloudinaryError.message.includes('Invalid API key')) {
+        errorMessage = 'Invalid Cloudinary API key. Please check your credentials.';
+      } else if (cloudinaryError.message.includes('Invalid API secret')) {
+        errorMessage = 'Invalid Cloudinary API secret. Please check your credentials.';
+      } else if (cloudinaryError.message.includes('Unauthorized')) {
+        errorMessage = 'Cloudinary authentication failed. Please verify your API credentials.';
+      } else if (cloudinaryError.message.includes('Upload preset')) {
+        errorMessage = 'Cloudinary upload preset error. This should be resolved automatically.';
+      }
+      
+      return res.status(500).json({
+        success: false,
+        message: errorMessage,
+        error: cloudinaryError.message,
+        helpText: 'Check your Cloudinary credentials in the .env file',
+        cloudinaryError: process.env.NODE_ENV === 'development' ? cloudinaryError : undefined
+      });
+    }
     
   } catch (error) {
-    console.error('❌ Upload error:', error);
+    console.error('❌ General upload error:', error);
     
     // Ensure JSON response even on error
     res.setHeader('Content-Type', 'application/json');
