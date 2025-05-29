@@ -2612,74 +2612,20 @@ exports.updateIndividualTenantSetting = async (req, res) => {
 // ✅ ADD: Cloudinary upload method
 exports.uploadTenantLogo = async (req, res) => {
   try {
-    console.log('📤 [ADMIN] Upload tenant logo - Direct Cloudinary upload');
+    console.log('📤 [ADMIN] Safe upload test');
     
-    // Handle FormData first
-    const upload = multer({
-      storage: multer.memoryStorage(),
-      limits: { fileSize: 10 * 1024 * 1024 },
-      fileFilter: (req, file, cb) => {
-        if (file.mimetype.startsWith('image/')) {
-          cb(null, true);
-        } else {
-          cb(new Error('Only image files allowed'));
-        }
-      }
+    // Just return success for now to test
+    res.json({
+      success: true,
+      message: 'Upload test - app not crashing',
+      url: 'https://via.placeholder.com/400x400.png?text=Test+Logo'
     });
-
-    upload.single('file')(req, res, async (err) => {
-      if (err) {
-        return res.status(400).json({
-          success: false,
-          message: err.message
-        });
-      }
-
-      if (!req.file) {
-        return res.status(400).json({
-          success: false,
-          message: 'No file uploaded'
-        });
-      }
-
-      try {
-        // Direct Cloudinary upload
-        const cloudinary = require('cloudinary').v2;
-        
-        const result = await new Promise((resolve, reject) => {
-          cloudinary.uploader.upload_stream(
-            {
-              folder: 'neurolex/uploads',
-              resource_type: 'auto'
-            },
-            (error, result) => {
-              if (error) reject(error);
-              else resolve(result);
-            }
-          ).end(req.file.buffer);
-        });
-
-        res.json({
-          success: true,
-          message: 'File uploaded successfully',
-          url: result.secure_url,
-          publicId: result.public_id
-        });
-
-      } catch (uploadError) {
-        console.error('Upload error:', uploadError);
-        res.status(500).json({
-          success: false,
-          message: 'Upload failed',
-          error: uploadError.message
-        });
-      }
-    });
-
+    
   } catch (error) {
+    console.error('❌ Safe upload error:', error.message);
     res.status(500).json({
       success: false,
-      message: 'Server error',
+      message: 'Safe error handling',
       error: error.message
     });
   }
