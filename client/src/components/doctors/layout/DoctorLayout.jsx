@@ -190,10 +190,9 @@ const DoctorLayout = () => {
 
   return (
     <div className="doctor-layout">
-      {/* Left Sidebar - All styling moved to CSS */}
+      {/* Left Sidebar */}
       <div className="doctor-sidebar">
         <div className="sidebar-header">
-          {/* ONLY THE LOGO - No platform name or clinic name */}
           <img 
             src={theme.systemLogo?.light || theme.logo || logoImage} 
             alt="Logo" 
@@ -254,7 +253,6 @@ const DoctorLayout = () => {
             <div className="doctor-details">
               <p className="doctor-name">{doctorInfo.name}</p>
               <p className="doctor-role">{doctorInfo.role}</p>
-              {/* REMOVED: clinic name text */}
             </div>
           </div>
           <button className="logout-button" onClick={handleLogout}>
@@ -263,10 +261,8 @@ const DoctorLayout = () => {
         </div>
       </div>
       
-      {/* Main Content Area - All styling moved to CSS */}
+      {/* Main Content Area */}
       <div className="doctor-content">
-        {/* REMOVED: Dynamic tenant branding header with platform name and clinic name */}
-        
         <div className="doctor-content-container">
           <Outlet />
         </div>
