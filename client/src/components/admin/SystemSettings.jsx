@@ -264,206 +264,194 @@ const SystemSettings = () => {
     <div style={{ 
       fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif', 
       backgroundColor: '#f8fafc', 
-      minHeight: '100vh',
       width: '100%',
-      position: 'relative',
-      overflowY: 'auto',
-      overflowX: 'hidden'
+      minHeight: '100%',
+      padding: '24px',
+      paddingBottom: '100px',
+      boxSizing: 'border-box'
     }}>
-      {/* SCROLLABLE CONTENT CONTAINER */}
-      <div style={{
-        width: '100%',
-        height: 'auto',
-        minHeight: '100vh',
-        padding: '24px',
-        paddingBottom: '150px', // Extra space at bottom
-        boxSizing: 'border-box',
-        overflowY: 'visible'
-      }}>
-        
-        {/* Header */}
+      {/* Header */}
+      <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '12px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+        <h1 style={{ margin: 0, fontSize: '28px', fontWeight: '600', color: '#1e293b' }}>General Settings</h1>
+        <p style={{ margin: '8px 0 0 0', fontSize: '16px', color: '#64748b' }}>Configure platform settings for each clinic</p>
+      </div>
+
+      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        {/* Tenant Selection */}
         <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '12px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-          <h1 style={{ margin: 0, fontSize: '28px', fontWeight: '600', color: '#1e293b' }}>General Settings</h1>
-          <p style={{ margin: '8px 0 0 0', fontSize: '16px', color: '#64748b' }}>Configure platform settings for each clinic</p>
+          <h2 style={{ margin: '0 0 16px 0', fontSize: '20px', fontWeight: '600', color: '#1e293b' }}>Select Clinic</h2>
+          <select value={selectedTenant} onChange={(e) => setSelectedTenant(e.target.value)} disabled={isLoadingTenants} style={{ padding: '12px 16px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '16px', minWidth: '300px', backgroundColor: 'white' }}>
+            <option value="">-- Select Clinic --</option>
+            {tenants.map(tenant => (
+              <option key={tenant._id} value={tenant._id}>{tenant.name}</option>
+            ))}
+          </select>
         </div>
 
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          {/* Tenant Selection */}
-          <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '12px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-            <h2 style={{ margin: '0 0 16px 0', fontSize: '20px', fontWeight: '600', color: '#1e293b' }}>Select Clinic</h2>
-            <select value={selectedTenant} onChange={(e) => setSelectedTenant(e.target.value)} disabled={isLoadingTenants} style={{ padding: '12px 16px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '16px', minWidth: '300px', backgroundColor: 'white' }}>
-              <option value="">-- Select Clinic --</option>
-              {tenants.map(tenant => (
-                <option key={tenant._id} value={tenant._id}>{tenant.name}</option>
-              ))}
-            </select>
-          </div>
-
-          {selectedTenant && !isLoading && (
-            <>
-              {/* Platform Settings */}
-              <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '12px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                <div style={{ marginBottom: '32px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '16px', color: '#374151' }}>Platform Name</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <input type="text" value={settings.platformName} onChange={(e) => handleInputChange('platformName', e.target.value)} placeholder="Enter platform name" style={{ flex: 1, padding: '12px 16px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '16px', backgroundColor: '#f8fafc' }} />
-                    <button onClick={() => saveIndividualSetting('platformName', settings.platformName)} style={{ backgroundColor: '#22c55e', color: 'white', border: 'none', padding: '12px 20px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>Save and Update</button>
-                  </div>
-                </div>
-                <div style={{ marginBottom: '32px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '16px', color: '#374151' }}>Platform Description</label>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                    <textarea value={settings.platformDescription} onChange={(e) => handleInputChange('platformDescription', e.target.value)} placeholder="Enter platform description" rows={4} style={{ flex: 1, padding: '12px 16px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '16px', resize: 'vertical', backgroundColor: '#f8fafc', fontFamily: 'inherit' }} />
-                    <button onClick={() => saveIndividualSetting('platformDescription', settings.platformDescription)} style={{ backgroundColor: '#22c55e', color: 'white', border: 'none', padding: '12px 20px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>Save and Update</button>
-                  </div>
+        {selectedTenant && !isLoading && (
+          <>
+            {/* Platform Settings */}
+            <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '12px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+              <div style={{ marginBottom: '32px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '16px', color: '#374151' }}>Platform Name</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <input type="text" value={settings.platformName} onChange={(e) => handleInputChange('platformName', e.target.value)} placeholder="Enter platform name" style={{ flex: 1, padding: '12px 16px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '16px', backgroundColor: '#f8fafc' }} />
+                  <button onClick={() => saveIndividualSetting('platformName', settings.platformName)} style={{ backgroundColor: '#22c55e', color: 'white', border: 'none', padding: '12px 20px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>Save and Update</button>
                 </div>
               </div>
-
-              {/* Logo Section */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
-                {/* System Logo Light */}
-                <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                  <h3 style={{ margin: '0 0 24px 0', fontSize: '20px', fontWeight: '600', color: '#1e293b' }}>System Logo (Version 1 - Light)</h3>
-                  <div style={{ width: '200px', height: '200px', border: '2px dashed #d1d5db', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px auto', backgroundColor: '#f8fafc', overflow: 'hidden', position: 'relative' }}>
-                    {(previewUrls.lightLogo || settings.systemLogo?.light) ? (
-                      <img src={previewUrls.lightLogo || settings.systemLogo?.light} alt="Light Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                    ) : (
-                      <div style={{ textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
-                        <div style={{ fontSize: '48px', marginBottom: '8px' }}>🖼️</div>
-                        <div>NEUROLEX_Logo_Light.png</div>
-                      </div>
-                    )}
-                  </div>
-                  <button style={{ width: '100%', backgroundColor: '#22c55e', color: 'white', border: 'none', padding: '12px 20px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }} onClick={() => document.getElementById('light-logo-input').click()}>Change Image</button>
-                  <input id="light-logo-input" type="file" accept="image/*" onChange={(e) => e.target.files[0] && handleFileUpload('logo', 'light', e.target.files[0])} style={{ display: 'none' }} />
-                </div>
-
-                {/* System Logo Dark */}
-                <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                  <h3 style={{ margin: '0 0 24px 0', fontSize: '20px', fontWeight: '600', color: '#1e293b' }}>System Logo (Version 1 - Dark)</h3>
-                  <div style={{ width: '200px', height: '200px', border: '2px dashed #d1d5db', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px auto', backgroundColor: '#1f2937', overflow: 'hidden', position: 'relative' }}>
-                    {(previewUrls.darkLogo || settings.systemLogo?.dark) ? (
-                      <img src={previewUrls.darkLogo || settings.systemLogo?.dark} alt="Dark Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                    ) : (
-                      <div style={{ textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
-                        <div style={{ fontSize: '48px', marginBottom: '8px' }}>🖼️</div>
-                        <div>NEUROLEX_Logo_Dark.png</div>
-                      </div>
-                    )}
-                  </div>
-                  <button style={{ width: '100%', backgroundColor: '#22c55e', color: 'white', border: 'none', padding: '12px 20px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }} onClick={() => document.getElementById('dark-logo-input').click()}>Change Image</button>
-                  <input id="dark-logo-input" type="file" accept="image/*" onChange={(e) => e.target.files[0] && handleFileUpload('logo', 'dark', e.target.files[0])} style={{ display: 'none' }} />
+              <div style={{ marginBottom: '32px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '16px', color: '#374151' }}>Platform Description</label>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                  <textarea value={settings.platformDescription} onChange={(e) => handleInputChange('platformDescription', e.target.value)} placeholder="Enter platform description" rows={4} style={{ flex: 1, padding: '12px 16px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '16px', resize: 'vertical', backgroundColor: '#f8fafc', fontFamily: 'inherit' }} />
+                  <button onClick={() => saveIndividualSetting('platformDescription', settings.platformDescription)} style={{ backgroundColor: '#22c55e', color: 'white', border: 'none', padding: '12px 20px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>Save and Update</button>
                 </div>
               </div>
+            </div>
 
-              {/* Favicon Section */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
-                {/* Favicon Light */}
-                <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                  <h3 style={{ margin: '0 0 24px 0', fontSize: '20px', fontWeight: '600', color: '#1e293b' }}>Favicon (Light)</h3>
-                  <div style={{ width: '200px', height: '200px', border: '2px dashed #d1d5db', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px auto', backgroundColor: '#f8fafc', overflow: 'hidden', position: 'relative' }}>
-                    {(previewUrls.lightFavicon || settings.favicon?.light) ? (
-                      <img src={previewUrls.lightFavicon || settings.favicon?.light} alt="Light Favicon" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                    ) : (
-                      <div style={{ textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
-                        <div style={{ fontSize: '48px', marginBottom: '8px' }}>🔗</div>
-                        <div>NEUROLEX_Favicon_Light.ico</div>
-                      </div>
-                    )}
-                  </div>
-                  <button style={{ width: '100%', backgroundColor: '#22c55e', color: 'white', border: 'none', padding: '12px 20px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }} onClick={() => document.getElementById('light-favicon-input').click()}>Change Image</button>
-                  <input id="light-favicon-input" type="file" accept="image/*,.ico" onChange={(e) => e.target.files[0] && handleFileUpload('favicon', 'light', e.target.files[0])} style={{ display: 'none' }} />
-                </div>
-
-                {/* Favicon Dark */}
-                <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                  <h3 style={{ margin: '0 0 24px 0', fontSize: '20px', fontWeight: '600', color: '#1e293b' }}>Favicon (Dark)</h3>
-                  <div style={{ width: '200px', height: '200px', border: '2px dashed #d1d5db', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px auto', backgroundColor: '#1f2937', overflow: 'hidden', position: 'relative' }}>
-                    {(previewUrls.darkFavicon || settings.favicon?.dark) ? (
-                      <img src={previewUrls.darkFavicon || settings.favicon?.dark} alt="Dark Favicon" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                    ) : (
-                      <div style={{ textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
-                        <div style={{ fontSize: '48px', marginBottom: '8px' }}>🔗</div>
-                        <div>NEUROLEX_Favicon_Dark.ico</div>
-                      </div>
-                    )}
-                  </div>
-                  <button style={{ width: '100%', backgroundColor: '#22c55e', color: 'white', border: 'none', padding: '12px 20px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }} onClick={() => document.getElementById('dark-favicon-input').click()}>Change Image</button>
-                  <input id="dark-favicon-input" type="file" accept="image/*,.ico" onChange={(e) => e.target.files[0] && handleFileUpload('favicon', 'dark', e.target.files[0])} style={{ display: 'none' }} />
-                </div>
-              </div>
-
-              {/* HIRS Management Table */}
-              <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '12px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                  <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '600', color: '#1e293b' }}>HIRS Management ({settings.hirsSettings.length} modules)</h2>
-                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                    <select style={{ padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px', backgroundColor: 'white' }}>
-                      <option>Year - 2025</option>
-                      <option>Year - 2024</option>
-                    </select>
-                    <button style={{ backgroundColor: '#22c55e', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>+ Add Entry</button>
-                  </div>
-                </div>
-
-                <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '80px 200px 1fr 150px 120px', gap: '16px', padding: '16px', backgroundColor: '#f9fafb', fontWeight: '600', fontSize: '14px', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>
-                    <div>Icon</div>
-                    <div>Function / Menu Name</div>
-                    <div>Description</div>
-                    <div>Last Updated</div>
-                    <div>Actions</div>
-                  </div>
-                  {settings.hirsSettings.map((hirs, index) => (
-                    <div key={hirs.id} style={{ display: 'grid', gridTemplateColumns: '80px 200px 1fr 150px 120px', gap: '16px', padding: '16px', borderBottom: index < settings.hirsSettings.length - 1 ? '1px solid #f3f4f6' : 'none', alignItems: 'center', backgroundColor: 'white' }}>
-                      <div style={{ width: '40px', height: '40px', backgroundColor: hirs.isActive ? '#22c55e' : '#9ca3af', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold' }}>{hirs.icon}</div>
-                      <div style={{ fontWeight: '500', color: '#1f2937' }}>{hirs.name}</div>
-                      <div style={{ fontSize: '14px', color: '#6b7280' }}>{hirs.description}</div>
-                      <div style={{ fontSize: '14px', color: '#6b7280' }}>{hirs.lastUpdated}</div>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '18px', padding: '4px', borderRadius: '4px' }} title="View">👁️</button>
-                        <button style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '18px', padding: '4px', borderRadius: '4px' }} title="Edit">✏️</button>
-                        <button style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '18px', padding: '4px', borderRadius: '4px' }} onClick={() => handleHirsToggle(hirs.id)} title={hirs.isActive ? 'Deactivate' : 'Activate'}>{hirs.isActive ? '🟢' : '🔴'}</button>
-                      </div>
+            {/* Logo Section */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
+              {/* System Logo Light */}
+              <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                <h3 style={{ margin: '0 0 24px 0', fontSize: '20px', fontWeight: '600', color: '#1e293b' }}>System Logo (Version 1 - Light)</h3>
+                <div style={{ width: '200px', height: '200px', border: '2px dashed #d1d5db', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px auto', backgroundColor: '#f8fafc', overflow: 'hidden', position: 'relative' }}>
+                  {(previewUrls.lightLogo || settings.systemLogo?.light) ? (
+                    <img src={previewUrls.lightLogo || settings.systemLogo?.light} alt="Light Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                  ) : (
+                    <div style={{ textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
+                      <div style={{ fontSize: '48px', marginBottom: '8px' }}>🖼️</div>
+                      <div>NEUROLEX_Logo_Light.png</div>
                     </div>
-                  ))}
+                  )}
+                </div>
+                <button style={{ width: '100%', backgroundColor: '#22c55e', color: 'white', border: 'none', padding: '12px 20px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }} onClick={() => document.getElementById('light-logo-input').click()}>Change Image</button>
+                <input id="light-logo-input" type="file" accept="image/*" onChange={(e) => e.target.files[0] && handleFileUpload('logo', 'light', e.target.files[0])} style={{ display: 'none' }} />
+              </div>
+
+              {/* System Logo Dark */}
+              <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                <h3 style={{ margin: '0 0 24px 0', fontSize: '20px', fontWeight: '600', color: '#1e293b' }}>System Logo (Version 1 - Dark)</h3>
+                <div style={{ width: '200px', height: '200px', border: '2px dashed #d1d5db', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px auto', backgroundColor: '#1f2937', overflow: 'hidden', position: 'relative' }}>
+                  {(previewUrls.darkLogo || settings.systemLogo?.dark) ? (
+                    <img src={previewUrls.darkLogo || settings.systemLogo?.dark} alt="Dark Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                  ) : (
+                    <div style={{ textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
+                      <div style={{ fontSize: '48px', marginBottom: '8px' }}>🖼️</div>
+                      <div>NEUROLEX_Logo_Dark.png</div>
+                    </div>
+                  )}
+                </div>
+                <button style={{ width: '100%', backgroundColor: '#22c55e', color: 'white', border: 'none', padding: '12px 20px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }} onClick={() => document.getElementById('dark-logo-input').click()}>Change Image</button>
+                <input id="dark-logo-input" type="file" accept="image/*" onChange={(e) => e.target.files[0] && handleFileUpload('logo', 'dark', e.target.files[0])} style={{ display: 'none' }} />
+              </div>
+            </div>
+
+            {/* Favicon Section */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
+              {/* Favicon Light */}
+              <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                <h3 style={{ margin: '0 0 24px 0', fontSize: '20px', fontWeight: '600', color: '#1e293b' }}>Favicon (Light)</h3>
+                <div style={{ width: '200px', height: '200px', border: '2px dashed #d1d5db', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px auto', backgroundColor: '#f8fafc', overflow: 'hidden', position: 'relative' }}>
+                  {(previewUrls.lightFavicon || settings.favicon?.light) ? (
+                    <img src={previewUrls.lightFavicon || settings.favicon?.light} alt="Light Favicon" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                  ) : (
+                    <div style={{ textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
+                      <div style={{ fontSize: '48px', marginBottom: '8px' }}>🔗</div>
+                      <div>NEUROLEX_Favicon_Light.ico</div>
+                    </div>
+                  )}
+                </div>
+                <button style={{ width: '100%', backgroundColor: '#22c55e', color: 'white', border: 'none', padding: '12px 20px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }} onClick={() => document.getElementById('light-favicon-input').click()}>Change Image</button>
+                <input id="light-favicon-input" type="file" accept="image/*,.ico" onChange={(e) => e.target.files[0] && handleFileUpload('favicon', 'light', e.target.files[0])} style={{ display: 'none' }} />
+              </div>
+
+              {/* Favicon Dark */}
+              <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                <h3 style={{ margin: '0 0 24px 0', fontSize: '20px', fontWeight: '600', color: '#1e293b' }}>Favicon (Dark)</h3>
+                <div style={{ width: '200px', height: '200px', border: '2px dashed #d1d5db', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px auto', backgroundColor: '#1f2937', overflow: 'hidden', position: 'relative' }}>
+                  {(previewUrls.darkFavicon || settings.favicon?.dark) ? (
+                    <img src={previewUrls.darkFavicon || settings.favicon?.dark} alt="Dark Favicon" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                  ) : (
+                    <div style={{ textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
+                      <div style={{ fontSize: '48px', marginBottom: '8px' }}>🔗</div>
+                      <div>NEUROLEX_Favicon_Dark.ico</div>
+                    </div>
+                  )}
+                </div>
+                <button style={{ width: '100%', backgroundColor: '#22c55e', color: 'white', border: 'none', padding: '12px 20px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }} onClick={() => document.getElementById('dark-favicon-input').click()}>Change Image</button>
+                <input id="dark-favicon-input" type="file" accept="image/*,.ico" onChange={(e) => e.target.files[0] && handleFileUpload('favicon', 'dark', e.target.files[0])} style={{ display: 'none' }} />
+              </div>
+            </div>
+
+            {/* HIRS Management Table */}
+            <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '12px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '600', color: '#1e293b' }}>HIRS Management ({settings.hirsSettings.length} modules)</h2>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <select style={{ padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px', backgroundColor: 'white' }}>
+                    <option>Year - 2025</option>
+                    <option>Year - 2024</option>
+                  </select>
+                  <button style={{ backgroundColor: '#22c55e', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>+ Add Entry</button>
                 </div>
               </div>
 
-              {/* Save Actions */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', backgroundColor: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '50px' }}>
-                <button onClick={resetSettings} disabled={isLoading || isSaving} style={{ backgroundColor: 'white', color: '#6b7280', border: '1px solid #d1d5db', padding: '12px 24px', borderRadius: '8px', cursor: 'pointer', fontSize: '16px', fontWeight: '500', opacity: (isLoading || isSaving) ? 0.6 : 1 }}>Reset Changes</button>
-                <button onClick={saveSettings} disabled={isLoading || isSaving} style={{ backgroundColor: '#22c55e', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '8px', cursor: 'pointer', fontSize: '16px', fontWeight: '500', opacity: (isLoading || isSaving) ? 0.6 : 1 }}>{isSaving ? 'Saving...' : 'Save All Settings'}</button>
-              </div>
-            </>
-          )}
-
-          {/* Loading and Empty States */}
-          {isLoading && (
-            <div style={{ backgroundColor: 'white', padding: '60px 24px', borderRadius: '12px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-              <h3 style={{ margin: '0 0 16px 0', fontSize: '20px', color: '#1e293b' }}>Loading Settings...</h3>
-              <p style={{ margin: 0, color: '#64748b', fontSize: '16px' }}>Fetching configuration for selected clinic...</p>
-            </div>
-          )}
-
-          {!selectedTenant && !isLoadingTenants && (
-            <div style={{ backgroundColor: 'white', padding: '60px 24px', borderRadius: '12px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-              <h3 style={{ margin: '0 0 16px 0', fontSize: '20px', color: '#1e293b' }}>No Clinic Selected</h3>
-              <p style={{ margin: 0, color: '#64748b', fontSize: '16px' }}>Please select a clinic from the dropdown above to configure its settings.</p>
-            </div>
-          )}
-
-          {/* Upload Progress Overlay */}
-          {isUploadingFile && (
-            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-              <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '12px', textAlign: 'center', minWidth: '300px' }}>
-                <div style={{ width: '40px', height: '40px', border: '4px solid #f3f4f6', borderTop: '4px solid #22c55e', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px auto' }} />
-                <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', color: '#1e293b' }}>Uploading File...</h3>
-                <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>Please wait while we upload your image to Cloudinary</p>
+              <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '80px 200px 1fr 150px 120px', gap: '16px', padding: '16px', backgroundColor: '#f9fafb', fontWeight: '600', fontSize: '14px', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>
+                  <div>Icon</div>
+                  <div>Function / Menu Name</div>
+                  <div>Description</div>
+                  <div>Last Updated</div>
+                  <div>Actions</div>
+                </div>
+                {settings.hirsSettings.map((hirs, index) => (
+                  <div key={hirs.id} style={{ display: 'grid', gridTemplateColumns: '80px 200px 1fr 150px 120px', gap: '16px', padding: '16px', borderBottom: index < settings.hirsSettings.length - 1 ? '1px solid #f3f4f6' : 'none', alignItems: 'center', backgroundColor: 'white' }}>
+                    <div style={{ width: '40px', height: '40px', backgroundColor: hirs.isActive ? '#22c55e' : '#9ca3af', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold' }}>{hirs.icon}</div>
+                    <div style={{ fontWeight: '500', color: '#1f2937' }}>{hirs.name}</div>
+                    <div style={{ fontSize: '14px', color: '#6b7280' }}>{hirs.description}</div>
+                    <div style={{ fontSize: '14px', color: '#6b7280' }}>{hirs.lastUpdated}</div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '18px', padding: '4px', borderRadius: '4px' }} title="View">👁️</button>
+                      <button style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '18px', padding: '4px', borderRadius: '4px' }} title="Edit">✏️</button>
+                      <button style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '18px', padding: '4px', borderRadius: '4px' }} onClick={() => handleHirsToggle(hirs.id)} title={hirs.isActive ? 'Deactivate' : 'Activate'}>{hirs.isActive ? '🟢' : '🔴'}</button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          )}
-        </div>
+
+            {/* Save Actions */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', backgroundColor: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '50px' }}>
+              <button onClick={resetSettings} disabled={isLoading || isSaving} style={{ backgroundColor: 'white', color: '#6b7280', border: '1px solid #d1d5db', padding: '12px 24px', borderRadius: '8px', cursor: 'pointer', fontSize: '16px', fontWeight: '500', opacity: (isLoading || isSaving) ? 0.6 : 1 }}>Reset Changes</button>
+              <button onClick={saveSettings} disabled={isLoading || isSaving} style={{ backgroundColor: '#22c55e', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '8px', cursor: 'pointer', fontSize: '16px', fontWeight: '500', opacity: (isLoading || isSaving) ? 0.6 : 1 }}>{isSaving ? 'Saving...' : 'Save All Settings'}</button>
+            </div>
+          </>
+        )}
+
+        {/* Loading and Empty States */}
+        {isLoading && (
+          <div style={{ backgroundColor: 'white', padding: '60px 24px', borderRadius: '12px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '20px', color: '#1e293b' }}>Loading Settings...</h3>
+            <p style={{ margin: 0, color: '#64748b', fontSize: '16px' }}>Fetching configuration for selected clinic...</p>
+          </div>
+        )}
+
+        {!selectedTenant && !isLoadingTenants && (
+          <div style={{ backgroundColor: 'white', padding: '60px 24px', borderRadius: '12px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '20px', color: '#1e293b' }}>No Clinic Selected</h3>
+            <p style={{ margin: 0, color: '#64748b', fontSize: '16px' }}>Please select a clinic from the dropdown above to configure its settings.</p>
+          </div>
+        )}
+
+        {/* Upload Progress Overlay */}
+        {isUploadingFile && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '12px', textAlign: 'center', minWidth: '300px' }}>
+              <div style={{ width: '40px', height: '40px', border: '4px solid #f3f4f6', borderTop: '4px solid #22c55e', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px auto' }} />
+              <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', color: '#1e293b' }}>Uploading File...</h3>
+              <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>Please wait while we upload your image to Cloudinary</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* CSS Animation for loading spinner */}
