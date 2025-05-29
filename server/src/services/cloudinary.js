@@ -9,6 +9,41 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET, // gwMDx_iKxQ6FC3dR616am_MVGTY
 });
 
+// ✅ ADDED: Direct upload function for buffer uploads
+const uploadToCloudinary = async (buffer, options = {}) => {
+  try {
+    console.log('📤 Uploading buffer to Cloudinary with options:', options);
+    
+    return new Promise((resolve, reject) => {
+      cloudinary.uploader.upload_stream(
+        {
+          folder: options.folder || `${process.env.CLOUDINARY_FOLDER || 'neurolex'}/uploads`,
+          public_id: options.public_id,
+          overwrite: options.overwrite || true,
+          resource_type: options.resource_type || 'auto',
+          transformation: options.transformation || [
+            { width: 400, height: 400, crop: 'limit' },
+            { quality: 'auto' },
+            { fetch_format: 'auto' }
+          ]
+        },
+        (error, result) => {
+          if (error) {
+            console.error('❌ Cloudinary upload error:', error);
+            reject(error);
+          } else {
+            console.log('✅ Cloudinary upload success:', result.secure_url);
+            resolve(result);
+          }
+        }
+      ).end(buffer);
+    });
+  } catch (error) {
+    console.error('❌ Error in uploadToCloudinary:', error);
+    throw error;
+  }
+};
+
 // ✅ Multi-tenant logo storage
 const logoStorage = (tenantId) => new CloudinaryStorage({
   cloudinary: cloudinary,
@@ -97,5 +132,6 @@ module.exports = {
   logoStorage,
   faviconStorage,
   deleteCloudinaryImage,
-  extractPublicId
+  extractPublicId,
+  uploadToCloudinary // ✅ ADDED: Export the new function
 };
