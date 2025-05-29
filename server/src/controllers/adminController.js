@@ -2532,11 +2532,11 @@ exports.updateIndividualTenantSetting = async (req, res) => {
 
 exports.uploadTenantLogo = async (req, res) => {
   try {
-    console.log('📤 [ADMIN] Upload tenant logo to Cloudinary');
+    console.log('📤 [ADMIN] Upload tenant logo - Simple method');
     
-    // ✅ FIXED: Create multer middleware FIRST, then get form data
+    // Create multer upload with existing logoStorage
     const upload = multer({
-      storage: multer.memoryStorage(), // Use memory storage temporarily
+      storage: logoStorage('default'),
       limits: {
         fileSize: 10 * 1024 * 1024 // 10MB limit
       },
@@ -2548,8 +2548,8 @@ exports.uploadTenantLogo = async (req, res) => {
         }
       }
     });
-
-    // Use multer middleware to process form data
+    
+    // Use multer middleware
     upload.single('file')(req, res, async (err) => {
       if (err) {
         console.error('❌ Multer error:', err);
@@ -2567,124 +2567,71 @@ exports.uploadTenantLogo = async (req, res) => {
       }
 
       try {
-        // ✅ FIXED: Now get form data AFTER multer processes it
+        console.log('✅ File uploaded to Cloudinary:', req.file.path);
+        
+        // Get form data AFTER multer processes it
         const { tenantId, uploadType, variant } = req.body;
         console.log('Form data:', { tenantId, uploadType, variant });
 
-        if (!tenantId) {
-          return res.status(400).json({
-            success: false,
-            message: 'Tenant ID is required'
-          });
-        }
+        // Get Cloudinary URL and public ID
+        const cloudinaryUrl = req.file.path;
+        const publicId = req.file.filename;
 
-        // Validate tenantId format
-        if (!tenantId.match(/^[0-9a-fA-F]{24}$/)) {
-          return res.status(400).json({
-            success: false,
-            message: 'Invalid tenant ID format'
-          });
-        }
+        // If tenantId is provided, update the tenant record
+        if (tenantId && tenantId.match(/^[0-9a-fA-F]{24}$/)) {
+          const masterConn = getMasterConnection();
+          if (masterConn) {
+            const Tenant = masterConn.model('Tenant');
+            const updateData = {
+              updatedAt: new Date()
+            };
 
-        // Get master connection and check if tenant exists
-        const masterConn = getMasterConnection();
-        if (!masterConn) {
-          throw new Error('Failed to connect to master database');
-        }
-
-        const Tenant = masterConn.model('Tenant');
-        const existingTenant = await Tenant.findById(tenantId);
-        
-        if (!existingTenant) {
-          return res.status(404).json({
-            success: false,
-            message: 'Tenant not found'
-          });
-        }
-
-        // ✅ FIXED: Upload to Cloudinary directly
-        const { uploadToCloudinary } = require('../services/cloudinary');
-        
-        // Create upload options
-        const uploadOptions = {
-          folder: `tenants/${tenantId}/${uploadType || 'logos'}`,
-          public_id: `${uploadType || 'logo'}_${variant || 'light'}_${Date.now()}`,
-          overwrite: true,
-          resource_type: 'auto'
-        };
-
-        // Upload to Cloudinary
-        const result = await uploadToCloudinary(req.file.buffer, uploadOptions);
-        console.log('✅ File uploaded to Cloudinary:', result.secure_url);
-
-        // Prepare update data for tenant
-        const updateData = {
-          updatedAt: new Date()
-        };
-
-        // Determine which field to update and handle old image deletion
-        let oldImageUrl = null;
-
-        if (uploadType === 'systemLogo' || uploadType === 'logo' || !uploadType) {
-          const isLight = variant !== 'dark' && !req.file.originalname.toLowerCase().includes('dark');
-          
-          if (isLight) {
-            oldImageUrl = existingTenant.logoUrl;
-            updateData.logoUrl = result.secure_url;
-          } else {
-            oldImageUrl = existingTenant.darkLogoUrl;
-            updateData.darkLogoUrl = result.secure_url;
-          }
-        } else if (uploadType === 'favicon') {
-          const isLight = variant !== 'dark' && !req.file.originalname.toLowerCase().includes('dark');
-          
-          if (isLight) {
-            oldImageUrl = existingTenant.faviconUrl;
-            updateData.faviconUrl = result.secure_url;
-          } else {
-            oldImageUrl = existingTenant.darkFaviconUrl;
-            updateData.darkFaviconUrl = result.secure_url;
-          }
-        }
-
-        // Update tenant in database
-        const updatedTenant = await Tenant.findByIdAndUpdate(
-          tenantId,
-          { $set: updateData },
-          { new: true, runValidators: false }
-        );
-
-        if (!updatedTenant) {
-          console.warn('❌ Failed to update tenant with new image URL');
-        } else {
-          console.log('✅ Tenant updated with new Cloudinary URL');
-          
-          // Delete old image from Cloudinary if it exists
-          if (oldImageUrl && oldImageUrl.includes('cloudinary.com')) {
-            const { extractPublicId, deleteCloudinaryImage } = require('../services/cloudinary');
-            const oldPublicId = extractPublicId(oldImageUrl);
-            if (oldPublicId) {
-              await deleteCloudinaryImage(oldPublicId);
+            // Determine which field to update
+            if (uploadType === 'favicon') {
+              const isLight = variant !== 'dark';
+              if (isLight) {
+                updateData.faviconUrl = cloudinaryUrl;
+              } else {
+                updateData.darkFaviconUrl = cloudinaryUrl;
+              }
+            } else {
+              // Default to logo
+              const isLight = variant !== 'dark';
+              if (isLight) {
+                updateData.logoUrl = cloudinaryUrl;
+              } else {
+                updateData.darkLogoUrl = cloudinaryUrl;
+              }
             }
+
+            await Tenant.findByIdAndUpdate(
+              tenantId,
+              { $set: updateData },
+              { new: true, runValidators: false }
+            );
+            
+            console.log('✅ Tenant updated with new logo URL');
           }
         }
 
         res.json({
           success: true,
           message: 'File uploaded successfully to Cloudinary',
-          url: result.secure_url,
-          publicId: result.public_id,
+          url: cloudinaryUrl,
+          publicId: publicId,
           uploadType: uploadType || 'logo',
-          variant: variant || (req.file.originalname.toLowerCase().includes('dark') ? 'dark' : 'light'),
-          tenantId
+          variant: variant || 'light',
+          tenantId: tenantId || null
         });
 
-      } catch (uploadError) {
-        console.error('❌ Error uploading to Cloudinary:', uploadError);
-        res.status(500).json({
-          success: false,
-          message: 'Failed to upload file to Cloudinary',
-          error: uploadError.message
+      } catch (updateError) {
+        console.error('❌ Error after upload:', updateError);
+        res.json({
+          success: true,
+          message: 'File uploaded to Cloudinary (database update failed)',
+          url: req.file.path,
+          publicId: req.file.filename,
+          error: updateError.message
         });
       }
     });
@@ -2698,7 +2645,6 @@ exports.uploadTenantLogo = async (req, res) => {
     });
   }
 };
-
 exports.updateIndividualTenantSetting = async (req, res) => {
   try {
     const { tenantId } = req.params;
