@@ -10,10 +10,12 @@ const SystemSettings = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
   
-  // 🎯 FIXED: Preview URLs state for immediate image display
+  // 🎯 ENHANCED: Preview URLs state for ALL image types (Logo + Favicon)
   const [previewUrls, setPreviewUrls] = useState({
     lightLogo: '',
-    darkLogo: ''
+    darkLogo: '',
+    lightFavicon: '',
+    darkFavicon: ''
   });
   
   // Settings state - EMPTY by default, filled from API
@@ -33,7 +35,7 @@ const SystemSettings = () => {
     hirsSettings: []
   });
 
-  // ✅ FIXED: Individual setting save function using adminService
+  // ✅ Individual setting save function using adminService
   const saveIndividualSetting = async (settingType, value) => {
     if (!selectedTenant) {
       alert('Please select a clinic first');
@@ -43,12 +45,10 @@ const SystemSettings = () => {
     try {
       console.log(`💾 Saving ${settingType}:`, value);
       
-      // Create partial update object
       const updateData = {
         [settingType]: value
       };
       
-      // ✅ FIXED: Use adminService instead of fetch
       const data = await adminService.updateIndividualSetting(selectedTenant, updateData);
       
       if (data.success) {
@@ -63,16 +63,24 @@ const SystemSettings = () => {
     }
   };
 
-  // Create default settings if none exist - wrapped in useCallback to fix dependency warning
+  // Create default settings if none exist
   const createDefaultTenantSettings = useCallback(async () => {
     try {
       console.log('🔧 Creating default settings for tenant:', selectedTenant);
       
       const defaultSettings = {
         platformName: 'NEUROLEX',
-        platformDescription: 'AI-powered mental wellness platform',
+        platformDescription: 'Neurolex is an AI-powered system that uses Natural Language Processing (NLP) to analyze your journal entries and track your emotional well-being. It provides insights into your mental state, helping you understand your thoughts and feelings over time. With continuous monitoring, Neurolex supports your journey toward self-awareness, emotional growth, and overall well-being.',
         primaryColor: '#4CAF50',
         secondaryColor: '#2196F3',
+        systemLogo: {
+          light: null,
+          dark: null
+        },
+        favicon: {
+          light: null,
+          dark: null
+        },
         hirsSettings: [
           {
             id: 1,
@@ -157,7 +165,6 @@ const SystemSettings = () => {
         ]
       };
 
-      // ✅ FIXED: Use adminService instead of fetch
       const data = await adminService.updateTenantSettings(selectedTenant, defaultSettings);
       
       if (data.success) {
@@ -165,23 +172,23 @@ const SystemSettings = () => {
         console.log('✅ Default settings created successfully');
       } else {
         console.error('❌ Failed to create default settings:', data.message);
-        // Set local defaults even if save fails
         setSettings(defaultSettings);
       }
     } catch (error) {
       console.error('❌ Error creating default settings:', error);
-      // Set local defaults even if API fails
       setSettings({
         platformName: 'NEUROLEX',
         platformDescription: 'AI-powered mental wellness platform',
         primaryColor: '#4CAF50',
         secondaryColor: '#2196F3',
+        systemLogo: { light: null, dark: null },
+        favicon: { light: null, dark: null },
         hirsSettings: []
       });
     }
   }, [selectedTenant]);
 
-  // Fetch tenant settings - wrapped in useCallback to fix dependency warning
+  // Fetch tenant settings
   const fetchTenantSettings = useCallback(async () => {
     if (!selectedTenant) return;
 
@@ -189,12 +196,10 @@ const SystemSettings = () => {
       setIsLoading(true);
       console.log(`🔍 Fetching settings for tenant: ${selectedTenant}`);
       
-      // ✅ FIXED: Use adminService instead of fetch
       const data = await adminService.getTenantSettings(selectedTenant);
       console.log('📊 Tenant settings response:', data);
       
       if (data.success) {
-        // Use the fetched data, with fallbacks only if data is missing
         const fetchedSettings = {
           platformName: data.data.platformName || 'NEUROLEX',
           platformDescription: data.data.platformDescription || 'Mental wellness platform',
@@ -207,25 +212,27 @@ const SystemSettings = () => {
         
         setSettings(fetchedSettings);
         
-        // 🎯 Set preview URLs from existing data
+        // 🎯 Set preview URLs from existing data (Logo + Favicon)
         setPreviewUrls({
           lightLogo: fetchedSettings.systemLogo?.light || '',
-          darkLogo: fetchedSettings.systemLogo?.dark || ''
+          darkLogo: fetchedSettings.systemLogo?.dark || '',
+          lightFavicon: fetchedSettings.favicon?.light || '',
+          darkFavicon: fetchedSettings.favicon?.dark || ''
         });
         
         console.log('✅ Settings loaded successfully');
         console.log('🖼️ Initial preview URLs set:', {
           lightLogo: fetchedSettings.systemLogo?.light || 'none',
-          darkLogo: fetchedSettings.systemLogo?.dark || 'none'
+          darkLogo: fetchedSettings.systemLogo?.dark || 'none',
+          lightFavicon: fetchedSettings.favicon?.light || 'none',
+          darkFavicon: fetchedSettings.favicon?.dark || 'none'
         });
       } else {
         console.error('❌ Failed to fetch settings:', data.message);
-        // If tenant settings don't exist, create default ones
         await createDefaultTenantSettings();
       }
     } catch (error) {
       console.error('❌ Error fetching tenant settings:', error);
-      // If API call fails, try to create default settings
       await createDefaultTenantSettings();
     } finally {
       setIsLoading(false);
@@ -239,7 +246,6 @@ const SystemSettings = () => {
         setIsLoadingTenants(true);
         console.log('🔍 Fetching tenants...');
         
-        // ✅ FIXED: Use adminService instead of fetch
         const data = await adminService.getTenants();
         console.log('📊 Tenants response:', data);
         
@@ -266,7 +272,7 @@ const SystemSettings = () => {
     fetchTenants();
   }, []);
 
-  // Load settings when tenant is selected - fixed dependency warning
+  // Load settings when tenant is selected
   useEffect(() => {
     if (selectedTenant) {
       fetchTenantSettings();
@@ -280,8 +286,8 @@ const SystemSettings = () => {
     }));
   };
 
-  // 🎯 COMPLETELY FIXED: File upload function with immediate preview
-  const handleFileUpload = async (logoType, file) => {
+  // 🎯 ENHANCED: File upload function for BOTH logos and favicons
+  const handleFileUpload = async (imageType, variant, file) => {
     if (!file) return;
     
     if (!selectedTenant) {
@@ -291,7 +297,7 @@ const SystemSettings = () => {
 
     try {
       setIsUploadingFile(true);
-      console.log(`📤 Uploading ${logoType} file:`, {
+      console.log(`📤 Uploading ${imageType} ${variant} file:`, {
         name: file.name,
         size: file.size,
         type: file.type
@@ -306,36 +312,43 @@ const SystemSettings = () => {
         throw new Error('File size must be less than 10MB');
       }
       
+      // Special validation for favicons (should be smaller)
+      if (imageType === 'favicon' && file.size > 2 * 1024 * 1024) { // 2MB limit for favicons
+        throw new Error('Favicon file size should be less than 2MB');
+      }
+      
       // 🎯 CREATE IMMEDIATE PREVIEW from file (before upload)
       const fileReader = new FileReader();
       fileReader.onload = (e) => {
-        const variant = logoType === 'light' ? 'lightLogo' : 'darkLogo';
-        console.log(`🖼️ Setting immediate preview for ${variant}:`, e.target.result.substring(0, 50) + '...');
+        const previewKey = `${variant}${imageType === 'logo' ? 'Logo' : 'Favicon'}`;
+        console.log(`🖼️ Setting immediate preview for ${previewKey}:`, e.target.result.substring(0, 50) + '...');
         
         setPreviewUrls(prev => {
           const newUrls = {
             ...prev,
-            [variant]: e.target.result
+            [previewKey]: e.target.result
           };
-          console.log('🎯 Updated preview URLs:', {
-            lightLogo: newUrls.lightLogo ? 'SET (' + newUrls.lightLogo.substring(0, 30) + '...)' : 'NONE',
-            darkLogo: newUrls.darkLogo ? 'SET (' + newUrls.darkLogo.substring(0, 30) + '...)' : 'NONE'
-          });
+          console.log('🎯 Updated preview URLs:', Object.keys(newUrls).reduce((acc, key) => {
+            acc[key] = newUrls[key] ? 'SET (BASE64)' : 'NONE';
+            return acc;
+          }, {}));
           return newUrls;
         });
       };
       fileReader.readAsDataURL(file);
       
-      // ✅ FIXED: Create FormData with correct field names
+      // Create FormData for upload
       const formData = new FormData();
-      formData.append('logo', file);  // Match the multer.single('logo') configuration
-      formData.append('logoType', logoType);
+      formData.append('logo', file); // Server expects 'logo' field for all image uploads
+      formData.append('logoType', variant); // light or dark
+      formData.append('imageType', imageType); // logo or favicon
       formData.append('tenantId', selectedTenant);
       
       console.log('🚀 Sending upload request to /api/admin/upload-logo...');
       console.log('📋 FormData contents:', {
         logo: file.name,
-        logoType: logoType,
+        logoType: variant,
+        imageType: imageType,
         tenantId: selectedTenant
       });
       
@@ -343,18 +356,13 @@ const SystemSettings = () => {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
-          // ✅ IMPORTANT: Don't set Content-Type for FormData - browser handles it automatically
         },
         body: formData
       });
       
       console.log('📥 Response status:', response.status);
-      console.log('📥 Response headers:', {
-        contentType: response.headers.get('content-type'),
-        contentLength: response.headers.get('content-length')
-      });
       
-      // ✅ FIXED: Better response handling
+      // Handle response
       let data;
       const contentType = response.headers.get('content-type');
       
@@ -362,7 +370,6 @@ const SystemSettings = () => {
         data = await response.json();
         console.log('📊 Upload response:', data);
       } else {
-        // If we get HTML instead of JSON, it means there's a server error
         const text = await response.text();
         console.error('❌ Received non-JSON response:', text.substring(0, 500));
         throw new Error(`Server error: Expected JSON but received ${contentType}. Check server logs.`);
@@ -371,17 +378,17 @@ const SystemSettings = () => {
       if (data.success && response.ok) {
         console.log('✅ File uploaded successfully:', data.url);
         
-        // 🎯 UPDATE PREVIEW with Cloudinary URL (after a short delay to allow file preview to show first)
+        // 🎯 UPDATE PREVIEW with Cloudinary URL
         setTimeout(() => {
-          const variant = logoType === 'light' ? 'lightLogo' : 'darkLogo';
+          const previewKey = `${variant}${imageType === 'logo' ? 'Logo' : 'Favicon'}`;
           
           setPreviewUrls(prev => {
             const newUrls = {
               ...prev,
-              [variant]: data.url + '?t=' + Date.now() // Cache buster
+              [previewKey]: data.url + '?t=' + Date.now() // Cache buster
             };
             console.log('🔄 Updated to Cloudinary URL:', {
-              [variant]: data.url
+              [previewKey]: data.url
             });
             return newUrls;
           });
@@ -390,31 +397,30 @@ const SystemSettings = () => {
         // 🎯 Update settings state
         setSettings(prev => ({
           ...prev,
-          systemLogo: {
-            ...prev.systemLogo,
-            [logoType]: data.url
+          [imageType === 'logo' ? 'systemLogo' : 'favicon']: {
+            ...prev[imageType === 'logo' ? 'systemLogo' : 'favicon'],
+            [variant]: data.url
           }
         }));
         
         // ✅ Show success message
-        alert('✅ File uploaded successfully!');
+        alert(`✅ ${imageType} uploaded successfully!`);
         
-        // 🎯 Optional: Save to database immediately (if you want auto-save)
+        // 🎯 Auto-save to database
         try {
           const updateData = {
-            systemLogo: {
-              ...settings.systemLogo,
-              [logoType]: data.url
+            [imageType === 'logo' ? 'systemLogo' : 'favicon']: {
+              ...settings[imageType === 'logo' ? 'systemLogo' : 'favicon'],
+              [variant]: data.url
             }
           };
           
           const saveResult = await adminService.updateIndividualSetting(selectedTenant, updateData);
           if (saveResult.success) {
-            console.log('✅ Logo URL saved to database automatically');
+            console.log(`✅ ${imageType} URL saved to database automatically`);
           }
         } catch (saveError) {
           console.warn('⚠️ Upload successful but auto-save failed:', saveError);
-          // Don't show error to user since upload worked
         }
       } else {
         throw new Error(data.message || `Upload failed with status ${response.status}`);
@@ -463,7 +469,6 @@ const SystemSettings = () => {
       setIsSaving(true);
       console.log('💾 Saving settings for tenant:', selectedTenant);
       
-      // ✅ FIXED: Use adminService instead of fetch
       const data = await adminService.updateTenantSettings(selectedTenant, settings);
       
       if (data.success) {
@@ -488,66 +493,40 @@ const SystemSettings = () => {
   };
 
   return (
-    <div className="system-settings-container" style={{ 
-      fontFamily: 'Arial, sans-serif', 
-      backgroundColor: '#f5f5f5', 
+    <div style={{ 
+      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif', 
+      backgroundColor: '#f8fafc', 
       minHeight: '100vh',
-      maxHeight: '100vh',
-      overflowY: 'auto',
-      overflowX: 'hidden'
+      padding: '24px'
     }}>
       {/* Header */}
       <div style={{ 
         backgroundColor: 'white', 
-        padding: '20px', 
-        borderBottom: '1px solid #e0e0e0',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        position: 'sticky',
-        top: 0,
-        zIndex: 100
+        padding: '24px', 
+        borderRadius: '12px',
+        marginBottom: '24px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <button 
-            style={{ 
-              width: '40px', 
-              height: '40px', 
-              borderRadius: '50%', 
-              border: '1px solid #e0e0e0',
-              backgroundColor: 'white',
-              cursor: 'pointer',
-              fontSize: '18px'
-            }}
-            onClick={() => window.history.back()}
-          >
-            ←
-          </button>
-          <div>
-            <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '600' }}>System Settings</h1>
-            <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#666' }}>
-              Configure platform settings for each clinic (All data loaded dynamically)
-            </p>
-          </div>
-        </div>
-        <button 
-          style={{ 
-            border: 'none', 
-            background: 'none', 
-            fontSize: '24px', 
-            cursor: 'pointer' 
-          }}
-          onClick={() => window.history.back()}
-        >
-          ×
-        </button>
+        <h1 style={{ 
+          margin: 0, 
+          fontSize: '28px', 
+          fontWeight: '600',
+          color: '#1e293b'
+        }}>
+          General Settings
+        </h1>
+        <p style={{ 
+          margin: '8px 0 0 0', 
+          fontSize: '16px', 
+          color: '#64748b'
+        }}>
+          Configure platform settings for each clinic
+        </p>
       </div>
 
-      <div className="system-settings-content" style={{ 
-        padding: '20px', 
-        maxWidth: '1024px', 
-        margin: '0 auto',
-        minHeight: 'calc(100vh - 80px)'
+      <div style={{ 
+        maxWidth: '1200px', 
+        margin: '0 auto'
       }}>
         {/* Tenant Selection */}
         <div style={{ 
@@ -555,598 +534,778 @@ const SystemSettings = () => {
           padding: '24px', 
           borderRadius: '12px', 
           marginBottom: '24px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
         }}>
-          <h2 style={{ margin: '0 0 16px 0', fontSize: '20px', fontWeight: '600' }}>Select Clinic</h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <select
-              value={selectedTenant}
-              onChange={(e) => setSelectedTenant(e.target.value)}
-              disabled={isLoadingTenants}
-              style={{
-                padding: '12px 16px',
-                border: '1px solid #e0e0e0',
-                borderRadius: '8px',
-                fontSize: '16px',
-                minWidth: '200px'
-              }}
-            >
-              <option value="">-- Select Clinic --</option>
-              {tenants.map(tenant => (
-                <option key={tenant._id} value={tenant._id}>
-                  {tenant.name}
-                </option>
-              ))}
-            </select>
-            {isLoadingTenants && <span style={{ fontSize: '14px', color: '#666' }}>Loading clinics...</span>}
-          </div>
+          <h2 style={{ 
+            margin: '0 0 16px 0', 
+            fontSize: '20px', 
+            fontWeight: '600',
+            color: '#1e293b'
+          }}>
+            Select Clinic
+          </h2>
+          <select
+            value={selectedTenant}
+            onChange={(e) => setSelectedTenant(e.target.value)}
+            disabled={isLoadingTenants}
+            style={{
+              padding: '12px 16px',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              fontSize: '16px',
+              minWidth: '300px',
+              backgroundColor: 'white'
+            }}
+          >
+            <option value="">-- Select Clinic --</option>
+            {tenants.map(tenant => (
+              <option key={tenant._id} value={tenant._id}>
+                {tenant.name}
+              </option>
+            ))}
+          </select>
         </div>
 
-        {selectedTenant && (
+        {selectedTenant && !isLoading && (
           <>
-            {/* Loading State */}
-            {isLoading && (
-              <div style={{
-                backgroundColor: 'white', 
-                padding: '60px 24px', 
-                borderRadius: '12px',
-                textAlign: 'center',
-                marginBottom: '24px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
-              }}>
-                <h3 style={{ margin: '0 0 16px 0', fontSize: '20px', color: '#333' }}>Loading Settings...</h3>
-                <p style={{ margin: 0, color: '#666', fontSize: '16px' }}>
-                  Fetching configuration for selected clinic...
-                </p>
-              </div>
-            )}
-
-            {!isLoading && (
-              <>
-                {/* General Settings */}
-                <div style={{ 
-                  backgroundColor: 'white', 
-                  padding: '24px', 
-                  borderRadius: '12px', 
-                  marginBottom: '24px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+            {/* Platform Settings */}
+            <div style={{ 
+              backgroundColor: 'white', 
+              padding: '32px', 
+              borderRadius: '12px', 
+              marginBottom: '24px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            }}>
+              <div style={{ marginBottom: '32px' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '8px', 
+                  fontWeight: '500',
+                  fontSize: '16px',
+                  color: '#374151'
                 }}>
-                  <h2 style={{ margin: '0 0 24px 0', fontSize: '20px', fontWeight: '600' }}>General Settings</h2>
-                  
-                  <div style={{ marginBottom: '24px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Platform Name</label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <input
-                        type="text"
-                        value={settings.platformName}
-                        onChange={(e) => handleInputChange('platformName', e.target.value)}
-                        placeholder="Enter platform name"
-                        style={{
-                          flex: 1,
-                          padding: '12px 16px',
-                          border: '1px solid #e0e0e0',
-                          borderRadius: '8px',
-                          fontSize: '16px'
-                        }}
-                      />
-                      <button 
-                        onClick={() => saveIndividualSetting('platformName', settings.platformName)}
-                        style={{
-                          backgroundColor: '#4CAF50',
-                          color: 'white',
-                          border: 'none',
-                          padding: '12px 20px',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          fontSize: '14px'
-                        }}
-                      >
-                        Save and Update
-                      </button>
-                    </div>
-                  </div>
-
-                  <div style={{ marginBottom: '24px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Platform Description</label>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                      <textarea
-                        value={settings.platformDescription}
-                        onChange={(e) => handleInputChange('platformDescription', e.target.value)}
-                        placeholder="Enter platform description"
-                        rows={4}
-                        style={{
-                          flex: 1,
-                          padding: '12px 16px',
-                          border: '1px solid #e0e0e0',
-                          borderRadius: '8px',
-                          fontSize: '16px',
-                          resize: 'vertical'
-                        }}
-                      />
-                      <button 
-                        onClick={() => saveIndividualSetting('platformDescription', settings.platformDescription)}
-                        style={{
-                          backgroundColor: '#4CAF50',
-                          color: 'white',
-                          border: 'none',
-                          padding: '12px 20px',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          fontSize: '14px'
-                        }}
-                      >
-                        Save and Update
-                      </button>
-                    </div>
-                  </div>
+                  Platform Name
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <input
+                    type="text"
+                    value={settings.platformName}
+                    onChange={(e) => handleInputChange('platformName', e.target.value)}
+                    placeholder="Enter platform name"
+                    style={{
+                      flex: 1,
+                      padding: '12px 16px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      backgroundColor: '#f8fafc'
+                    }}
+                  />
+                  <button 
+                    onClick={() => saveIndividualSetting('platformName', settings.platformName)}
+                    style={{
+                      backgroundColor: '#22c55e',
+                      color: 'white',
+                      border: 'none',
+                      padding: '12px 20px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '500'
+                    }}
+                  >
+                    Save and Update
+                  </button>
                 </div>
+              </div>
 
-                {/* Logo Settings - COMPLETELY FIXED */}
-                <div style={{ 
-                  backgroundColor: 'white', 
-                  padding: '24px', 
-                  borderRadius: '12px', 
-                  marginBottom: '24px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+              <div style={{ marginBottom: '32px' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '8px', 
+                  fontWeight: '500',
+                  fontSize: '16px',
+                  color: '#374151'
                 }}>
-                  <h2 style={{ margin: '0 0 24px 0', fontSize: '20px', fontWeight: '600' }}>Logo Settings</h2>
-                  
-                  {isUploadingFile && (
+                  Platform Description
+                </label>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                  <textarea
+                    value={settings.platformDescription}
+                    onChange={(e) => handleInputChange('platformDescription', e.target.value)}
+                    placeholder="Enter platform description"
+                    rows={4}
+                    style={{
+                      flex: 1,
+                      padding: '12px 16px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      resize: 'vertical',
+                      backgroundColor: '#f8fafc',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                  <button 
+                    onClick={() => saveIndividualSetting('platformDescription', settings.platformDescription)}
+                    style={{
+                      backgroundColor: '#22c55e',
+                      color: 'white',
+                      border: 'none',
+                      padding: '12px 20px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '500'
+                    }}
+                  >
+                    Save and Update
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Logo and Favicon Upload Section - MATCHES FIGMA */}
+            <div style={{ 
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '24px',
+              marginBottom: '24px'
+            }}>
+              {/* System Logo Section */}
+              <div style={{ 
+                backgroundColor: 'white', 
+                padding: '32px', 
+                borderRadius: '12px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+              }}>
+                <h3 style={{
+                  margin: '0 0 24px 0',
+                  fontSize: '20px',
+                  fontWeight: '600',
+                  color: '#1e293b'
+                }}>
+                  System Logo (Version 1 - Light)
+                </h3>
+                
+                <div style={{
+                  width: '200px',
+                  height: '200px',
+                  border: '2px dashed #d1d5db',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 20px auto',
+                  backgroundColor: '#f8fafc',
+                  overflow: 'hidden',
+                  position: 'relative'
+                }}>
+                  {(previewUrls.lightLogo || settings.systemLogo?.light) ? (
+                    <img 
+                      src={previewUrls.lightLogo || settings.systemLogo?.light} 
+                      alt="Light Logo" 
+                      style={{ 
+                        maxWidth: '100%', 
+                        maxHeight: '100%', 
+                        objectFit: 'contain'
+                      }}
+                    />
+                  ) : (
                     <div style={{ 
-                      backgroundColor: '#e3f2fd', 
-                      padding: '12px 16px', 
-                      borderRadius: '8px', 
-                      marginBottom: '16px',
-                      color: '#1976d2'
+                      textAlign: 'center', 
+                      color: '#9ca3af',
+                      fontSize: '14px'
                     }}>
-                      📤 Uploading file... Please wait.
+                      <div style={{ fontSize: '48px', marginBottom: '8px' }}>🖼️</div>
+                      <div>NEUROLEX_Logo_Light.png</div>
                     </div>
                   )}
-                  
-                  {/* 🎯 DEBUG PANEL - Remove in production */}
-                  <div style={{
-                    backgroundColor: '#f8f9fa',
-                    padding: '12px',
-                    borderRadius: '6px',
-                    marginBottom: '16px',
-                    fontSize: '12px',
-                    fontFamily: 'monospace'
-                  }}>
-                    <strong>🔍 DEBUG INFO:</strong><br/>
-                    Light Preview: {previewUrls.lightLogo ? '✅ ' + previewUrls.lightLogo.substring(0, 60) + '...' : '❌ Not set'}<br/>
-                    Dark Preview: {previewUrls.darkLogo ? '✅ ' + previewUrls.darkLogo.substring(0, 60) + '...' : '❌ Not set'}<br/>
-                    Light Settings: {settings.systemLogo?.light ? '✅ ' + settings.systemLogo.light.substring(0, 60) + '...' : '❌ Not set'}<br/>
-                    Dark Settings: {settings.systemLogo?.dark ? '✅ ' + settings.systemLogo.dark.substring(0, 60) + '...' : '❌ Not set'}
-                  </div>
-                  
-                  <div style={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-                    gap: '24px' 
-                  }}>
-                    {/* Light Logo */}
-                    <div style={{ textAlign: 'center' }}>
-                      <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '500' }}>
-                        System Logo (Light)
-                      </h3>
-                      <div style={{
-                        width: '150px',
-                        height: '150px',
-                        border: '2px dashed #e0e0e0',
-                        borderRadius: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        margin: '0 auto 16px auto',
-                        backgroundColor: '#f9f9f9',
-                        overflow: 'hidden',
-                        position: 'relative'
-                      }}>
-                        {(previewUrls.lightLogo || settings.systemLogo?.light) ? (
-                          <>
-                            <img 
-                              src={previewUrls.lightLogo || settings.systemLogo.light} 
-                              alt="Light Logo" 
-                              style={{ 
-                                maxWidth: '100%', 
-                                maxHeight: '100%', 
-                                objectFit: 'contain',
-                                borderRadius: '4px'
-                              }}
-                              onLoad={(e) => {
-                                console.log('✅ Light logo loaded:', e.target.src.substring(0, 60) + '...');
-                              }}
-                              onError={(e) => {
-                                console.error('❌ Light logo failed to load:', e.target.src);
-                                e.target.style.display = 'none';
-                                e.target.nextSibling.style.display = 'flex';
-                              }}
-                            />
-                            <div style={{ 
-                              display: 'none',
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                              color: '#ff4444'
-                            }}>
-                              <span style={{ fontSize: '24px' }}>❌</span>
-                              <span style={{ fontSize: '12px', marginTop: '4px' }}>Failed to load</span>
-                            </div>
-                          </>
-                        ) : (
-                          <div style={{ textAlign: 'center', color: '#ccc' }}>
-                            <span style={{ fontSize: '48px' }}>🔗</span>
-                            <div style={{ fontSize: '12px', marginTop: '8px' }}>No image uploaded</div>
-                          </div>
-                        )}
-                        
-                        {/* Upload overlay */}
-                        {isUploadingFile && (
-                          <div style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            backgroundColor: 'rgba(255,255,255,0.9)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '14px',
-                            color: '#666'
-                          }}>
-                            📤 Uploading...
-                          </div>
-                        )}
-                      </div>
-                      
-                      <button 
-                        style={{
-                          backgroundColor: '#4CAF50',
-                          color: 'white',
-                          border: 'none',
-                          padding: '8px 16px',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontSize: '14px',
-                          opacity: isUploadingFile ? 0.6 : 1
-                        }}
-                        disabled={isUploadingFile}
-                        onClick={() => document.getElementById('light-logo-input').click()}
-                      >
-                        {isUploadingFile ? 'Uploading...' : 'Upload Light Logo'}
-                      </button>
-                      <input
-                        id="light-logo-input"
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          if (e.target.files[0]) {
-                            console.log('📁 Light logo file selected:', e.target.files[0].name);
-                            handleFileUpload('light', e.target.files[0]);
-                          }
-                        }}
-                        style={{ display: 'none' }}
-                      />
-                    </div>
+                </div>
+                
+                <button 
+                  style={{
+                    width: '100%',
+                    backgroundColor: '#22c55e',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px 20px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500'
+                  }}
+                  onClick={() => document.getElementById('light-logo-input').click()}
+                >
+                  Change Image
+                </button>
+                <input
+                  id="light-logo-input"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => e.target.files[0] && handleFileUpload('logo', 'light', e.target.files[0])}
+                  style={{ display: 'none' }}
+                />
+              </div>
 
-                    {/* Dark Logo */}
-                    <div style={{ textAlign: 'center' }}>
-                      <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '500' }}>
-                        System Logo (Dark)
-                      </h3>
-                      <div style={{
-                        width: '150px',
-                        height: '150px',
-                        border: '2px dashed #e0e0e0',
-                        borderRadius: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        margin: '0 auto 16px auto',
-                        backgroundColor: '#2a2a2a',
-                        overflow: 'hidden',
-                        position: 'relative'
-                      }}>
-                        {(previewUrls.darkLogo || settings.systemLogo?.dark) ? (
-                          <>
-                            <img 
-                              src={previewUrls.darkLogo || settings.systemLogo.dark} 
-                              alt="Dark Logo" 
-                              style={{ 
-                                maxWidth: '100%', 
-                                maxHeight: '100%', 
-                                objectFit: 'contain',
-                                borderRadius: '4px'
-                              }}
-                              onLoad={(e) => {
-                                console.log('✅ Dark logo loaded:', e.target.src.substring(0, 60) + '...');
-                              }}
-                              onError={(e) => {
-                                console.error('❌ Dark logo failed to load:', e.target.src);
-                                e.target.style.display = 'none';
-                                e.target.nextSibling.style.display = 'flex';
-                              }}
-                            />
-                            <div style={{ 
-                              display: 'none',
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                              color: '#ff4444'
-                            }}>
-                              <span style={{ fontSize: '24px' }}>❌</span>
-                              <span style={{ fontSize: '12px', marginTop: '4px' }}>Failed to load</span>
-                            </div>
-                          </>
-                        ) : (
-                          <div style={{ textAlign: 'center', color: '#888' }}>
-                            <span style={{ fontSize: '48px' }}>🔗</span>
-                            <div style={{ fontSize: '12px', marginTop: '8px' }}>No image uploaded</div>
-                          </div>
-                        )}
-                        
-                        {/* Upload overlay */}
-                        {isUploadingFile && (
-                          <div style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            backgroundColor: 'rgba(255,255,255,0.9)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '14px',
-                            color: '#666'
-                          }}>
-                            📤 Uploading...
-                          </div>
-                        )}
-                      </div>
-                      
-                      <button 
-                        style={{
-                          backgroundColor: '#4CAF50',
-                          color: 'white',
-                          border: 'none',
-                          padding: '8px 16px',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontSize: '14px',
-                          opacity: isUploadingFile ? 0.6 : 1
-                        }}
-                        disabled={isUploadingFile}
-                        onClick={() => document.getElementById('dark-logo-input').click()}
-                      >
-                        {isUploadingFile ? 'Uploading...' : 'Upload Dark Logo'}
-                      </button>
-                      <input
-                        id="dark-logo-input"
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          if (e.target.files[0]) {
-                            console.log('📁 Dark logo file selected:', e.target.files[0].name);
-                            handleFileUpload('dark', e.target.files[0]);
-                          }
-                        }}
-                        style={{ display: 'none' }}
-                      />
+              {/* System Logo Dark */}
+              <div style={{ 
+                backgroundColor: 'white', 
+                padding: '32px', 
+                borderRadius: '12px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+              }}>
+                <h3 style={{
+                  margin: '0 0 24px 0',
+                  fontSize: '20px',
+                  fontWeight: '600',
+                  color: '#1e293b'
+                }}>
+                  System Logo (Version 1 - Dark)
+                </h3>
+                
+                <div style={{
+                  width: '200px',
+                  height: '200px',
+                  border: '2px dashed #d1d5db',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 20px auto',
+                  backgroundColor: '#1f2937',
+                  overflow: 'hidden',
+                  position: 'relative'
+                }}>
+                  {(previewUrls.darkLogo || settings.systemLogo?.dark) ? (
+                    <img 
+                      src={previewUrls.darkLogo || settings.systemLogo?.dark} 
+                      alt="Dark Logo" 
+                      style={{ 
+                        maxWidth: '100%', 
+                        maxHeight: '100%', 
+                        objectFit: 'contain'
+                      }}
+                    />
+                  ) : (
+                    <div style={{ 
+                      textAlign: 'center', 
+                      color: '#9ca3af',
+                      fontSize: '14px'
+                    }}>
+                      <div style={{ fontSize: '48px', marginBottom: '8px' }}>🖼️</div>
+                      <div>NEUROLEX_Logo_Dark.png</div>
                     </div>
-                  </div>
+                  )}
+                </div>
+                
+                <button 
+                  style={{
+                    width: '100%',
+                    backgroundColor: '#22c55e',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px 20px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500'
+                  }}
+                  onClick={() => document.getElementById('dark-logo-input').click()}
+                >
+                  Change Image
+                </button>
+                <input
+                  id="dark-logo-input"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => e.target.files[0] && handleFileUpload('logo', 'dark', e.target.files[0])}
+                  style={{ display: 'none' }}
+                />
+              </div>
+            </div>
+
+            {/* Favicon Section - NEW */}
+            <div style={{ 
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '24px',
+              marginBottom: '24px'
+            }}>
+              {/* Favicon Light */}
+              <div style={{ 
+                backgroundColor: 'white', 
+                padding: '32px', 
+                borderRadius: '12px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+              }}>
+                <h3 style={{
+                  margin: '0 0 24px 0',
+                  fontSize: '20px',
+                  fontWeight: '600',
+                  color: '#1e293b'
+                }}>
+                  Favicon (Light)
+                </h3>
+                
+                <div style={{
+                  width: '200px',
+                  height: '200px',
+                  border: '2px dashed #d1d5db',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 20px auto',
+                  backgroundColor: '#f8fafc',
+                  overflow: 'hidden',
+                  position: 'relative'
+                }}>
+                  {(previewUrls.lightFavicon || settings.favicon?.light) ? (
+                    <img 
+                      src={previewUrls.lightFavicon || settings.favicon?.light} 
+                      alt="Light Favicon" 
+                      style={{ 
+                        maxWidth: '100%', 
+                        maxHeight: '100%', 
+                        objectFit: 'contain'
+                      }}
+                    />
+                  ) : (
+                    <div style={{ 
+                      textAlign: 'center', 
+                      color: '#9ca3af',
+                      fontSize: '14px'
+                    }}>
+                      <div style={{ fontSize: '48px', marginBottom: '8px' }}>🔗</div>
+                      <div>NEUROLEX_Favicon_Light.ico</div>
+                    </div>
+                  )}
+                </div>
+                
+                <button 
+                  style={{
+                    width: '100%',
+                    backgroundColor: '#22c55e',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px 20px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500'
+                  }}
+                  onClick={() => document.getElementById('light-favicon-input').click()}
+                >
+                  Change Image
+                </button>
+                <input
+                  id="light-favicon-input"
+                  type="file"
+                  accept="image/*,.ico"
+                  onChange={(e) => e.target.files[0] && handleFileUpload('favicon', 'light', e.target.files[0])}
+                  style={{ display: 'none' }}
+                />
+              </div>
+
+              {/* Favicon Dark */}
+              <div style={{ 
+                backgroundColor: 'white', 
+                padding: '32px', 
+                borderRadius: '12px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+              }}>
+                <h3 style={{
+                  margin: '0 0 24px 0',
+                  fontSize: '20px',
+                  fontWeight: '600',
+                  color: '#1e293b'
+                }}>
+                  Favicon (Dark)
+                </h3>
+                
+                <div style={{
+                  width: '200px',
+                  height: '200px',
+                  border: '2px dashed #d1d5db',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 20px auto',
+                  backgroundColor: '#1f2937',
+                  overflow: 'hidden',
+                  position: 'relative'
+                }}>
+                  {(previewUrls.darkFavicon || settings.favicon?.dark) ? (
+                    <img 
+                      src={previewUrls.darkFavicon || settings.favicon?.dark} 
+                      alt="Dark Favicon" 
+                      style={{ 
+                        maxWidth: '100%', 
+                        maxHeight: '100%', 
+                        objectFit: 'contain'
+                      }}
+                    />
+                  ) : (
+                    <div style={{ 
+                      textAlign: 'center', 
+                      color: '#9ca3af',
+                      fontSize: '14px'
+                    }}>
+                      <div style={{ fontSize: '48px', marginBottom: '8px' }}>🔗</div>
+                      <div>NEUROLEX_Favicon_Dark.ico</div>
+                    </div>
+                  )}
+                </div>
+                
+                <button 
+                  style={{
+                    width: '100%',
+                    backgroundColor: '#22c55e',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px 20px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500'
+                  }}
+                  onClick={() => document.getElementById('dark-favicon-input').click()}
+                >
+                  Change Image
+                </button>
+                <input
+                  id="dark-favicon-input"
+                  type="file"
+                  accept="image/*,.ico"
+                  onChange={(e) => e.target.files[0] && handleFileUpload('favicon', 'dark', e.target.files[0])}
+                  style={{ display: 'none' }}
+                />
+              </div>
+            </div>
+
+            {/* HIRS Management Table */}
+            <div style={{ 
+              backgroundColor: 'white', 
+              padding: '32px', 
+              borderRadius: '12px', 
+              marginBottom: '24px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            }}>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                marginBottom: '24px' 
+              }}>
+                <h2 style={{ 
+                  margin: 0, 
+                  fontSize: '24px', 
+                  fontWeight: '600',
+                  color: '#1e293b'
+                }}>
+                  HIRS Management ({settings.hirsSettings.length} modules)
+                </h2>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <select style={{
+                    padding: '8px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    backgroundColor: 'white'
+                  }}>
+                    <option>Year - 2025</option>
+                    <option>Year - 2024</option>
+                  </select>
+                  <button style={{
+                    backgroundColor: '#22c55e',
+                    color: 'white',
+                    border: 'none',
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500'
+                  }}>
+                    + Add Entry
+                  </button>
+                </div>
+              </div>
+
+              {/* Table */}
+              <div style={{ 
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                overflow: 'hidden'
+              }}>
+                {/* Table Header */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '80px 200px 1fr 150px 120px',
+                  gap: '16px',
+                  padding: '16px',
+                  backgroundColor: '#f9fafb',
+                  fontWeight: '600',
+                  fontSize: '14px',
+                  color: '#374151',
+                  borderBottom: '1px solid #e5e7eb'
+                }}>
+                  <div>Icon</div>
+                  <div>Function / Menu Name</div>
+                  <div>Description</div>
+                  <div>Last Updated</div>
+                  <div>Actions</div>
                 </div>
 
-                {/* HIRS Management */}
-                <div style={{ 
-                  backgroundColor: 'white', 
-                  padding: '24px', 
-                  borderRadius: '12px', 
-                  marginBottom: '24px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
-                }}>
-                  <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center',
-                    marginBottom: '24px' 
-                  }}>
-                    <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600' }}>
-                      HIRS Management ({settings.hirsSettings.length} modules)
-                    </h2>
-                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                      <select style={{
-                        padding: '8px 12px',
-                        border: '1px solid #e0e0e0',
-                        borderRadius: '6px',
-                        fontSize: '14px'
-                      }}>
-                        <option>Year - 2025</option>
-                        <option>Year - 2024</option>
-                      </select>
-                      <button style={{
-                        backgroundColor: '#4CAF50',
-                        color: 'white',
-                        border: 'none',
-                        padding: '8px 16px',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontSize: '14px'
-                      }}>
-                        + Add Entry
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* HIRS Table */}
-                  <div className="hirs-table-container" style={{ 
-                    overflowX: 'auto',
-                    overflowY: 'auto',
-                    maxHeight: '600px',
-                    border: '1px solid #e0e0e0',
-                    borderRadius: '8px'
-                  }}>
-                    {/* Table Header */}
-                    <div style={{
+                {/* Table Rows */}
+                {settings.hirsSettings.map((hirs, index) => (
+                  <div 
+                    key={hirs.id} 
+                    style={{
                       display: 'grid',
                       gridTemplateColumns: '80px 200px 1fr 150px 120px',
                       gap: '16px',
-                      padding: '12px 16px',
-                      backgroundColor: '#f8f9fa',
-                      fontWeight: '600',
-                      fontSize: '14px',
-                      position: 'sticky',
-                      top: 0,
-                      zIndex: 10
-                    }}>
-                      <div>Icon</div>
-                      <div>Function / Menu Name</div>
-                      <div>Description</div>
-                      <div>Last Updated</div>
-                      <div>Actions</div>
-                    </div>
-
-                    {/* Table Rows */}
-                    {settings.hirsSettings.map((hirs) => (
-                      <div 
-                        key={hirs.id} 
-                        style={{
-                          display: 'grid',
-                          gridTemplateColumns: '80px 200px 1fr 150px 120px',
-                          gap: '16px',
-                          padding: '16px',
-                          borderBottom: '1px solid #e0e0e0',
-                          alignItems: 'center',
-                          opacity: hirs.isActive ? 1 : 0.6
-                        }}
-                      >
-                        <div style={{
-                          width: '40px',
-                          height: '40px',
-                          backgroundColor: hirs.isActive ? '#4CAF50' : '#ccc',
-                          color: 'white',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          borderRadius: '8px',
-                          fontSize: '12px',
-                          fontWeight: 'bold'
-                        }}>
-                          {hirs.icon}
-                        </div>
-                        <div style={{ fontWeight: '500' }}>{hirs.name}</div>
-                        <div style={{ fontSize: '14px', color: '#666' }}>{hirs.description}</div>
-                        <div style={{ fontSize: '14px', color: '#666' }}>{hirs.lastUpdated}</div>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <button 
-                            style={{
-                              border: 'none',
-                              background: 'none',
-                              cursor: 'pointer',
-                              fontSize: '18px',
-                              padding: '4px'
-                            }}
-                            title="View"
-                          >
-                            👁️
-                          </button>
-                          <button 
-                            style={{
-                              border: 'none',
-                              background: 'none',
-                              cursor: 'pointer',
-                              fontSize: '18px',
-                              padding: '4px'
-                            }}
-                            title="Edit"
-                          >
-                            ✏️
-                          </button>
-                          <button 
-                            style={{
-                              border: 'none',
-                              background: 'none',
-                              cursor: 'pointer',
-                              fontSize: '18px',
-                              padding: '4px'
-                            }}
-                            onClick={() => handleHirsToggle(hirs.id)}
-                            title={hirs.isActive ? 'Deactivate' : 'Activate'}
-                          >
-                            {hirs.isActive ? '🟢' : '🔴'}
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Save/Reset Actions */}
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'flex-end', 
-                  gap: '12px',
-                  backgroundColor: 'white',
-                  padding: '24px',
-                  borderRadius: '12px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
-                }}>
-                  <button 
-                    onClick={resetSettings}
-                    disabled={isLoading || isSaving}
-                    style={{
-                      backgroundColor: 'white',
-                      color: '#666',
-                      border: '1px solid #e0e0e0',
-                      padding: '12px 24px',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontSize: '16px',
-                      opacity: (isLoading || isSaving) ? 0.6 : 1
+                      padding: '16px',
+                      borderBottom: index < settings.hirsSettings.length - 1 ? '1px solid #f3f4f6' : 'none',
+                      alignItems: 'center',
+                      backgroundColor: 'white'
                     }}
                   >
-                    Reset Changes
-                  </button>
-                  <button 
-                    onClick={saveSettings}
-                    disabled={isLoading || isSaving}
-                    style={{
-                      backgroundColor: '#4CAF50',
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      backgroundColor: hirs.isActive ? '#22c55e' : '#9ca3af',
                       color: 'white',
-                      border: 'none',
-                      padding: '12px 24px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                       borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontSize: '16px',
+                      fontSize: '12px',
+                      fontWeight: 'bold'
+                    }}>
+                      {hirs.icon}
+                    </div>
+                    <div style={{ 
                       fontWeight: '500',
-                      opacity: (isLoading || isSaving) ? 0.6 : 1
-                    }}
-                  >
-                    {isSaving ? 'Saving...' : 'Save All Settings'}
-                  </button>
-                </div>
-              </>
-            )}
+                      color: '#1f2937'
+                    }}>
+                      {hirs.name}
+                    </div>
+                    <div style={{ 
+                      fontSize: '14px', 
+                      color: '#6b7280'
+                    }}>
+                      {hirs.description}
+                    </div>
+                    <div style={{ 
+                      fontSize: '14px', 
+                      color: '#6b7280'
+                    }}>
+                      {hirs.lastUpdated}
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button 
+                        style={{
+                          border: 'none',
+                          background: 'none',
+                          cursor: 'pointer',
+                          fontSize: '18px',
+                          padding: '4px',
+                          borderRadius: '4px'
+                        }}
+                        title="View"
+                      >
+                        👁️
+                      </button>
+                      <button 
+                        style={{
+                          border: 'none',
+                          background: 'none',
+                          cursor: 'pointer',
+                          fontSize: '18px',
+                          padding: '4px',
+                          borderRadius: '4px'
+                        }}
+                        title="Edit"
+                      >
+                        ✏️
+                      </button>
+                      <button 
+                        style={{
+                          border: 'none',
+                          background: 'none',
+                          cursor: 'pointer',
+                          fontSize: '18px',
+                          padding: '4px',
+                          borderRadius: '4px'
+                        }}
+                        onClick={() => handleHirsToggle(hirs.id)}
+                        title={hirs.isActive ? 'Deactivate' : 'Activate'}
+                      >
+                        {hirs.isActive ? '🟢' : '🔴'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Save Actions */}
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'flex-end', 
+              gap: '12px',
+              backgroundColor: 'white',
+              padding: '24px',
+              borderRadius: '12px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            }}>
+              <button 
+                onClick={resetSettings}
+                disabled={isLoading || isSaving}
+                style={{
+                  backgroundColor: 'white',
+                  color: '#6b7280',
+                  border: '1px solid #d1d5db',
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: '500',
+                  opacity: (isLoading || isSaving) ? 0.6 : 1
+                }}
+              >
+                Reset Changes
+              </button>
+              <button 
+                onClick={saveSettings}
+                disabled={isLoading || isSaving}
+                style={{
+                  backgroundColor: '#22c55e',
+                  color: 'white',
+                  border: 'none',
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: '500',
+                  opacity: (isLoading || isSaving) ? 0.6 : 1
+                }}
+              >
+                {isSaving ? 'Saving...' : 'Save All Settings'}
+              </button>
+            </div>
           </>
         )}
 
+        {/* Loading State */}
+        {isLoading && (
+          <div style={{
+            backgroundColor: 'white', 
+            padding: '60px 24px', 
+            borderRadius: '12px',
+            textAlign: 'center',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+          }}>
+            <h3 style={{ 
+              margin: '0 0 16px 0', 
+              fontSize: '20px', 
+              color: '#1e293b' 
+            }}>
+              Loading Settings...
+            </h3>
+            <p style={{ 
+              margin: 0, 
+              color: '#64748b', 
+              fontSize: '16px' 
+            }}>
+              Fetching configuration for selected clinic...
+            </p>
+          </div>
+        )}
+
+        {/* No Tenant Selected */}
         {!selectedTenant && !isLoadingTenants && (
           <div style={{ 
             backgroundColor: 'white', 
             padding: '60px 24px', 
             borderRadius: '12px',
             textAlign: 'center',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
           }}>
-            <h3 style={{ margin: '0 0 16px 0', fontSize: '20px', color: '#333' }}>No Clinic Selected</h3>
-            <p style={{ margin: 0, color: '#666', fontSize: '16px' }}>
+            <h3 style={{ 
+              margin: '0 0 16px 0', 
+              fontSize: '20px', 
+              color: '#1e293b' 
+            }}>
+              No Clinic Selected
+            </h3>
+            <p style={{ 
+              margin: 0, 
+              color: '#64748b', 
+              fontSize: '16px' 
+            }}>
               Please select a clinic from the dropdown above to configure its settings.
-            </p>
-            <p style={{ margin: '16px 0 0 0', color: '#999', fontSize: '14px', fontStyle: 'italic' }}>
-              All data will be loaded dynamically from your database.
             </p>
           </div>
         )}
+
+        {/* Upload Progress Overlay */}
+        {isUploadingFile && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}>
+            <div style={{
+              backgroundColor: 'white',
+              padding: '32px',
+              borderRadius: '12px',
+              textAlign: 'center',
+              minWidth: '300px'
+            }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                border: '4px solid #f3f4f6',
+                borderTop: '4px solid #22c55e',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite',
+                margin: '0 auto 16px auto'
+              }} />
+              <h3 style={{
+                margin: '0 0 8px 0',
+                fontSize: '18px',
+                color: '#1e293b'
+              }}>
+                Uploading File...
+              </h3>
+              <p style={{
+                margin: 0,
+                color: '#64748b',
+                fontSize: '14px'
+              }}>
+                Please wait while we upload your image to Cloudinary
+              </p>
+            </div>
+          </div>
+        )}
       </div>
+
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 };

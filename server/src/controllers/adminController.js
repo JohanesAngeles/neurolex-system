@@ -2612,7 +2612,7 @@ exports.updateIndividualTenantSetting = async (req, res) => {
 
 exports.uploadTenantLogo = async (req, res) => {
   try {
-    console.log('📤 [ADMIN] Real Cloudinary upload - NO MOCK');
+    console.log('📤 [ADMIN] Enhanced upload - Logo AND Favicon support');
     
     // Ensure JSON response
     res.setHeader('Content-Type', 'application/json');
@@ -2632,14 +2632,9 @@ exports.uploadTenantLogo = async (req, res) => {
       });
     }
     
-    if (req.file.size > 10 * 1024 * 1024) {
-      return res.status(400).json({
-        success: false,
-        message: 'File too large. Maximum size is 10MB.'
-      });
-    }
-    
-    const logoType = req.body.logoType || 'light';
+    // Get parameters from request
+    const logoType = req.body.logoType || 'light'; // light or dark
+    const imageType = req.body.imageType || 'logo'; // logo or favicon
     const tenantId = req.body.tenantId || req.query.tenantId;
     
     if (!tenantId) {
@@ -2649,8 +2644,35 @@ exports.uploadTenantLogo = async (req, res) => {
       });
     }
     
+    // Validate imageType
+    if (!['logo', 'favicon'].includes(imageType)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid image type. Must be "logo" or "favicon".'
+      });
+    }
+    
+    // Validate logoType
+    if (!['light', 'dark'].includes(logoType)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid logo type. Must be "light" or "dark".'
+      });
+    }
+    
+    // Different size limits for logos vs favicons
+    const maxSize = imageType === 'favicon' ? 2 * 1024 * 1024 : 10 * 1024 * 1024; // 2MB for favicon, 10MB for logo
+    
+    if (req.file.size > maxSize) {
+      return res.status(400).json({
+        success: false,
+        message: `File too large. Maximum size for ${imageType} is ${maxSize / (1024 * 1024)}MB.`
+      });
+    }
+    
     console.log('📋 Upload parameters:', { 
       logoType, 
+      imageType,
       tenantId, 
       fileName: req.file.originalname,
       fileSize: req.file.size 
@@ -2698,18 +2720,25 @@ exports.uploadTenantLogo = async (req, res) => {
     }
     
     // ✅ UPLOAD TO CLOUDINARY
-    console.log('🚀 Starting Cloudinary upload...');
+    console.log(`🚀 Starting Cloudinary upload for ${imageType}...`);
     
     const uploadResult = await new Promise((resolve, reject) => {
+      // Different upload options for logos vs favicons
       const uploadOptions = {
-        folder: `neurolex/tenants/${tenantId}/logos`,
-        public_id: `${logoType}_logo_${Date.now()}`,
+        folder: `neurolex/tenants/${tenantId}/${imageType}s`, // logos or favicons
+        public_id: `${logoType}_${imageType}_${Date.now()}`,
         resource_type: 'image',
         overwrite: true,
         invalidate: true,
         use_filename: false,
         unique_filename: true,
-        transformation: [
+        transformation: imageType === 'favicon' ? [
+          // Favicon transformations (smaller, square)
+          { width: 512, height: 512, crop: 'fill' },
+          { quality: 'auto:good' },
+          { fetch_format: 'auto' }
+        ] : [
+          // Logo transformations (larger, maintain aspect ratio)
           { width: 800, height: 600, crop: 'limit' },
           { quality: 'auto:good' },
           { fetch_format: 'auto' }
@@ -2739,15 +2768,46 @@ exports.uploadTenantLogo = async (req, res) => {
       uploadStream.end(req.file.buffer);
     });
     
-    console.log('🎉 Upload completed successfully!');
+    console.log(`🎉 ${imageType} upload completed successfully!`);
+    
+    // ✅ UPDATE TENANT DATABASE with new image URL
+    try {
+      const masterConn = getMasterConnection();
+      if (masterConn) {
+        const Tenant = masterConn.model('Tenant');
+        
+        // Determine which field to update based on imageType and logoType
+        let updateField;
+        if (imageType === 'logo') {
+          updateField = logoType === 'light' ? 'logoUrl' : 'darkLogoUrl';
+        } else if (imageType === 'favicon') {
+          updateField = logoType === 'light' ? 'faviconUrl' : 'darkFaviconUrl';
+        }
+        
+        if (updateField) {
+          await Tenant.findByIdAndUpdate(
+            tenantId,
+            { 
+              [updateField]: uploadResult.secure_url,
+              updatedAt: new Date()
+            },
+            { new: true }
+          );
+          console.log(`✅ Tenant ${updateField} updated in database`);
+        }
+      }
+    } catch (dbError) {
+      console.warn('⚠️ Upload successful but database update failed:', dbError.message);
+      // Don't fail the request since upload was successful
+    }
     
     // ✅ RETURN SUCCESS RESPONSE
     return res.status(200).json({
       success: true,
-      message: 'Logo uploaded successfully to Cloudinary',
+      message: `${imageType.charAt(0).toUpperCase() + imageType.slice(1)} uploaded successfully to Cloudinary`,
       url: uploadResult.secure_url,
       publicId: uploadResult.public_id,
-      uploadType: 'logo',
+      uploadType: imageType,
       variant: logoType,
       cloudinaryInfo: {
         format: uploadResult.format,
@@ -2761,6 +2821,12 @@ exports.uploadTenantLogo = async (req, res) => {
         originalName: req.file.originalname,
         originalSize: req.file.size,
         originalType: req.file.mimetype
+      },
+      tenantInfo: {
+        tenantId: tenantId,
+        fieldUpdated: imageType === 'logo' 
+          ? (logoType === 'light' ? 'logoUrl' : 'darkLogoUrl')
+          : (logoType === 'light' ? 'faviconUrl' : 'darkFaviconUrl')
       }
     });
     
