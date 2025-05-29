@@ -1,3 +1,4 @@
+// client/src/components/admin/layout/SystemSettings.jsx - Enhanced with Real-time Updates
 import React, { useState, useEffect, useCallback } from 'react';
 import adminService from '../../services/adminService';
 
@@ -29,7 +30,36 @@ const SystemSettings = () => {
     hirsSettings: []
   });
 
-  // Individual setting save function
+  // 🔄 NEW: Broadcast settings update to all open tabs/windows
+  const broadcastSettingsUpdate = useCallback((tenantId, updatedSettings) => {
+    console.log('📡 Broadcasting settings update to all tabs...');
+    
+    // Method 1: Custom event for same tab
+    const updateEvent = new CustomEvent('tenantSettingsUpdated', {
+      detail: {
+        tenantId,
+        updatedSettings,
+        timestamp: Date.now()
+      }
+    });
+    window.dispatchEvent(updateEvent);
+    
+    // Method 2: LocalStorage event for other tabs
+    localStorage.setItem('tenantSettingsUpdated', JSON.stringify({
+      tenantId,
+      timestamp: Date.now(),
+      updatedSettings
+    }));
+    
+    // Clean up the localStorage flag after a short delay
+    setTimeout(() => {
+      localStorage.removeItem('tenantSettingsUpdated');
+    }, 1000);
+    
+    console.log('✅ Settings update broadcasted successfully');
+  }, []);
+
+  // 🔄 ENHANCED: Individual setting save function with real-time updates
   const saveIndividualSetting = async (settingType, value) => {
     if (!selectedTenant) {
       alert('Please select a clinic first');
@@ -39,7 +69,15 @@ const SystemSettings = () => {
       const updateData = { [settingType]: value };
       const data = await adminService.updateIndividualSetting(selectedTenant, updateData);
       if (data.success) {
+        // 🔄 Broadcast the update to all open tabs
+        broadcastSettingsUpdate(selectedTenant, { [settingType]: value });
+        
         alert(`✅ ${settingType.replace(/([A-Z])/g, ' $1').toLowerCase()} saved successfully!`);
+        
+        // 🔄 Small delay to ensure backend is updated, then refresh preview
+        setTimeout(() => {
+          fetchTenantSettings();
+        }, 500);
       } else {
         throw new Error(data.message || 'Save failed');
       }
@@ -74,11 +112,13 @@ const SystemSettings = () => {
       const data = await adminService.updateTenantSettings(selectedTenant, defaultSettings);
       if (data.success) {
         setSettings(defaultSettings);
+        // 🔄 Broadcast the update
+        broadcastSettingsUpdate(selectedTenant, defaultSettings);
       }
     } catch (error) {
       console.error('Error creating default settings:', error);
     }
-  }, [selectedTenant]);
+  }, [selectedTenant, broadcastSettingsUpdate]);
 
   // Fetch tenant settings
   const fetchTenantSettings = useCallback(async () => {
@@ -144,7 +184,7 @@ const SystemSettings = () => {
     setSettings(prev => ({ ...prev, [field]: value }));
   };
 
-  // File upload function for BOTH logos and favicons
+  // 🔄 ENHANCED: File upload function with real-time updates
   const handleFileUpload = async (imageType, variant, file) => {
     if (!file || !selectedTenant) {
       alert('Please select a clinic first');
@@ -185,10 +225,15 @@ const SystemSettings = () => {
 
       const data = await response.json();
       if (data.success) {
+        // 🔄 Update preview with new URL immediately
         setTimeout(() => {
           const previewKey = `${variant}${imageType === 'logo' ? 'Logo' : 'Favicon'}`;
           setPreviewUrls(prev => ({ ...prev, [previewKey]: data.url + '?t=' + Date.now() }));
         }, 500);
+
+        const updatedImageData = {
+          [variant]: data.url
+        };
 
         setSettings(prev => ({
           ...prev,
@@ -198,16 +243,19 @@ const SystemSettings = () => {
           }
         }));
 
+        // 🔄 Broadcast the image update to all open tabs
+        const updateData = {
+          [imageType === 'logo' ? 'systemLogo' : 'favicon']: {
+            ...settings[imageType === 'logo' ? 'systemLogo' : 'favicon'],
+            [variant]: data.url
+          }
+        };
+        broadcastSettingsUpdate(selectedTenant, updateData);
+
         alert(`✅ ${imageType} uploaded successfully!`);
 
         // Auto-save
         try {
-          const updateData = {
-            [imageType === 'logo' ? 'systemLogo' : 'favicon']: {
-              ...settings[imageType === 'logo' ? 'systemLogo' : 'favicon'],
-              [variant]: data.url
-            }
-          };
           await adminService.updateIndividualSetting(selectedTenant, updateData);
         } catch (saveError) {
           console.warn('Upload successful but auto-save failed:', saveError);
@@ -233,6 +281,7 @@ const SystemSettings = () => {
     }));
   };
 
+  // 🔄 ENHANCED: Save settings with real-time updates
   const saveSettings = async () => {
     if (!selectedTenant) {
       alert('Please select a clinic first');
@@ -242,7 +291,15 @@ const SystemSettings = () => {
       setIsSaving(true);
       const data = await adminService.updateTenantSettings(selectedTenant, settings);
       if (data.success) {
+        // 🔄 Broadcast the complete settings update
+        broadcastSettingsUpdate(selectedTenant, settings);
+        
         alert('✅ Settings saved successfully!');
+        
+        // 🔄 Small delay to ensure all tabs receive the update
+        setTimeout(() => {
+          fetchTenantSettings();
+        }, 500);
       } else {
         throw new Error(data.message || 'Save failed');
       }
@@ -259,6 +316,19 @@ const SystemSettings = () => {
       alert('Settings reset to saved values');
     }
   };
+
+  // 🔄 NEW: Show notification when settings are updated from another tab
+  useEffect(() => {
+    const handleSettingsUpdate = () => {
+      console.log('🔔 Settings updated from another source, refreshing...');
+      if (selectedTenant) {
+        fetchTenantSettings();
+      }
+    };
+
+    window.addEventListener('tenantSettingsUpdated', handleSettingsUpdate);
+    return () => window.removeEventListener('tenantSettingsUpdated', handleSettingsUpdate);
+  }, [selectedTenant, fetchTenantSettings]);
 
   return (
     <>

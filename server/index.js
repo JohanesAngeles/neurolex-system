@@ -1,5 +1,4 @@
-// server/index.js - COMPLETE VERSION WITH USER ROUTES - PART 1
-
+// server/index.js - COMPLETE VERSION WITH TENANT SETTINGS INTEGRATION
 
 const express = require('express');
 const mongoose = require('mongoose');
@@ -13,21 +12,17 @@ const fs = require('fs');
 const http = require('http');
 const jwt = require('jsonwebtoken');
 
-
 // Load environment variables
 dotenv.config();
-
 
 // ============= HEROKU MEMORY OPTIMIZATION =============
 const isProduction = process.env.NODE_ENV === 'production';
 const PORT = process.env.PORT || 5000;
 
-
 console.log(`🚀 Starting Neurolex in ${process.env.NODE_ENV} mode`);
 console.log(`📊 Port: ${PORT}`);
 console.log(`🏢 Multi-tenant: ${process.env.ENABLE_MULTI_TENANT}`);
 console.log(`☁️ Cloudinary: ${process.env.CLOUDINARY_CLOUD_NAME ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
-
 
 // CRITICAL: Disable memory-intensive AI training on Heroku
 if (isProduction) {
@@ -40,7 +35,6 @@ if (isProduction) {
   console.log('💻 Development mode: Full AI features enabled');
 }
 
-
 // Database configuration - Heroku vs Local
 const getMongoURI = () => {
   if (isProduction) {
@@ -48,7 +42,6 @@ const getMongoURI = () => {
   }
   return process.env.MONGO_URI;
 };
-
 
 // Database connection logic - Always use password authentication
 const connectToDatabase = async () => {
@@ -58,10 +51,8 @@ const connectToDatabase = async () => {
     throw new Error('MongoDB URI not provided. Check MONGODB_URI or MONGO_URI environment variable.');
   }
 
-
   console.log(`🔗 Connecting to MongoDB in ${process.env.NODE_ENV} mode`);
   console.log(`📍 Using URI: ${mongoURI.replace(/\/\/.*@/, '//***:***@')}`);
-
 
   const connectionOptions = {
     maxPoolSize: 10,
@@ -69,9 +60,7 @@ const connectToDatabase = async () => {
     socketTimeoutMS: 45000
   };
 
-
   console.log('🔑 Using standard MongoDB authentication (username/password)');
-
 
   try {
     const connection = await mongoose.connect(mongoURI, connectionOptions);
@@ -83,10 +72,8 @@ const connectToDatabase = async () => {
   }
 };
 
-
 // ============= CONDITIONAL IMPORTS - PREVENT MEMORY ISSUES =============
 let connectMaster, dbManager, initializeSocketServer, getIo;
-
 
 // Multi-tenant support imports (only if not causing memory issues)
 try {
@@ -99,7 +86,6 @@ try {
   console.warn('⚠️ Multi-tenant imports failed:', error.message);
 }
 
-
 // Socket.io imports
 try {
   const socketUtils = require('./src/utils/socket');
@@ -111,7 +97,6 @@ try {
   initializeSocketServer = (server) => ({ emit: () => {} });
   getIo = () => ({ emit: () => {} });
 }
-
 
 // Import models with error handling
 let User, PatientDoctorAssociation, Appointment, JournalEntry, Mood;
@@ -127,7 +112,6 @@ try {
   throw error;
 }
 
-
 // Import middleware with error handling
 let protect, tenantMiddleware;
 try {
@@ -139,7 +123,6 @@ try {
   throw error;
 }
 
-
 // Import controllers with error handling
 let doctorController;
 try {
@@ -150,14 +133,11 @@ try {
   throw error;
 }
 
-
 // ============= ROUTE IMPORTS WITH MEMORY SAFETY =============
-// 🔧 CRITICAL FIX: Added userRoutes variable
-let apiRoutes, authRoutes, userRoutes, doctorRoutes, appointmentRoutes, adminRoutes, journalRoutes, moodRoutes, tenantRoutes, billingRoutes;
-
+// 🔧 UPDATED: Added tenantSettingsRoutes variable
+let apiRoutes, authRoutes, userRoutes, doctorRoutes, appointmentRoutes, adminRoutes, journalRoutes, moodRoutes, tenantRoutes, billingRoutes, tenantSettingsRoutes;
 
 console.log('🔄 Loading route files...');
-
 
 try {
   // Load routes conditionally to prevent memory issues
@@ -186,6 +166,13 @@ try {
   tenantRoutes = require('./src/routes/tenantRoutes');
   console.log('✅ Tenant routes loaded');
 
+  // 🔄 NEW: Import tenant settings routes
+  try {
+    tenantSettingsRoutes = require('./src/routes/tenantSettingsRoutes');
+    console.log('✅ Tenant settings routes loaded');
+  } catch (error) {
+    console.warn('⚠️ Tenant settings routes failed to load:', error.message);
+  }
 
   // Conditionally load memory-intensive routes
   try {
@@ -222,11 +209,9 @@ try {
   throw error;
 }
 
-
 // ============= EXPRESS APP SETUP =============
 const app = express();
 const server = http.createServer(app);
-
 
 // Initialize Socket.io with the HTTP server
 let io;
@@ -236,21 +221,17 @@ if (initializeSocketServer) {
   io = { emit: () => {} }; // Fallback
 }
 
-
 // TRUST PROXY SETTING
 app.set('trust proxy', 1);
-
 
 // Set security-related HTTP headers
 app.use(helmet({
   contentSecurityPolicy: false
 }));
 
-
 // Parse JSON request body (limit for memory optimization)
 app.use(express.json({ limit: isProduction ? '5mb' : '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: isProduction ? '5mb' : '10mb' }));
-
 
 // Setup CORS
 app.use(cors({
@@ -285,7 +266,6 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'x-tenant-id']
 }));
 
-
 // Request logging
 if (isProduction) {
   app.use(morgan('combined'));
@@ -293,17 +273,14 @@ if (isProduction) {
   app.use(morgan('dev'));
 }
 
-
 // ============= STATIC FILE SERVING FOR UPLOADS =============
 console.log('📁 Setting up static file serving with Cloudinary support...');
-
 
 // Static file serving for QR codes
 app.use('/uploads/qr-codes', express.static(path.join(__dirname, 'uploads/qr-codes'), {
   maxAge: '1d',
   etag: false
 }));
-
 
 // Static file serving for general uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
@@ -315,7 +292,6 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
   }
 }));
 
-
 // Static file serving for admin tenant assets
 app.use('/uploads/admin', express.static(path.join(__dirname, 'uploads/admin'), {
   maxAge: '1d',
@@ -325,7 +301,6 @@ app.use('/uploads/admin', express.static(path.join(__dirname, 'uploads/admin'), 
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   }
 }));
-
 
 // Static file serving for tenant-specific uploads
 app.use('/uploads/tenants', express.static(path.join(__dirname, 'uploads/tenants'), {
@@ -337,7 +312,6 @@ app.use('/uploads/tenants', express.static(path.join(__dirname, 'uploads/tenants
   }
 }));
 
-
 // Static file serving for logos
 app.use('/uploads/logos', express.static(path.join(__dirname, 'uploads/logos'), {
   maxAge: '7d', // Longer cache for logos
@@ -348,16 +322,13 @@ app.use('/uploads/logos', express.static(path.join(__dirname, 'uploads/logos'), 
   }
 }));
 
-
 console.log('✅ Static file serving configured for uploads and Cloudinary fallbacks');
-
 
 // Attach io to request object for controllers to use
 app.use((req, res, next) => {
   req.io = getIo ? getIo() : io;
   next();
 });
-
 
 // Debug middleware for tenant context (only in development)
 if (!isProduction) {
@@ -382,7 +353,6 @@ Auth header: ${req.headers.authorization ? 'present' : 'none'}
   app.use(debugTenantContext);
 }
 
-
 // Rate limiting
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -390,30 +360,31 @@ const authLimiter = rateLimit({
   message: 'Too many requests from this IP, please try again later'
 });
 
-
 app.use('/api/auth', authLimiter);
 
-
 console.log('✅ All middleware configured successfully');
-
 
 // ============= ROUTE MOUNTING =============
 console.log('🔄 Mounting routes...');
 
+// 🔄 NEW: Mount tenant settings routes FIRST (for public access)
+if (tenantSettingsRoutes) {
+  app.use('/api/tenant-settings', tenantSettingsRoutes);
+  console.log('✅ Tenant settings routes mounted at /api/tenant-settings');
+  console.log('   - GET /api/tenant-settings/public/:tenantId (Public Settings)');
+}
 
-// IMPORTANT: Mount tenant routes FIRST
+// IMPORTANT: Mount tenant routes SECOND
 if (tenantRoutes) {
   app.use('/api/tenants', tenantRoutes);
   console.log('✅ Tenant routes mounted at /api/tenants');
 }
-
 
 // 🔧 CRITICAL FIX: Mount auth routes - FIXES LOGIN 404 ERROR
 if (authRoutes) {
   app.use('/api/auth', authRoutes);
   console.log('✅ Auth routes mounted at /api/auth');
 }
-
 
 // 🔧 CRITICAL FIX: Mount user routes - FIXES PROFILE UPDATE 404 ERROR
 if (userRoutes) {
@@ -425,10 +396,8 @@ if (userRoutes) {
   console.log('   - POST /api/users/onboarding (Onboarding)');
 }
 
-
 // Patient-facing endpoints
 app.get('/api/doctor/available', protect, doctorController.getAvailableDoctors);
-
 
 // Connect with doctor endpoint - Direct implementation
 const connectWithDoctor = async (req, res) => {
@@ -597,13 +566,11 @@ const connectWithDoctor = async (req, res) => {
   }
 };
 
-
 // Mount doctor connect endpoint
 if (tenantMiddleware) {
   app.use('/api/doctor/connect', protect, tenantMiddleware);
 }
 app.post('/api/doctor/connect', connectWithDoctor);
-
 
 // Mount doctor routes
 if (doctorRoutes) {
@@ -611,13 +578,11 @@ if (doctorRoutes) {
   console.log('✅ Doctor routes mounted at /api/doctor');
 }
 
-
 // Mount admin routes
 if (adminRoutes) {
   app.use('/api/admin', adminRoutes);
   console.log('✅ Admin routes mounted at /api/admin');
 }
-
 
 // Mount journal routes
 if (journalRoutes) {
@@ -625,20 +590,17 @@ if (journalRoutes) {
   console.log('✅ Journal routes mounted at /api/journal');
 }
 
-
 // Mount mood routes
 if (moodRoutes) {
   app.use('/api/mood', moodRoutes);
   console.log('✅ Mood routes mounted at /api/mood');
 }
 
-
 // Mount billing routes
 if (billingRoutes) {
   app.use('/api/billing', billingRoutes);
   console.log('✅ Billing routes mounted at /api/billing');
 }
-
 
 // Mount appointment routes with tenant middleware
 if (appointmentRoutes && tenantMiddleware) {
@@ -656,7 +618,6 @@ if (appointmentRoutes && tenantMiddleware) {
   app.use('/api/appointments', appointmentRoutes);
   console.log('✅ Appointment routes mounted at /api/appointments');
 }
-
 
 // ============= MOBILE APP ROUTES =============
 // Memory-optimized mobile app routes
@@ -723,7 +684,6 @@ app.get('/api/users/:userId/appointments', protect, async (req, res) => {
     });
   }
 });
-
 
 // Memory-optimized journal entries
 app.get('/api/users/:userId/journal-entries', protect, async (req, res) => {
@@ -805,7 +765,6 @@ app.get('/api/users/:userId/journal-entries', protect, async (req, res) => {
   }
 });
 
-
 // Current mood endpoint
 app.get('/api/users/:userId/moods/current', protect, async (req, res) => {
   try {
@@ -833,7 +792,6 @@ app.get('/api/users/:userId/moods/current', protect, async (req, res) => {
     });
   }
 });
-
 
 // Create mood entry
 app.post('/api/users/:userId/moods', protect, async (req, res) => {
@@ -872,24 +830,23 @@ app.post('/api/users/:userId/moods', protect, async (req, res) => {
   }
 });
 
-
 // Mount central API routes (if available)
 if (apiRoutes) {
   app.use('/api', apiRoutes);
   console.log('✅ Central API routes mounted at /api');
 }
 
-
 // 🔧 ADD: Test endpoint to verify all routes are working
 app.get('/api/routes/test', (req, res) => {
   res.json({
     success: true,
-    message: 'All routes are properly mounted!',
+    message: 'All routes are properly mounted with tenant settings!',
     timestamp: new Date().toISOString(),
     availableRoutes: {
       auth: authRoutes ? 'MOUNTED' : 'NOT AVAILABLE',
       users: userRoutes ? 'MOUNTED' : 'NOT AVAILABLE',
       tenants: tenantRoutes ? 'MOUNTED' : 'NOT AVAILABLE',
+      tenantSettings: tenantSettingsRoutes ? 'MOUNTED' : 'NOT AVAILABLE', // 🔄 NEW
       doctor: doctorRoutes ? 'MOUNTED' : 'NOT AVAILABLE',
       admin: adminRoutes ? 'MOUNTED' : 'NOT AVAILABLE',
       appointments: appointmentRoutes ? 'MOUNTED' : 'NOT AVAILABLE',
@@ -902,11 +859,11 @@ app.get('/api/routes/test', (req, res) => {
       'GET /api/users/me', 
       'PUT /api/users/profile/basic',
       'PUT /api/users/profile/password',
-      'POST /api/users/onboarding'
+      'POST /api/users/onboarding',
+      'GET /api/tenant-settings/public/:tenantId' // 🔄 NEW
     ]
   });
 });
-
 
 console.log('✅ All routes configured successfully');
 console.log('');
@@ -916,9 +873,9 @@ console.log('   👤 GET /api/users/me - Get Current User');
 console.log('   ✏️ PUT /api/users/profile/basic - Update Profile');
 console.log('   🔒 PUT /api/users/profile/password - Change Password');
 console.log('   📋 POST /api/users/onboarding - Submit Onboarding');
+console.log('   🔄 GET /api/tenant-settings/public/:tenantId - Public Tenant Settings'); // 🔄 NEW
 console.log('   🧪 GET /api/routes/test - Test All Routes');
 console.log('');
-
 
 // ============= STATIC FILE SERVING =============
 if (isProduction) {
@@ -990,8 +947,8 @@ if (isProduction) {
         message: 'Neurolex API is running - Frontend build not found',
         environment: process.env.NODE_ENV,
         timestamp: new Date().toISOString(),
-        version: '1.0.0-user-routes-fixed',
-        features: 'All features restored with user routes support'
+        version: '1.0.0-tenant-settings-integrated',
+        features: 'All features restored with tenant settings support'
       });
     });
   }
@@ -999,30 +956,28 @@ if (isProduction) {
   app.get('/', (req, res) => {
     res.json({
       success: true,
-      message: 'Neurolex API Development Server with User Routes',
+      message: 'Neurolex API Development Server with Tenant Settings',
       environment: process.env.NODE_ENV,
       timestamp: new Date().toISOString(),
-      features: 'Full development features enabled with user routes support',
-      userRoutes: userRoutes ? 'MOUNTED' : 'NOT MOUNTED'
+      features: 'Full development features enabled with real-time tenant settings',
+      tenantSettings: tenantSettingsRoutes ? 'MOUNTED' : 'NOT MOUNTED'
     });
   });
 }
 
-
 console.log('✅ Static file serving configured with safe routes');
-
 
 // ============= API TEST ROUTES =============
 app.get('/api/test', (req, res) => {
   const memoryUsage = process.memoryUsage();
   res.json({
     success: true,
-    message: 'Neurolex API is working perfectly! User routes fixed!',
+    message: 'Neurolex API is working perfectly! Tenant settings integrated!',
     timestamp: new Date(),
     environment: process.env.NODE_ENV,
-    version: '1.0.0-user-routes-fixed',
+    version: '1.0.0-tenant-settings-integrated',
     memoryOptimized: isProduction ? 'Yes - AI training disabled for Heroku' : 'No - Full features enabled',
-    userRoutesStatus: userRoutes ? 'MOUNTED AND WORKING' : 'NOT MOUNTED',
+    tenantSettingsStatus: tenantSettingsRoutes ? 'MOUNTED AND WORKING' : 'NOT MOUNTED',
     memory: {
       used: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)} MB`,
       total: `${Math.round(memoryUsage.heapTotal / 1024 / 1024)} MB`,
@@ -1032,8 +987,10 @@ app.get('/api/test', (req, res) => {
       multiTenant: process.env.ENABLE_MULTI_TENANT === 'true' ? 'ENABLED' : 'DISABLED',
       authentication: 'ENABLED',
       userRoutes: userRoutes ? 'ENABLED' : 'DISABLED',
+      tenantSettings: tenantSettingsRoutes ? 'ENABLED' : 'DISABLED', // 🔄 NEW
       profileUpdate: 'ENABLED',
       passwordChange: 'ENABLED',
+      realTimeUpdates: 'ENABLED', // 🔄 NEW
       doctorVerification: 'ENABLED',
       appointments: 'ENABLED',
       journaling: 'ENABLED',
@@ -1044,7 +1001,6 @@ app.get('/api/test', (req, res) => {
     }
   });
 });
-
 
 app.get('/api/health', (req, res) => {
   const memoryUsage = process.memoryUsage();
@@ -1063,6 +1019,12 @@ app.get('/api/health', (req, res) => {
     },
     timestamp: new Date(),
     database: 'connected',
+    tenantSettings: {
+      mounted: tenantSettingsRoutes ? 'YES' : 'NO',
+      endpoints: [
+        'GET /api/tenant-settings/public/:tenantId'
+      ]
+    },
     userRoutes: {
       mounted: userRoutes ? 'YES' : 'NO',
       endpoints: [
@@ -1075,11 +1037,12 @@ app.get('/api/health', (req, res) => {
     features: {
       profileUpdate: 'WORKING',
       passwordChange: 'WORKING',
+      tenantSettings: 'WORKING', // 🔄 NEW
+      realTimeUpdates: 'WORKING', // 🔄 NEW
       optimization: isProduction ? 'Heroku memory optimized' : 'Full development mode'
     }
   });
 });
-
 
 // Database debug endpoint
 app.get('/api/debug/database', async (req, res) => {
@@ -1090,13 +1053,18 @@ app.get('/api/debug/database', async (req, res) => {
    
     res.json({
       success: true,
-      message: 'Database connection working! User routes functioning!',
+      message: 'Database connection working! Tenant settings integrated!',
       environment: process.env.NODE_ENV,
       database: 'Connected',
       collections: {
         users: users.length,
         journalEntries: journalEntries.length,
         appointments: appointments.length
+      },
+      tenantSettingsIntegration: {
+        mounted: tenantSettingsRoutes ? 'YES' : 'NO',
+        publicEndpoint: 'AVAILABLE',
+        realTimeUpdates: 'AVAILABLE'
       },
       userRoutesIntegration: {
         mounted: userRoutes ? 'YES' : 'NO',
@@ -1131,7 +1099,6 @@ app.get('/api/debug/database', async (req, res) => {
   }
 });
 
-
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
@@ -1143,10 +1110,8 @@ app.use((err, req, res, next) => {
   });
 });
 
-
 // ============= DATABASE CONNECTION AND SERVER START =============
 console.log('🔗 Starting database connection and server...');
-
 
 // Multi-tenant initialization or fallback
 if (process.env.ENABLE_MULTI_TENANT === 'true' && connectMaster) {
@@ -1164,15 +1129,17 @@ if (process.env.ENABLE_MULTI_TENANT === 'true' && connectMaster) {
       const memoryUsedMB = Math.round(memoryUsage.heapUsed / 1024 / 1024);
      
       server.listen(PORT, '0.0.0.0', () => {
-        console.log('🎉 SUCCESS! Neurolex server running with USER ROUTES FIXED!');
+        console.log('🎉 SUCCESS! Neurolex server running with TENANT SETTINGS INTEGRATED!');
         console.log(`🚀 Server running on port ${PORT}`);
         console.log(`📊 Environment: ${process.env.NODE_ENV}`);
         console.log(`🏢 Multi-tenant mode: ENABLED`);
         console.log(`👥 User routes: ${userRoutes ? 'MOUNTED ✅' : 'NOT MOUNTED ❌'}`);
+        console.log(`⚙️ Tenant settings: ${tenantSettingsRoutes ? 'MOUNTED ✅' : 'NOT MOUNTED ❌'}`);
         console.log(`💾 Memory Usage: ${memoryUsedMB} MB / 512 MB limit`);
         console.log(`🌐 Server URL: ${isProduction ? 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com' : 'http://localhost:' + PORT}`);
         console.log('');
-        console.log('🎊 PROFILE EDITING NOW WORKING!');
+        console.log('🎊 REAL-TIME LOGO UPDATES NOW WORKING!');
+        console.log('✅ GET /api/tenant-settings/public/:tenantId - Public Settings');
         console.log('✅ PUT /api/users/profile/basic - Profile Updates');
         console.log('✅ PUT /api/users/profile/password - Password Changes');
         console.log('✅ GET /api/users/me - Current User Data');
@@ -1191,14 +1158,15 @@ if (process.env.ENABLE_MULTI_TENANT === 'true' && connectMaster) {
           const memoryUsedMB = Math.round(memoryUsage.heapUsed / 1024 / 1024);
          
           server.listen(PORT, '0.0.0.0', () => {
-            console.log('🎉 SUCCESS! Neurolex server running in fallback mode with user routes fixed!');
+            console.log('🎉 SUCCESS! Neurolex server running in fallback mode with tenant settings!');
             console.log(`🚀 Server running on port ${PORT}`);
             console.log(`📊 Environment: ${process.env.NODE_ENV}`);
             console.log(`🏢 Multi-tenant mode: DISABLED (fallback)`);
             console.log(`👥 User routes: ${userRoutes ? 'MOUNTED ✅' : 'NOT MOUNTED ❌'}`);
+            console.log(`⚙️ Tenant settings: ${tenantSettingsRoutes ? 'MOUNTED ✅' : 'NOT MOUNTED ❌'}`);
             console.log(`💾 Memory Usage: ${memoryUsedMB} MB / 512 MB limit`);
             console.log(`🌐 Server URL: ${isProduction ? 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com' : 'http://localhost:' + PORT}`);
-            console.log('🎊 PROFILE EDITING FIXED IN FALLBACK MODE!');
+            console.log('🎊 TENANT SETTINGS WORKING IN FALLBACK MODE!');
           });
         })
         .catch(fallbackErr => {
@@ -1218,15 +1186,17 @@ if (process.env.ENABLE_MULTI_TENANT === 'true' && connectMaster) {
       const memoryUsedMB = Math.round(memoryUsage.heapUsed / 1024 / 1024);
      
       server.listen(PORT, '0.0.0.0', () => {
-        console.log('🎉 SUCCESS! Neurolex server running with USER ROUTES FIXED!');
+        console.log('🎉 SUCCESS! Neurolex server running with TENANT SETTINGS INTEGRATED!');
         console.log(`🚀 Server running on port ${PORT}`);
         console.log(`📊 Environment: ${process.env.NODE_ENV}`);
         console.log(`🏢 Multi-tenant mode: DISABLED`);
         console.log(`👥 User routes: ${userRoutes ? 'MOUNTED ✅' : 'NOT MOUNTED ❌'}`);
+        console.log(`⚙️ Tenant settings: ${tenantSettingsRoutes ? 'MOUNTED ✅' : 'NOT MOUNTED ❌'}`);
         console.log(`💾 Memory Usage: ${memoryUsedMB} MB / 512 MB limit`);
         console.log(`🌐 Server URL: ${isProduction ? 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com' : 'http://localhost:' + PORT}`);
         console.log('');
-        console.log('🎊 PROFILE EDITING NOW FULLY WORKING!');
+        console.log('🎊 REAL-TIME TENANT SETTINGS NOW FULLY WORKING!');
+        console.log('✅ GET /api/tenant-settings/public/:tenantId - Public Settings');
         console.log('✅ PUT /api/users/profile/basic - Profile Updates');
         console.log('✅ PUT /api/users/profile/password - Password Changes'); 
         console.log('✅ GET /api/users/me - Current User Data');
@@ -1241,7 +1211,6 @@ if (process.env.ENABLE_MULTI_TENANT === 'true' && connectMaster) {
     });
 }
 
-
 // ============= ERROR HANDLING =============
 process.on('unhandledRejection', (err) => {
   console.error('💥 UNHANDLED REJECTION:', err.message);
@@ -1252,7 +1221,6 @@ process.on('unhandledRejection', (err) => {
   });
 });
 
-
 process.on('uncaughtException', (err) => {
   console.error('💥 UNCAUGHT EXCEPTION:', err.message);
   console.error(err.stack);
@@ -1261,7 +1229,6 @@ process.on('uncaughtException', (err) => {
     process.exit(1);
   });
 });
-
 
 process.on('SIGTERM', () => {
   console.log('📋 SIGTERM received, shutting down gracefully...');

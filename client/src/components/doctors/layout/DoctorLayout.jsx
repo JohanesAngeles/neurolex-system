@@ -1,3 +1,4 @@
+// client/src/components/doctor/layout/DoctorLayout.jsx - Enhanced with Real-time Updates
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useFeatureControl } from '../../../hooks/useFeatureControl';
@@ -16,8 +17,18 @@ import settingsIcon from '../../../assets/icons/Settings_icon.svg';
 const DoctorLayout = () => {
   const navigate = useNavigate();
   const featureControl = useFeatureControl();
-  const { currentTenant, getThemeStyles, platformName, isLoading } = useTenant();
+  const { 
+    currentTenant, 
+    getThemeStyles, 
+    platformName, 
+    isLoading,
+    refreshTenantSettings,
+    lastRefresh
+  } = useTenant();
+  
   const [currentUser, setCurrentUser] = useState(null);
+  const [logoError, setLogoError] = useState(false);
+  const [logoKey, setLogoKey] = useState(Date.now()); // 🔄 Force logo refresh
 
   // Get tenant theme styles - this will now be dynamic from system settings
   const theme = getThemeStyles();
@@ -35,7 +46,6 @@ const DoctorLayout = () => {
         console.error('Error loading doctor info:', error);
       }
     };
-
     loadDoctorInfo();
   }, []); // 🔧 EMPTY DEPENDENCY - RUNS ONLY ONCE
 
@@ -51,6 +61,57 @@ const DoctorLayout = () => {
       root.style.setProperty('--tenant-secondary-rgb', hexToRgb(theme.secondaryColor || '#2196F3'));
     }
   }, [theme?.primaryColor, theme?.secondaryColor]); // 🔧 SPECIFIC DEPENDENCIES ONLY
+
+  // 🔄 NEW: Listen for tenant settings updates and refresh logo
+  useEffect(() => {
+    const handleSettingsUpdate = (event) => {
+      console.log('🔔 [DoctorLayout] Received tenant settings update:', event.detail);
+      
+      // Force logo refresh by updating the key
+      setLogoKey(Date.now());
+      setLogoError(false);
+      
+      // Refresh tenant settings if needed
+      if (refreshTenantSettings) {
+        setTimeout(() => {
+          refreshTenantSettings(true);
+        }, 500);
+      }
+    };
+
+    // Listen for custom events from admin panel
+    window.addEventListener('tenantSettingsUpdated', handleSettingsUpdate);
+    
+    // Also listen for storage events (settings updated in another tab)
+    const handleStorageChange = (event) => {
+      if (event.key === 'tenantSettingsUpdated') {
+        console.log('🔔 [DoctorLayout] Detected settings update from storage');
+        setLogoKey(Date.now());
+        setLogoError(false);
+        
+        if (refreshTenantSettings) {
+          setTimeout(() => {
+            refreshTenantSettings(true);
+          }, 500);
+        }
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('tenantSettingsUpdated', handleSettingsUpdate);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [refreshTenantSettings]);
+
+  // 🔄 NEW: Update logo key when theme changes to force refresh
+  useEffect(() => {
+    if (theme?.systemLogo?.light || theme?.logo) {
+      setLogoKey(Date.now());
+      setLogoError(false);
+    }
+  }, [theme?.systemLogo?.light, theme?.logo, lastRefresh]);
 
   // Helper function to convert hex to RGB for CSS variables
   const hexToRgb = (hex) => {
@@ -164,6 +225,39 @@ const DoctorLayout = () => {
     };
   }, [currentUser]); // 🔧 MEMOIZED WITH SPECIFIC DEPENDENCY
 
+  // 🔄 NEW: Enhanced logo source with fallback and cache busting
+  const getLogoSource = () => {
+    // Determine which logo to use
+    let logoUrl = null;
+    
+    // Priority: systemLogo.light > logo > fallback
+    if (theme?.systemLogo?.light) {
+      logoUrl = theme.systemLogo.light;
+    } else if (theme?.logo) {
+      logoUrl = theme.logo;
+    }
+    
+    // If we have a tenant logo URL, add cache busting
+    if (logoUrl && !logoError) {
+      return `${logoUrl}?key=${logoKey}`;
+    }
+    
+    // Fallback to default logo
+    return logoImage;
+  };
+
+  // 🔄 NEW: Handle logo load errors
+  const handleLogoError = () => {
+    console.warn('🖼️ [DoctorLayout] Logo failed to load, using fallback');
+    setLogoError(true);
+  };
+
+  // 🔄 NEW: Handle successful logo load
+  const handleLogoLoad = () => {
+    console.log('✅ [DoctorLayout] Logo loaded successfully');
+    setLogoError(false);
+  };
+
   // Show loading state if tenant data is still loading
   if (isLoading) {
     return (
@@ -187,11 +281,33 @@ const DoctorLayout = () => {
       {/* Left Sidebar */}
       <div className="doctor-sidebar">
         <div className="sidebar-header">
+          {/* 🔄 ENHANCED: Logo with real-time updates and error handling */}
           <img 
-            src={theme?.systemLogo?.light || theme?.logo || logoImage} 
-            alt="Logo" 
+            key={logoKey} // Force re-render when key changes
+            src={getLogoSource()} 
+            alt={`${platformName} Logo`} 
             className="doctor-logo" 
+            onError={handleLogoError}
+            onLoad={handleLogoLoad}
+            style={{
+              transition: 'opacity 0.3s ease-in-out',
+              opacity: logoError ? 0.7 : 1
+            }}
           />
+          {/* 🔄 NEW: Debug info in development */}
+          {process.env.NODE_ENV === 'development' && (
+            <div style={{ 
+              fontSize: '10px', 
+              color: '#666', 
+              marginTop: '4px',
+              textAlign: 'center',
+              opacity: 0.7
+            }}>
+              {logoError ? 'Fallback Logo' : 'Dynamic Logo'}
+              <br />
+              Key: {logoKey.toString().slice(-6)}
+            </div>
+          )}
         </div>
         
         <div className="sidebar-menu">
@@ -217,7 +333,7 @@ const DoctorLayout = () => {
               </li>
             ))}
           </ul>
-
+          
           {/* Feature Status Panel (Development Only) */}
           {process.env.NODE_ENV === 'development' && featureControl.getActiveFeatures && (
             <div className="dev-feature-status">
@@ -234,6 +350,19 @@ const DoctorLayout = () => {
                     +{featureControl.getActiveFeatures().length - 4} more...
                   </div>
                 )}
+              </div>
+              
+              {/* 🔄 NEW: Settings update indicator */}
+              <div style={{ 
+                marginTop: '8px', 
+                padding: '4px 8px', 
+                backgroundColor: theme?.primaryColor || '#4CAF50',
+                color: 'white',
+                borderRadius: '4px',
+                fontSize: '10px',
+                textAlign: 'center'
+              }}>
+                Settings: {new Date(lastRefresh).toLocaleTimeString()}
               </div>
             </div>
           )}
@@ -261,6 +390,25 @@ const DoctorLayout = () => {
           <Outlet />
         </div>
       </div>
+      
+      {/* 🔄 NEW: Real-time update notification (development only) */}
+      {process.env.NODE_ENV === 'development' && (
+        <div style={{
+          position: 'fixed',
+          bottom: '20px',
+          right: '20px',
+          backgroundColor: theme?.primaryColor || '#4CAF50',
+          color: 'white',
+          padding: '8px 12px',
+          borderRadius: '6px',
+          fontSize: '12px',
+          zIndex: 1000,
+          opacity: 0.8,
+          pointerEvents: 'none'
+        }}>
+          🔄 Live Updates Active
+        </div>
+      )}
     </div>
   );
 };
