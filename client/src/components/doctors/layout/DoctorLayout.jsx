@@ -369,7 +369,8 @@ const DoctorLayout = () => {
         </div>
         
         <div className="sidebar-footer">
-          <div className="doctor-info" onClick={() => navigate('/doctor/profile')}>
+          {/* 🔄 UPDATED: Removed onClick handler - doctor info display only */}
+          <div className="doctor-info">
             <div className="doctor-avatar">
               <span>{doctorInfo.initials}</span>
             </div>
