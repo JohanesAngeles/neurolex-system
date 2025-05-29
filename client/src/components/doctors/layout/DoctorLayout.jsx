@@ -246,15 +246,6 @@ const DoctorLayout = () => {
         </div>
         
         <div className="sidebar-footer">
-          <div className="doctor-info" onClick={() => navigate('/doctor/profile')}>
-            <div className="doctor-avatar">
-              <span>{doctorInfo.initials}</span>
-            </div>
-            <div className="doctor-details">
-              <p className="doctor-name">{doctorInfo.name}</p>
-              <p className="doctor-role">{doctorInfo.role}</p>
-            </div>
-          </div>
           <button className="logout-button" onClick={handleLogout}>
             <span>Logout</span>
           </button>
