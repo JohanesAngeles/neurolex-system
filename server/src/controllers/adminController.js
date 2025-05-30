@@ -2242,88 +2242,56 @@ exports.getTenantSettings = async (req, res) => {
       },
       primaryColor: tenant.primaryColor || '#4CAF50',
       secondaryColor: tenant.secondaryColor || '#2196F3',
-      hirsSettings: tenant.hirsSettings || [
-        {
-          id: 1,
-          icon: 'HR',
-          name: 'User Dashboard',
-          description: 'Controls the displays, names, and icons used by End Users on the Dashboard.',
-          lastUpdated: new Date().toLocaleDateString(),
-          isActive: true
-        },
-        {
-          id: 2,
-          icon: 'JE', 
-          name: 'Journal Entries',
-          description: 'Control what journal prompts are available for users.',
-          lastUpdated: new Date().toLocaleDateString(),
-          isActive: true
-        },
-        {
-          id: 3,
-          icon: 'DR',
-          name: 'Mood Tracking-Dr',
-          description: 'Set up mood tracking functionality for doctors and patients.',
-          lastUpdated: new Date().toLocaleDateString(),
-          isActive: true
-        },
-        {
-          id: 4,
-          icon: 'MA',
-          name: 'Dr Mental Assessments', 
-          description: 'Mental health assessment tools for healthcare professionals.',
-          lastUpdated: new Date().toLocaleDateString(),
-          isActive: true
-        },
-        {
-          id: 5,
-          icon: 'SM',
-          name: 'Stress Managing',
-          description: 'Stress management tools and resources.',
-          lastUpdated: new Date().toLocaleDateString(),
-          isActive: true
-        },
-        {
-          id: 6,
-          icon: 'PS',
-          name: 'User Profiles',
-          description: 'User profile management and customization.',
-          lastUpdated: new Date().toLocaleDateString(),
-          isActive: true
-        },
-        {
-          id: 7,
-          icon: 'NT',
-          name: 'Notifications',
-          description: 'Push notifications and alert system.',
-          lastUpdated: new Date().toLocaleDateString(),
-          isActive: true
-        },
-        {
-          id: 8,
-          icon: 'DA',
-          name: 'Data Analytics',
-          description: 'Analytics dashboard and reporting tools.',
-          lastUpdated: new Date().toLocaleDateString(),
-          isActive: true
-        },
-        {
-          id: 9,
-          icon: 'CA',
-          name: 'Care / Report',
-          description: 'Care management and reporting functionality.',
-          lastUpdated: new Date().toLocaleDateString(),
-          isActive: true
-        },
-        {
-          id: 10,
-          icon: 'CF',
-          name: 'Config',
-          description: 'System configuration and settings.',
-          lastUpdated: new Date().toLocaleDateString(),
-          isActive: true
-        }
-      ]
+     hirsSettings: tenant.hirsSettings || [
+  {
+    id: 1,
+    icon: '📊',
+    name: 'Dashboard',  // ✅ NEW NAME
+    description: 'Main dashboard overview for doctors.',
+    lastUpdated: new Date().toLocaleDateString(),
+    isActive: true
+  },
+  {
+    id: 2,
+    icon: '👥',
+    name: 'Patients',  // ✅ NEW NAME
+    description: 'Patient management and list view.',
+    lastUpdated: new Date().toLocaleDateString(),
+    isActive: true
+  },
+  {
+    id: 3,
+    icon: '📖',
+    name: 'Patient Journal Management',  // ✅ NEW NAME
+    description: 'View and manage patient journal entries.',
+    lastUpdated: new Date().toLocaleDateString(),
+    isActive: true
+  },
+  {
+    id: 4,
+    icon: '📝',
+    name: 'Journal Template Management',  // ✅ NEW NAME
+    description: 'Create and manage journal templates for patients.',
+    lastUpdated: new Date().toLocaleDateString(),
+    isActive: true
+  },
+  {
+    id: 5,
+    icon: '📅',
+    name: 'Appointments',  // ✅ NEW NAME
+    description: 'Schedule and manage appointments with patients.',
+    lastUpdated: new Date().toLocaleDateString(),
+    isActive: true
+  },
+  {
+    id: 6,
+    icon: '💬',
+    name: 'Messages',  // ✅ NEW NAME
+    description: 'Secure messaging with patients.',
+    lastUpdated: new Date().toLocaleDateString(),
+    isActive: true
+  }
+]
     };
     
     console.log('✅ Tenant settings retrieved successfully');
