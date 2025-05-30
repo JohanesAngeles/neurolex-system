@@ -1,4 +1,4 @@
-// client/src/context/TenantContext.js - FIXED WITH REAL-TIME UPDATES
+// client/src/context/TenantContext.js - CORRECTED to match your API structure
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 const TenantContext = createContext();
@@ -17,6 +17,15 @@ export const TenantProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(Date.now());
 
+  // 🔧 SAFE: Get HIRS settings array with defensive programming
+  const getHirsSettings = useCallback(() => {
+    const settings = tenantSettings || window.tenantSettings;
+    if (settings && settings.hirsSettings && Array.isArray(settings.hirsSettings)) {
+      return settings.hirsSettings;
+    }
+    return [];
+  }, [tenantSettings]);
+
   // 🔄 ENHANCED: Force refresh function for real-time updates
   const refreshTenantSettings = useCallback(async (force = false) => {
     if (!currentTenant?._id) return;
@@ -31,7 +40,7 @@ export const TenantProvider = ({ children }) => {
       // Add cache busting parameter to ensure fresh data
       const cacheBuster = force ? `?t=${Date.now()}` : '';
       
-      // 🚨 FIXED: Correct API endpoint path
+      // 🚨 KEEP YOUR EXISTING API ENDPOINT
       const response = await fetch(`/api/tenants/${currentTenant._id}/public${cacheBuster}`, {
         headers: {
           'Cache-Control': 'no-cache',
@@ -45,20 +54,26 @@ export const TenantProvider = ({ children }) => {
         console.log('✅ [TenantContext] Tenant settings refreshed successfully');
         console.log('🔍 [TenantContext] New HIRS Settings:', data.data.hirsSettings);
         
+        // 🔧 SAFE: Ensure hirsSettings is always an array
+        const safeTenantSettings = {
+          ...data.data,
+          hirsSettings: Array.isArray(data.data.hirsSettings) ? data.data.hirsSettings : []
+        };
+        
         // 🚨 CRITICAL: Update state and force re-render
-        setTenantSettings(data.data);
+        setTenantSettings(safeTenantSettings);
         setLastRefresh(Date.now());
         
         // 🔧 FORCE UPDATE: Make data available globally for debugging
-        window.tenantSettings = data.data;
+        window.tenantSettings = safeTenantSettings;
         window.currentTenant = currentTenant;
         
         // 🔧 Update CSS variables immediately when settings change
-        updateCSSVariables(data.data);
+        updateCSSVariables(safeTenantSettings);
         
         // 🔔 Dispatch custom event to notify other components
         window.dispatchEvent(new CustomEvent('tenantSettingsRefreshed', {
-          detail: { tenantSettings: data.data, timestamp: Date.now() }
+          detail: { tenantSettings: safeTenantSettings, timestamp: Date.now() }
         }));
         
       } else {
@@ -69,7 +84,7 @@ export const TenantProvider = ({ children }) => {
     }
   }, [currentTenant?._id, lastRefresh]);
 
-  // 🎨 NEW: Update CSS variables for real-time theme changes
+  // 🎨 Update CSS variables for real-time theme changes
   const updateCSSVariables = useCallback((settings) => {
     if (!settings || typeof document === 'undefined') return;
     
@@ -133,7 +148,6 @@ export const TenantProvider = ({ children }) => {
         if (storedTenant) {
           const tenant = JSON.parse(storedTenant);
           setCurrentTenant(tenant);
-          // Don't call fetchTenantSettings here, it will be called by the effect below
         } else {
           setIsLoading(false);
         }
@@ -160,7 +174,7 @@ export const TenantProvider = ({ children }) => {
       setIsLoading(true);
       console.log('🔍 [TenantContext] Fetching tenant settings for:', tenantId);
       
-      // 🚨 FIXED: Correct API endpoint path with cache busting
+      // 🚨 KEEP YOUR EXISTING API ENDPOINT with cache busting
       const response = await fetch(`/api/tenants/${tenantId}/public?t=${Date.now()}`, {
         headers: {
           'Cache-Control': 'no-cache',
@@ -173,15 +187,21 @@ export const TenantProvider = ({ children }) => {
         console.log('✅ [TenantContext] Tenant settings loaded successfully');
         console.log('🔍 [TenantContext] HIRS Settings:', data.data.hirsSettings);
         
-        setTenantSettings(data.data);
+        // 🔧 SAFE: Ensure hirsSettings is always an array
+        const safeTenantSettings = {
+          ...data.data,
+          hirsSettings: Array.isArray(data.data.hirsSettings) ? data.data.hirsSettings : []
+        };
+        
+        setTenantSettings(safeTenantSettings);
         setLastRefresh(Date.now());
         
         // 🔧 FORCE UPDATE: Make data available globally for debugging
-        window.tenantSettings = data.data;
+        window.tenantSettings = safeTenantSettings;
         window.currentTenant = currentTenant;
         
         // Apply CSS variables on initial load
-        updateCSSVariables(data.data);
+        updateCSSVariables(safeTenantSettings);
       } else {
         console.warn('⚠️ [TenantContext] Failed to load tenant settings:', data.message);
       }
@@ -201,46 +221,72 @@ export const TenantProvider = ({ children }) => {
     }
   };
 
-  // 🚨 ENHANCED: Check if a feature is enabled with better error handling
+  // 🚨 COMPLETELY FIXED: Check if a feature is enabled with full defensive programming
   const isFeatureEnabled = useCallback((featureName) => {
-    console.log('🔍 [DEBUG] isFeatureEnabled called with:', featureName);
-    console.log('🔍 [DEBUG] tenantSettings state:', tenantSettings);
-    console.log('🔍 [DEBUG] window.tenantSettings (backup):', window.tenantSettings);
-    
-    // Try both state and window fallback
-    const settings = tenantSettings || window.tenantSettings;
-    
-    if (!settings) {
-      console.log('🔍 [DEBUG] No settings available, returning true (default enabled)');
-      return true; // Default to enabled if no settings
-    }
-    
-    if (!settings.hirsSettings || !Array.isArray(settings.hirsSettings)) {
-      console.log('🔍 [DEBUG] No hirsSettings array, returning true (default enabled)');
-      return true;
-    }
-
-    // Log all available features
-    console.log('🔍 [DEBUG] Available features:', settings.hirsSettings.map(h => ({ 
-      id: h.id, 
-      name: h.name, 
-      isActive: h.isActive 
-    })));
-
     try {
-      const feature = settings.hirsSettings.find(
-        hirs => hirs.name === featureName || hirs.id === featureName
-      );
+      console.log('🔍 [DEBUG] isFeatureEnabled called with:', featureName);
+      
+      // Try both state and window fallback
+      const settings = tenantSettings || window.tenantSettings;
+      console.log('🔍 [DEBUG] tenantSettings state:', !!tenantSettings);
+      console.log('🔍 [DEBUG] window.tenantSettings (backup):', !!window.tenantSettings);
+      
+      if (!settings) {
+        console.log('🔍 [DEBUG] No settings available, returning true (default enabled)');
+        return true; // Default to enabled if no settings
+      }
+      
+      // 🔧 SAFE: Get hirsSettings array defensively
+      const hirsArray = getHirsSettings();
+      console.log('🔍 [DEBUG] HIRS array length:', hirsArray.length);
+      
+      if (hirsArray.length === 0) {
+        console.log('🔍 [DEBUG] No hirsSettings array, returning true (default enabled)');
+        return true;
+      }
+
+      // Log all available features for debugging
+      console.log('🔍 [DEBUG] Available features:', hirsArray.map(h => ({ 
+        id: h.id, 
+        name: h.name, 
+        isActive: h.isActive 
+      })));
+
+      // 🔧 SAFE: Find feature with multiple matching strategies
+      let feature = null;
+      
+      // Strategy 1: Match by name (string)
+      if (typeof featureName === 'string') {
+        feature = hirsArray.find(hirs => 
+          hirs && hirs.name && hirs.name.toLowerCase() === featureName.toLowerCase()
+        );
+      }
+      
+      // Strategy 2: Match by ID (number)
+      if (!feature && (typeof featureName === 'number' || !isNaN(parseInt(featureName)))) {
+        const numericId = typeof featureName === 'number' ? featureName : parseInt(featureName);
+        feature = hirsArray.find(hirs => hirs && hirs.id === numericId);
+      }
+      
+      // Strategy 3: Exact match (fallback)
+      if (!feature) {
+        feature = hirsArray.find(hirs => 
+          hirs && (hirs.name === featureName || hirs.id === featureName)
+        );
+      }
       
       console.log('🔍 [DEBUG] Found feature for "' + featureName + '":', feature);
-      console.log('🔍 [DEBUG] Returning:', feature ? feature.isActive : true);
       
-      return feature ? feature.isActive : true;
-    } catch (findError) {
-      console.error('❌ [DEBUG] Error in find operation:', findError);
+      const isEnabled = feature ? Boolean(feature.isActive) : true;
+      console.log('🔍 [DEBUG] Returning isEnabled:', isEnabled);
+      
+      return isEnabled;
+      
+    } catch (error) {
+      console.error('❌ [DEBUG] Error in isFeatureEnabled:', error);
       return true; // Default to enabled on error
     }
-  }, [tenantSettings]);
+  }, [tenantSettings, getHirsSettings]);
 
   // 🎨 ENHANCED: Get tenant-specific styling with cache busting
   const getThemeStyles = useCallback(() => {
@@ -288,7 +334,7 @@ export const TenantProvider = ({ children }) => {
       // Force immediate refresh when settings are updated
       setTimeout(() => {
         refreshTenantSettings(true);
-      }, 100); // Small delay to ensure database is updated
+      }, 500); // Increased delay to ensure database is updated
     };
 
     // Listen for custom events from admin panel
@@ -298,40 +344,67 @@ export const TenantProvider = ({ children }) => {
     const handleStorageChange = (event) => {
       if (event.key === 'tenantSettingsUpdated') {
         console.log('🔔 [TenantContext] Detected settings update from storage event');
-        refreshTenantSettings(true);
+        setTimeout(() => {
+          refreshTenantSettings(true);
+        }, 500);
       }
       
-      // 🆕 NEW: Listen for force refresh signals
+      // 🆕 Listen for force refresh signals
       if (event.key === 'forceRefreshTenantSettings') {
         console.log('🔔 [TenantContext] Force refresh signal received');
-        const data = JSON.parse(event.newValue || '{}');
-        if (data.tenantId === currentTenant?._id) {
-          console.log('🔄 [TenantContext] Force refreshing tenant settings...');
-          refreshTenantSettings(true);
+        try {
+          const data = JSON.parse(event.newValue || '{}');
+          if (data.tenantId === currentTenant?._id) {
+            console.log('🔄 [TenantContext] Force refreshing tenant settings...');
+            setTimeout(() => {
+              refreshTenantSettings(true);
+            }, 1000); // Give more time for database update
+          }
+        } catch (parseError) {
+          console.error('Error parsing force refresh data:', parseError);
         }
       }
     };
     
     window.addEventListener('storage', handleStorageChange);
 
+    // 🆕 Listen for broadcast channel messages
+    let broadcastChannel;
+    if (window.BroadcastChannel) {
+      broadcastChannel = new BroadcastChannel('tenant-settings');
+      broadcastChannel.onmessage = (event) => {
+        console.log('🔔 [TenantContext] Received broadcast message:', event.data);
+        if (event.data.type === 'HIRS_TOGGLE' && event.data.tenantId === currentTenant?._id) {
+          console.log('🔄 [TenantContext] HIRS toggle detected, refreshing...');
+          setTimeout(() => {
+            refreshTenantSettings(true);
+          }, 1000);
+        }
+      };
+    }
+
     return () => {
       window.removeEventListener('tenantSettingsUpdated', handleSettingsUpdate);
       window.removeEventListener('storage', handleStorageChange);
+      if (broadcastChannel) {
+        broadcastChannel.close();
+      }
     };
   }, [refreshTenantSettings, currentTenant?._id]);
 
-  // 🔄 ENHANCED: More frequent refresh for HIRS settings (every 5 seconds)
+  // 🔄 ENHANCED: More frequent refresh for HIRS settings (every 10 seconds)
   useEffect(() => {
     if (!currentTenant?._id) return;
 
     const interval = setInterval(() => {
+      console.log('🔄 [TenantContext] Periodic refresh...');
       refreshTenantSettings(false); // Gentle refresh without forcing
-    }, 5000); // 5 seconds for faster updates
+    }, 10000); // 10 seconds for better performance
 
     return () => clearInterval(interval);
   }, [refreshTenantSettings, currentTenant?._id]);
 
-  // 🚨 NEW: Listen for focus events to refresh when user returns to tab
+  // 🚨 Listen for focus events to refresh when user returns to tab
   useEffect(() => {
     const handleFocus = () => {
       console.log('🔍 [TenantContext] Tab focused, refreshing settings...');
@@ -350,7 +423,8 @@ export const TenantProvider = ({ children }) => {
     updateTenant,
     isFeatureEnabled,
     getThemeStyles,
-    refreshTenantSettings, // 🔄 NEW: Expose refresh function
+    getHirsSettings, // 🆕 Expose the safe getter
+    refreshTenantSettings, // 🔄 Expose refresh function
     platformName: (tenantSettings || window.tenantSettings)?.platformName || 'NEUROLEX',
     platformDescription: (tenantSettings || window.tenantSettings)?.platformDescription || 'Mental wellness platform'
   };
