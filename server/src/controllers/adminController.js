@@ -2200,7 +2200,7 @@ exports.getDashboardData = async (req, res) => {
 exports.getTenantSettings = async (req, res) => {
   try {
     const { tenantId } = req.params;
-    console.log(`🔍 [ADMIN] Getting tenant settings for: ${tenantId}`);
+    console.log(`🔍 [ADMIN] Getting tenant settings for: ${tenantId} (from Tenant model)`);
     
     // Validate tenantId format
     if (!tenantId.match(/^[0-9a-fA-F]{24}$/)) {
@@ -2210,7 +2210,7 @@ exports.getTenantSettings = async (req, res) => {
       });
     }
     
-    // Get master connection
+    // 🚨 FIXED: Get settings directly from Tenant model
     const masterConn = getMasterConnection();
     if (!masterConn) {
       throw new Error('Failed to connect to master database');
@@ -2218,7 +2218,7 @@ exports.getTenantSettings = async (req, res) => {
     
     const Tenant = masterConn.model('Tenant');
     
-    // Find tenant
+    // Find tenant with all settings
     const tenant = await Tenant.findById(tenantId);
     
     if (!tenant) {
@@ -2228,7 +2228,66 @@ exports.getTenantSettings = async (req, res) => {
       });
     }
     
-    // Return tenant settings with proper structure for both light and dark logos
+    // 🔧 DEFENSIVE: Initialize hirsSettings if missing
+    if (!tenant.hirsSettings || tenant.hirsSettings.length === 0) {
+      console.log(`⚠️ [ADMIN] No HIRS settings found, initializing defaults for tenant: ${tenantId}`);
+      
+      tenant.hirsSettings = [
+        {
+          id: 1,
+          icon: '📊',
+          name: 'Dashboard',
+          description: 'Main dashboard overview for doctors.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
+        },
+        {
+          id: 2,
+          icon: '👥',
+          name: 'Patients',
+          description: 'Patient management and list view.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
+        },
+        {
+          id: 3,
+          icon: '📖',
+          name: 'Patient Journal Management',
+          description: 'View and manage patient journal entries.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
+        },
+        {
+          id: 4,
+          icon: '📝',
+          name: 'Journal Template Management',
+          description: 'Create and manage journal templates for patients.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
+        },
+        {
+          id: 5,
+          icon: '📅',
+          name: 'Appointments',
+          description: 'Schedule and manage appointments with patients.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
+        },
+        {
+          id: 6,
+          icon: '💬',
+          name: 'Messages',
+          description: 'Secure messaging with patients.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
+        }
+      ];
+      
+      // Save the initialized settings
+      await tenant.save();
+    }
+    
+    // Return tenant settings with proper structure
     const settings = {
       platformName: tenant.name || 'NEUROLEX',
       platformDescription: tenant.description || 'AI-powered mental wellness platform',
@@ -2242,65 +2301,17 @@ exports.getTenantSettings = async (req, res) => {
       },
       primaryColor: tenant.primaryColor || '#4CAF50',
       secondaryColor: tenant.secondaryColor || '#2196F3',
-     hirsSettings: tenant.hirsSettings || [
-  {
-    id: 1,
-    icon: '📊',
-    name: 'Dashboard',  // ✅ NEW NAME
-    description: 'Main dashboard overview for doctors.',
-    lastUpdated: new Date().toLocaleDateString(),
-    isActive: true
-  },
-  {
-    id: 2,
-    icon: '👥',
-    name: 'Patients',  // ✅ NEW NAME
-    description: 'Patient management and list view.',
-    lastUpdated: new Date().toLocaleDateString(),
-    isActive: true
-  },
-  {
-    id: 3,
-    icon: '📖',
-    name: 'Patient Journal Management',  // ✅ NEW NAME
-    description: 'View and manage patient journal entries.',
-    lastUpdated: new Date().toLocaleDateString(),
-    isActive: true
-  },
-  {
-    id: 4,
-    icon: '📝',
-    name: 'Journal Template Management',  // ✅ NEW NAME
-    description: 'Create and manage journal templates for patients.',
-    lastUpdated: new Date().toLocaleDateString(),
-    isActive: true
-  },
-  {
-    id: 5,
-    icon: '📅',
-    name: 'Appointments',  // ✅ NEW NAME
-    description: 'Schedule and manage appointments with patients.',
-    lastUpdated: new Date().toLocaleDateString(),
-    isActive: true
-  },
-  {
-    id: 6,
-    icon: '💬',
-    name: 'Messages',  // ✅ NEW NAME
-    description: 'Secure messaging with patients.',
-    lastUpdated: new Date().toLocaleDateString(),
-    isActive: true
-  }
-]
+      hirsSettings: tenant.hirsSettings || []
     };
     
-    console.log('✅ Tenant settings retrieved successfully');
+    console.log(`✅ [ADMIN] Tenant settings retrieved from Tenant model - ${settings.hirsSettings.length} HIRS features`);
+    
     res.json({
       success: true,
       data: settings
     });
   } catch (error) {
-    console.error('❌ Error getting tenant settings:', error);
+    console.error('❌ [ADMIN] Error getting tenant settings:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to get tenant settings',
@@ -2845,7 +2856,7 @@ exports.toggleHirsFeature = async (req, res) => {
       });
     }
     
-    // Get master connection
+    // 🚨 FIXED: Use master connection to access Tenant model directly
     const masterConn = getMasterConnection();
     if (!masterConn) {
       throw new Error('Failed to connect to master database');
@@ -2853,7 +2864,7 @@ exports.toggleHirsFeature = async (req, res) => {
     
     const Tenant = masterConn.model('Tenant');
     
-    // Find tenant and update specific HIRS setting
+    // Find tenant from the main Tenant collection
     const tenant = await Tenant.findById(tenantId);
     if (!tenant) {
       return res.status(404).json({
@@ -2862,11 +2873,13 @@ exports.toggleHirsFeature = async (req, res) => {
       });
     }
     
-    // 🔧 DEFENSIVE PROGRAMMING: Check if hirsSettings exists and is an array
+    console.log(`🔍 [ADMIN] Found tenant: ${tenant.name}`);
+    console.log(`🔍 [ADMIN] Current hirsSettings:`, tenant.hirsSettings?.length || 0, 'features');
+    
+    // 🔧 DEFENSIVE: Initialize hirsSettings if it doesn't exist
     if (!tenant.hirsSettings || !Array.isArray(tenant.hirsSettings)) {
-      console.log(`⚠️ Tenant ${tenantId} has invalid hirsSettings, initializing default settings...`);
+      console.log(`⚠️ [ADMIN] Initializing default HIRS settings for tenant ${tenantId}`);
       
-      // Initialize with default HIRS settings
       tenant.hirsSettings = [
         {
           id: 1,
@@ -2917,22 +2930,13 @@ exports.toggleHirsFeature = async (req, res) => {
           isActive: true
         }
       ];
-      
-      // Save the tenant with default settings
-      await tenant.save();
-      console.log(`✅ Default HIRS settings initialized for tenant ${tenantId}`);
     }
     
-    // 🔧 DEFENSIVE PROGRAMMING: Ensure hirsSettings is still an array after potential initialization
-    if (!Array.isArray(tenant.hirsSettings)) {
-      throw new Error('Failed to initialize hirsSettings as array');
-    }
-    
-    // Find the HIRS setting to update
+    // Find the specific HIRS setting to update
     const hirsIndex = tenant.hirsSettings.findIndex(hirs => hirs.id === parseInt(hirsId));
     
     if (hirsIndex === -1) {
-      console.log(`❌ HIRS setting with ID ${hirsId} not found. Available IDs:`, tenant.hirsSettings.map(h => h.id));
+      console.log(`❌ [ADMIN] HIRS setting with ID ${hirsId} not found. Available IDs:`, tenant.hirsSettings.map(h => h.id));
       return res.status(404).json({
         success: false,
         message: `HIRS setting with ID ${hirsId} not found`,
@@ -2940,15 +2944,24 @@ exports.toggleHirsFeature = async (req, res) => {
       });
     }
     
-    // Update the HIRS setting
+    // 🚨 UPDATE: Save directly to Tenant model
+    const previousState = tenant.hirsSettings[hirsIndex].isActive;
     tenant.hirsSettings[hirsIndex].isActive = isActive;
     tenant.hirsSettings[hirsIndex].lastUpdated = lastUpdated || new Date().toLocaleDateString();
     tenant.updatedAt = new Date();
     
-    // Save tenant with updated settings
+    console.log(`🔄 [ADMIN] Updating ${tenant.hirsSettings[hirsIndex].name}: ${previousState} → ${isActive}`);
+    
+    // Save the tenant with updated HIRS settings
     await tenant.save();
     
-    console.log('✅ HIRS feature toggled successfully');
+    console.log('✅ [ADMIN] HIRS feature toggled successfully in Tenant model');
+    
+    // 🔧 VERIFICATION: Read back the saved data
+    const verifyTenant = await Tenant.findById(tenantId).select('hirsSettings');
+    const verifyFeature = verifyTenant.hirsSettings.find(h => h.id === parseInt(hirsId));
+    console.log(`🔍 [ADMIN] Verification - ${verifyFeature.name} isActive: ${verifyFeature.isActive}`);
+    
     res.json({
       success: true,
       message: `HIRS feature ${isActive ? 'enabled' : 'disabled'} successfully`,
@@ -2957,11 +2970,12 @@ exports.toggleHirsFeature = async (req, res) => {
         hirsId: parseInt(hirsId),
         isActive,
         featureName: tenant.hirsSettings[hirsIndex].name,
-        lastUpdated: tenant.hirsSettings[hirsIndex].lastUpdated
+        lastUpdated: tenant.hirsSettings[hirsIndex].lastUpdated,
+        verified: verifyFeature.isActive === isActive
       }
     });
   } catch (error) {
-    console.error('❌ Error toggling HIRS feature:', error);
+    console.error('❌ [ADMIN] Error toggling HIRS feature:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to toggle HIRS feature',
