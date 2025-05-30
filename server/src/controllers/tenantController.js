@@ -350,8 +350,8 @@ exports.updateTenant = async (req, res) => {
  */
 exports.getPublicTenantById = async (req, res) => {
   try {
-    // 🚨 FIX: Multiple ways to get tenantId (robust parameter extraction)
-    const tenantId = req.params.tenantId || req.params.id || req.query.tenantId;
+    // Extract tenantId from route params
+    const tenantId = req.params.id || req.params.tenantId;
     
     console.log(`🔍 [getPublicTenantById] Fetching public tenant info for ID: ${tenantId}`);
     console.log(`🔍 [getPublicTenantById] Route params:`, req.params);
@@ -362,12 +362,7 @@ exports.getPublicTenantById = async (req, res) => {
       console.error(`❌ [getPublicTenantById] No tenant ID provided in request`);
       return res.status(400).json({
         success: false,
-        message: 'Tenant ID is required',
-        debug: {
-          params: req.params,
-          query: req.query,
-          path: req.path
-        }
+        message: 'Tenant ID is required'
       });
     }
 
@@ -392,8 +387,8 @@ exports.getPublicTenantById = async (req, res) => {
 
     const Tenant = masterConn.model('Tenant');
 
-    // Find tenant
-    const tenant = await Tenant.findById(tenantId);
+    // 🚨 CRITICAL FIX: Find tenant and populate hirsSettings properly
+    const tenant = await Tenant.findById(tenantId).lean();
     
     if (!tenant) {
       console.error(`❌ [getPublicTenantById] Tenant not found: ${tenantId}`);
@@ -404,10 +399,12 @@ exports.getPublicTenantById = async (req, res) => {
     }
 
     console.log(`🔍 [getPublicTenantById] Found tenant: ${tenant.name}`);
+    console.log(`🔍 [getPublicTenantById] Raw hirsSettings from DB:`, tenant.hirsSettings);
 
-    // 🚨 CRITICAL FIX: Only create defaults if hirsSettings is completely missing or empty
-    // Do NOT overwrite existing HIRS settings that may have been modified by admin
-    if (!tenant.hirsSettings || !Array.isArray(tenant.hirsSettings) || tenant.hirsSettings.length === 0) {
+    // 🚨 CRITICAL: Check if hirsSettings exists AND has data
+    let hirsSettings = tenant.hirsSettings;
+    
+    if (!hirsSettings || !Array.isArray(hirsSettings) || hirsSettings.length === 0) {
       console.log(`⚠️ [getPublicTenantById] No HIRS settings found for tenant ${tenantId}, creating and SAVING defaults to database`);
       
       // Create default HIRS settings
@@ -420,23 +417,41 @@ exports.getPublicTenantById = async (req, res) => {
         { id: 6, icon: '💬', name: 'Messages', description: 'Secure messaging with patients.', lastUpdated: new Date().toLocaleDateString(), isActive: true }
       ];
 
-      // Set and save the defaults
-      tenant.hirsSettings = defaultHirsSettings;
-      await tenant.save();
+      // 🚨 CRITICAL: Update using findByIdAndUpdate to ensure it saves
+      const updatedTenant = await Tenant.findByIdAndUpdate(
+        tenantId,
+        { 
+          $set: { 
+            hirsSettings: defaultHirsSettings,
+            updatedAt: new Date()
+          }
+        },
+        { 
+          new: true, 
+          upsert: false,
+          runValidators: false
+        }
+      );
       
-      console.log(`✅ [getPublicTenantById] Default HIRS settings SAVED to database for tenant ${tenantId}`);
+      if (updatedTenant) {
+        hirsSettings = updatedTenant.hirsSettings;
+        console.log(`✅ [getPublicTenantById] Default HIRS settings SAVED to database for tenant ${tenantId}`);
+      } else {
+        console.error(`❌ [getPublicTenantById] Failed to save default HIRS settings for tenant ${tenantId}`);
+        hirsSettings = defaultHirsSettings; // Use defaults even if save failed
+      }
     } else {
       // 🎯 FIXED: HIRS settings exist - preserve them (don't overwrite admin changes)
       console.log(`✅ [getPublicTenantById] Found existing HIRS settings for tenant ${tenantId}, preserving admin changes`);
-      console.log(`🔍 [getPublicTenantById] Current HIRS states:`, tenant.hirsSettings.map(h => `${h.name}: ${h.isActive}`));
+      console.log(`🔍 [getPublicTenantById] Current HIRS states:`, hirsSettings.map(h => `${h.name}: ${h.isActive}`));
     }
 
-    console.log(`✅ [getPublicTenantById] Successfully returning tenant data with ${tenant.hirsSettings?.length || 0} HIRS settings`);
+    console.log(`✅ [getPublicTenantById] Successfully returning tenant data with ${hirsSettings?.length || 0} HIRS settings`);
     
     // Log current HIRS settings for debugging
     console.log(`🔍 [getPublicTenantById] HIRS settings preview: [`);
-    if (tenant.hirsSettings && tenant.hirsSettings.length > 0) {
-      tenant.hirsSettings.forEach(setting => {
+    if (hirsSettings && hirsSettings.length > 0) {
+      hirsSettings.forEach(setting => {
         console.log(`  { id: ${setting.id}, name: '${setting.name}', isActive: ${setting.isActive} },`);
       });
     }
@@ -455,12 +470,12 @@ exports.getPublicTenantById = async (req, res) => {
         primaryColor: tenant.primaryColor,
         secondaryColor: tenant.secondaryColor,
         description: tenant.description,
-        hirsSettings: tenant.hirsSettings || []
+        hirsSettings: hirsSettings || []
       }
     });
 
   } catch (error) {
-    console.error(`❌ [getPublicTenantById] Error fetching tenant ${req.params.tenantId || req.params.id || 'unknown'}:`, error);
+    console.error(`❌ [getPublicTenantById] Error fetching tenant ${req.params.id || req.params.tenantId || 'unknown'}:`, error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
