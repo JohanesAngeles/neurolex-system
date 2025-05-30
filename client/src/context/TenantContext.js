@@ -1,4 +1,4 @@
-// client/src/context/TenantContext.js
+// client/src/context/TenantContext.js - FIXED API ENDPOINT
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 const TenantContext = createContext();
@@ -30,7 +30,9 @@ export const TenantProvider = ({ children }) => {
       
       // Add cache busting parameter to ensure fresh data
       const cacheBuster = force ? `?t=${Date.now()}` : '';
-      const response = await fetch(`/api/tenant-settings/public/${currentTenant._id}${cacheBuster}`, {
+      
+      // 🚨 FIXED: Correct API endpoint path
+      const response = await fetch(`/api/tenants/${currentTenant._id}/public${cacheBuster}`, {
         headers: {
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache'
@@ -145,7 +147,8 @@ export const TenantProvider = ({ children }) => {
       setIsLoading(true);
       console.log('🔍 Fetching tenant settings for:', tenantId);
       
-      const response = await fetch(`/api/tenant-settings/public/${tenantId}`, {
+      // 🚨 FIXED: Correct API endpoint path
+      const response = await fetch(`/api/tenants/${tenantId}/public`, {
         headers: {
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache'
@@ -194,40 +197,40 @@ export const TenantProvider = ({ children }) => {
 
   // 🎨 ENHANCED: Get tenant-specific styling with cache busting
   const getThemeStyles = () => {
-    if (!tenantSettings) {
-      return {
-        primaryColor: '#4CAF50',
-        secondaryColor: '#2196F3',
-        logo: '/default-logo.png',
-        systemLogo: {
-          light: '/default-logo.png',
-          dark: '/default-logo-dark.png'
-        },
-        favicon: {
-          light: '/default-favicon.ico',
-          dark: '/default-favicon-dark.ico'
-        }
-      };
+  if (!tenantSettings) {
+    return {
+      primaryColor: '#4CAF50',
+      secondaryColor: '#2196F3',
+      logo: null, // 🔧 Use null instead of default path
+      systemLogo: {
+        light: null,
+        dark: null
+      },
+      favicon: {
+        light: null,
+        dark: null
+      }
+    };
     }
 
     // Add cache busting to image URLs to ensure fresh images
-    const cacheBuster = `?v=${lastRefresh}`;
-    
-    return {
-      primaryColor: tenantSettings.primaryColor || '#4CAF50',
-      secondaryColor: tenantSettings.secondaryColor || '#2196F3',
-      logo: tenantSettings.systemLogo?.light ? `${tenantSettings.systemLogo.light}${cacheBuster}` : '/default-logo.png',
-      darkLogo: tenantSettings.systemLogo?.dark ? `${tenantSettings.systemLogo.dark}${cacheBuster}` : '/default-logo-dark.png',
-      systemLogo: {
-        light: tenantSettings.systemLogo?.light ? `${tenantSettings.systemLogo.light}${cacheBuster}` : '/default-logo.png',
-        dark: tenantSettings.systemLogo?.dark ? `${tenantSettings.systemLogo.dark}${cacheBuster}` : '/default-logo-dark.png'
-      },
-      favicon: {
-        light: tenantSettings.favicon?.light ? `${tenantSettings.favicon.light}${cacheBuster}` : '/default-favicon.ico',
-        dark: tenantSettings.favicon?.dark ? `${tenantSettings.favicon.dark}${cacheBuster}` : '/default-favicon-dark.ico'
-      }
-    };
+     const cacheBuster = `?v=${lastRefresh}`;
+  
+  return {
+    primaryColor: tenantSettings.primaryColor || '#4CAF50',
+    secondaryColor: tenantSettings.secondaryColor || '#2196F3',
+    logo: tenantSettings.systemLogo?.light ? `${tenantSettings.systemLogo.light}${cacheBuster}` : null,
+    darkLogo: tenantSettings.systemLogo?.dark ? `${tenantSettings.systemLogo.dark}${cacheBuster}` : null,
+    systemLogo: {
+      light: tenantSettings.systemLogo?.light ? `${tenantSettings.systemLogo.light}${cacheBuster}` : null,
+      dark: tenantSettings.systemLogo?.dark ? `${tenantSettings.systemLogo.dark}${cacheBuster}` : null
+    },
+    favicon: {
+      light: tenantSettings.favicon?.light ? `${tenantSettings.favicon.light}${cacheBuster}` : null,
+      dark: tenantSettings.favicon?.dark ? `${tenantSettings.favicon.dark}${cacheBuster}` : null
+    }
   };
+};
 
   // 🔄 NEW: Global event listener for settings updates
   useEffect(() => {

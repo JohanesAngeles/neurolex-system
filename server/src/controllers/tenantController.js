@@ -343,18 +343,22 @@ exports.updateTenant = async (req, res) => {
 
 /**
  * Get public tenant info by ID - accessible without authentication
- * Only returns non-sensitive information
+ * Only returns non-sensitive information INCLUDING hirsSettings for feature control
  */
 exports.getPublicTenantById = async (req, res) => {
   try {
     const { id } = req.params;
     
+    console.log(`🔍 [getPublicTenantById] Fetching public tenant info for ID: ${id}`);
+    
     const masterConn = getMasterConnection();
     const Tenant = masterConn.model('Tenant');
     
-    const tenant = await Tenant.findById(id).select('name logoUrl primaryColor secondaryColor active');
+    // Get tenant info including hirsSettings (stored directly in Tenant model)
+    const tenant = await Tenant.findById(id).select('name logoUrl primaryColor secondaryColor active systemLogo favicon hirsSettings');
     
     if (!tenant) {
+      console.warn(`⚠️ [getPublicTenantById] Tenant not found for ID: ${id}`);
       return res.status(404).json({
         success: false,
         message: 'Clinic not found'
@@ -363,79 +367,56 @@ exports.getPublicTenantById = async (req, res) => {
     
     // Check if tenant is active
     if (!tenant.active) {
+      console.warn(`⚠️ [getPublicTenantById] Tenant is inactive for ID: ${id}`);
       return res.status(403).json({
         success: false,
         message: 'This clinic is currently inactive'
       });
     }
+
+    // 🔧 Get hirsSettings directly from tenant model or use defaults
+    let hirsSettings = tenant.hirsSettings;
+    
+    if (!hirsSettings || hirsSettings.length === 0) {
+      console.log(`ℹ️ [getPublicTenantById] No HIRS settings found for tenant ${id}, using defaults`);
+      
+      // 🔧 Provide default HIRS settings if none exist
+      hirsSettings = [
+        { id: 1, name: 'Dashboard', isActive: true },
+        { id: 2, name: 'Patients', isActive: true },
+        { id: 3, name: 'Patient Journal Management', isActive: true },
+        { id: 4, name: 'Journal Template Management', isActive: true },
+        { id: 5, name: 'Appointments', isActive: true },
+        { id: 6, name: 'Messages', isActive: true }
+      ];
+    } else {
+      console.log(`✅ [getPublicTenantById] Found ${hirsSettings.length} HIRS settings for tenant ${id}`);
+    }
+
+    // 🚨 UPDATED: Include hirsSettings in the response
+    const responseData = {
+      _id: tenant._id,
+      name: tenant.name,
+      logoUrl: tenant.logoUrl,
+      primaryColor: tenant.primaryColor,
+      secondaryColor: tenant.secondaryColor,
+      systemLogo: tenant.systemLogo,
+      favicon: tenant.favicon,
+      hirsSettings: hirsSettings, // 🔧 Include feature settings
+      active: tenant.active
+    };
+
+    console.log(`✅ [getPublicTenantById] Successfully returning tenant data with ${hirsSettings.length} HIRS settings`);
     
     res.status(200).json({
       success: true,
-      data: tenant
+      data: responseData
     });
   } catch (error) {
-    console.error('Error fetching public tenant info:', error);
+    console.error('❌ [getPublicTenantById] Error fetching public tenant info:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching clinic information',
-      error: error.message
-    });
-  }
-};
-
-/**
- * Get tenant by subdomain
- */
-exports.getTenantBySubdomain = async (req, res) => {
-  try {
-    const { subdomain } = req.params;
-    
-    // Sanitize subdomain
-    const sanitizedSubdomain = subdomain.toLowerCase().trim();
-    
-    if (!sanitizedSubdomain) {
-      return res.status(400).json({
-        success: false,
-        message: 'Subdomain is required'
-      });
-    }
-    
-    const masterConn = getMasterConnection();
-    const Tenant = masterConn.model('Tenant');
-    
-    // Find tenant by name (converted to subdomain format)
-    // This assumes your subdomain would be derived from the tenant name
-    // You might need to adjust this logic based on how you generate subdomains
-    const tenants = await Tenant.find({ active: true });
-    
-    // Find tenant where name matches the subdomain (ignoring spaces and special chars)
-    const tenant = tenants.find(t => {
-      const tenantSubdomain = t.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-      return tenantSubdomain === sanitizedSubdomain;
-    });
-    
-    if (!tenant) {
-      return res.status(404).json({
-        success: false,
-        message: 'Clinic not found'
-      });
-    }
-    
-    res.status(200).json({
-      success: true,
-      data: {
-        _id: tenant._id,
-        name: tenant.name,
-        logoUrl: tenant.logoUrl,
-        primaryColor: tenant.primaryColor,
-        secondaryColor: tenant.secondaryColor
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching tenant by subdomain:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching clinic',
       error: error.message
     });
   }
@@ -554,28 +535,58 @@ exports.getCurrentTenant = async (req, res) => {
 };
 
 /**
- * List all active tenants for dropdown
+ * Get tenant by subdomain
  */
-exports.listActiveTenants = async (req, res) => {
+exports.getTenantBySubdomain = async (req, res) => {
   try {
-    console.log('Fetching active tenants for dropdown');
+    const { subdomain } = req.params;
+    
+    // Sanitize subdomain
+    const sanitizedSubdomain = subdomain.toLowerCase().trim();
+    
+    if (!sanitizedSubdomain) {
+      return res.status(400).json({
+        success: false,
+        message: 'Subdomain is required'
+      });
+    }
+    
     const masterConn = getMasterConnection();
     const Tenant = masterConn.model('Tenant');
     
-    const tenants = await Tenant.find({ active: true })
-      .select('_id name logoUrl primaryColor')
-      .sort({ name: 1 });
+    // Find tenant by name (converted to subdomain format)
+    // This assumes your subdomain would be derived from the tenant name
+    // You might need to adjust this logic based on how you generate subdomains
+    const tenants = await Tenant.find({ active: true });
     
-    console.log(`Found ${tenants.length} active tenants for dropdown`);
-    return res.status(200).json({
+    // Find tenant where name matches the subdomain (ignoring spaces and special chars)
+    const tenant = tenants.find(t => {
+      const tenantSubdomain = t.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+      return tenantSubdomain === sanitizedSubdomain;
+    });
+    
+    if (!tenant) {
+      return res.status(404).json({
+        success: false,
+        message: 'Clinic not found'
+      });
+    }
+    
+    res.status(200).json({
       success: true,
-      data: tenants
+      data: {
+        _id: tenant._id,
+        name: tenant.name,
+        logoUrl: tenant.logoUrl,
+        primaryColor: tenant.primaryColor,
+        secondaryColor: tenant.secondaryColor
+      }
     });
   } catch (error) {
-    console.error('Error listing active tenants:', error);
-    return res.status(500).json({
+    console.error('Error fetching tenant by subdomain:', error);
+    res.status(500).json({
       success: false,
-      message: 'Error listing clinics',
+      message: 'Error fetching clinic',
       error: error.message
     });
   }
