@@ -48,57 +48,105 @@ const connectMaster = async () => {
  * @param {Connection} connection - Mongoose connection
  */
 const initializeTenantModel = (connection) => {
-  // Define Tenant schema
-  const TenantSchema = new mongoose.Schema({
-    name: {
-      type: String,
-      required: true,
-      trim: true
-    },
-    dbName: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true
-    },
-    active: {
-      type: Boolean,
-      default: true
-    },
-    logoUrl: {
-      type: String,
-      default: '/logo.svg'
-    },
-    primaryColor: {
-      type: String,
-      default: '#1e3a8a' // Default Neurolex blue
-    },
-    secondaryColor: {
-      type: String,
-      default: '#f3f4f6' // Light gray
-    },
-    adminEmail: {
-      type: String,
-      required: true
-    },
-    contactPhone: String,
-    contactEmail: String,
-    address: String,
-    databaseCreated: { // New field to track database creation status
-      type: Boolean,
-      default: false
-    },
-    createdAt: {
-      type: Date,
-      default: Date.now
+  // 🚨 CRITICAL FIX: Import the correct Tenant schema from models folder
+  let TenantSchema;
+  
+  try {
+    // Try the most common path first
+    TenantSchema = require('../models/Tenant');
+    console.log('✅ Found Tenant schema at ../models/master/Tenant');
+  } catch (error1) {
+    try {
+      // Try alternative path
+      TenantSchema = require('../models/Tenant');
+      console.log('✅ Found Tenant schema at ../models/Tenant');
+    } catch (error2) {
+      try {
+        // Try another alternative
+        TenantSchema = require('../models/Tenant');
+        console.log('✅ Found Tenant schema at ../../models/master/Tenant');
+      } catch (error3) {
+        console.error('❌ Could not find Tenant schema at any expected location');
+        console.error('Error 1 (../models/master/Tenant):', error1.message);
+        console.error('Error 2 (../models/Tenant):', error2.message);
+        console.error('Error 3 (../../models/master/Tenant):', error3.message);
+        
+        // 🚨 FALLBACK: Define schema inline with hirsSettings
+        console.log('⚠️ Using fallback inline schema definition');
+        TenantSchema = new mongoose.Schema({
+          name: { type: String, required: true, trim: true },
+          dbName: { type: String, required: true, unique: true, trim: true },
+          active: { type: Boolean, default: true },
+          logoUrl: { type: String, default: '/logo.svg' },
+          darkLogoUrl: { type: String, default: null },
+          faviconUrl: { type: String, default: null },
+          darkFaviconUrl: { type: String, default: null },
+          primaryColor: { type: String, default: '#1e3a8a' },
+          secondaryColor: { type: String, default: '#f3f4f6' },
+          description: { type: String, default: 'AI-powered mental wellness platform' },
+          // 🚨 CRITICAL: Include hirsSettings field
+          hirsSettings: [{
+            id: { type: Number, required: true },
+            icon: { type: String, required: true },
+            name: { type: String, required: true },
+            description: { type: String, required: true },
+            lastUpdated: { type: String, default: () => new Date().toLocaleDateString() },
+            isActive: { type: Boolean, default: true }
+          }],
+          adminEmail: { type: String, required: true },
+          contactPhone: String,
+          contactEmail: String,
+          address: String,
+          createdAt: { type: Date, default: Date.now },
+          updatedAt: { type: Date, default: Date.now }
+        });
+        
+        // Add pre-save middleware
+        TenantSchema.pre('save', function(next) {
+          this.updatedAt = new Date();
+          next();
+        });
+      }
     }
-  });
+  }
+  
+  console.log('🔍 Loading Tenant schema from models/master/Tenant.js');
+  console.log('🔍 Tenant schema paths:', Object.keys(TenantSchema.paths));
+  console.log('🔍 hirsSettings field exists?', 'hirsSettings' in TenantSchema.paths);
   
   // Register the Tenant model (if not already registered)
   try {
-    connection.model('Tenant');
+    const existingModel = connection.model('Tenant');
+    console.log('⚠️ Tenant model already exists, checking schema...');
+    
+    // Check if existing model has hirsSettings
+    const hasHirsSettings = 'hirsSettings' in existingModel.schema.paths;
+    console.log('🔍 Existing model has hirsSettings?', hasHirsSettings);
+    
+    if (!hasHirsSettings) {
+      console.log('🔄 Existing model missing hirsSettings, forcing recreation...');
+      
+      // Remove the model from the connection registry
+      delete connection.models.Tenant;
+      delete connection.modelSchemas.Tenant;
+      
+      // Create new model with correct schema
+      const newModel = connection.model('Tenant', TenantSchema);
+      console.log('✅ Recreated Tenant model with hirsSettings field');
+      return newModel;
+    }
+    
+    return existingModel;
   } catch (error) {
-    connection.model('Tenant', TenantSchema);
+    // Model doesn't exist, create it
+    console.log('✅ Creating new Tenant model with hirsSettings field');
+    const TenantModel = connection.model('Tenant', TenantSchema);
+    
+    // Verify the model has hirsSettings
+    console.log('🔍 Created model paths:', Object.keys(TenantModel.schema.paths));
+    console.log('🔍 hirsSettings exists in created model?', 'hirsSettings' in TenantModel.schema.paths);
+    
+    return TenantModel;
   }
 };
 
