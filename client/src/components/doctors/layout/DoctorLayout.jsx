@@ -119,81 +119,89 @@ const DoctorLayout = () => {
   };
 
   // 🚨 FIXED: Menu items with proper feature control integration
-  const menuItems = React.useMemo(() => {
-    const allItems = [
-      { 
-        id: 'dashboard', 
-        label: 'Dashboard', 
-        path: '/doctor', 
-        icon: dashboardIcon,
-        feature: 'Dashboard',
-        alwaysShow: true, // Dashboard should always be available
-        implemented: true
-      },
-      { 
-        id: 'patients', 
-        label: 'Patients', 
-        path: '/doctor/patients', 
-        icon: patientsIcon,
-        feature: 'Patients',
-        implemented: true
-      },
-      { 
-        id: 'patient-journal', 
-        label: 'Patient Journal Management', 
-        path: '/doctor/journal-entries', 
-        icon: journalIcon,
-        feature: 'Patient Journal Management',
-        implemented: true
-      },
-      { 
-        id: 'journal-templates', 
-        label: 'Journal Template Management', 
-        path: '/doctor/form-templates', 
-        icon: templatesIcon,
-        feature: 'Journal Template Management',
-        implemented: true
-      },
-      { 
-        id: 'appointments', 
-        label: 'Appointments', 
-        path: '/doctor/appointments', 
-        icon: appointmentsIcon,
-        feature: 'Appointments',
-        implemented: true
-      },
-      { 
-        id: 'messages', 
-        label: 'Messages', 
-        path: '/doctor/messages', 
-        icon: messageIcon,
-        feature: 'Messages',
-        implemented: false // Not yet implemented
-      }
-    ];
+   const allItems = [
+    { 
+      id: 'dashboard', 
+      label: 'Dashboard', 
+      path: '/doctor', 
+      icon: dashboardIcon,
+      feature: 'Dashboard',
+      alwaysShow: true, // Dashboard should always be available
+      implemented: true
+    },
+    { 
+      id: 'patients', 
+      label: 'Patients', 
+      path: '/doctor/patients', 
+      icon: patientsIcon,
+      feature: 'Patients',
+      implemented: true
+    },
+    { 
+      id: 'patient-journal', 
+      label: 'Patient Journal Management', 
+      path: '/doctor/journal-entries', 
+      icon: journalIcon,
+      feature: 'Patient Journal Management',
+      implemented: true
+    },
+    { 
+      id: 'journal-templates', 
+      label: 'Journal Template Management', 
+      path: '/doctor/form-templates', 
+      icon: templatesIcon,
+      feature: 'Journal Template Management',
+      implemented: true
+    },
+    { 
+      id: 'appointments', 
+      label: 'Appointments', 
+      path: '/doctor/appointments', 
+      icon: appointmentsIcon,
+      feature: 'Appointments',
+      implemented: true
+    },
+    { 
+      id: 'messages', 
+      label: 'Messages', 
+      path: '/doctor/messages', 
+      icon: messageIcon,
+      feature: 'Messages',
+      implemented: false // Not yet implemented
+    }
+  ];
+  
+  // 🔍 DEBUG: Add comprehensive logging
+  console.log('🔍 [DoctorLayout] Building menu items...');
+  console.log('🔍 [DoctorLayout] tenantSettings:', tenantSettings);
+  console.log('🔍 [DoctorLayout] hirsSettings:', tenantSettings?.hirsSettings);
+  console.log('🔍 [DoctorLayout] lastRefresh:', lastRefresh);
+  
+  // 🚨 SIMPLIFIED: Direct filtering without useMemo
+  const menuItems = allItems.filter(item => {
+    // Always show dashboard
+    if (item.alwaysShow) {
+      console.log(`🔍 [DoctorLayout] ${item.label} - Always show`);
+      return true;
+    }
     
-    // 🔍 DEBUG: Add logging to see what's happening
-    console.log('🔍 [DoctorLayout] Building menu items...');
-    console.log('🔍 [DoctorLayout] tenantSettings:', tenantSettings);
-    console.log('🔍 [DoctorLayout] hirsSettings:', tenantSettings?.hirsSettings);
+    // Check if isFeatureEnabled function exists and tenantSettings are loaded
+    if (!isFeatureEnabled || !tenantSettings) {
+      console.log(`🔍 [DoctorLayout] ${item.label} - Settings not loaded yet, showing temporarily`);
+      return true; // Show all items while loading
+    }
     
-    // 🚨 FIXED: Use isFeatureEnabled directly from useTenant
-    const filteredItems = allItems.filter(item => {
-      // Always show dashboard
-      if (item.alwaysShow) {
-        console.log(`🔍 [DoctorLayout] ${item.label} - Always show`);
-        return true;
-      }
-      
-      // 🚨 FIXED: Use isFeatureEnabled directly from useTenant
-      const enabled = isFeatureEnabled(item.feature);
-      console.log(`🔍 [DoctorLayout] ${item.label} (${item.feature}) - Enabled: ${enabled}`);
-      return enabled;
-    });
+    // Use isFeatureEnabled function
+    const enabled = isFeatureEnabled(item.feature);
+    console.log(`🔍 [DoctorLayout] ${item.label} (${item.feature}) - Enabled: ${enabled}`);
+    console.log(`🔍 [DoctorLayout] HIRS Settings for ${item.feature}:`, 
+      tenantSettings?.hirsSettings?.find(h => h.name === item.feature)
+    );
     
-    console.log('🔍 [DoctorLayout] Final filtered menu items:', filteredItems.map(i => i.label));
-    return filteredItems;
-  }, [isFeatureEnabled, tenantSettings]); // 🚨 FIXED: Correct dependencies
+    return enabled;
+  });
+  
+  console.log('🔍 [DoctorLayout] Final filtered menu items:', menuItems.map(i => i.label));
 
   const handleLogout = () => {
     localStorage.removeItem('token');
