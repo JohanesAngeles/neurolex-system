@@ -2862,13 +2862,81 @@ exports.toggleHirsFeature = async (req, res) => {
       });
     }
     
-    // Update specific HIRS setting
+    // 🔧 DEFENSIVE PROGRAMMING: Check if hirsSettings exists and is an array
+    if (!tenant.hirsSettings || !Array.isArray(tenant.hirsSettings)) {
+      console.log(`⚠️ Tenant ${tenantId} has invalid hirsSettings, initializing default settings...`);
+      
+      // Initialize with default HIRS settings
+      tenant.hirsSettings = [
+        {
+          id: 1,
+          icon: '📊',
+          name: 'Dashboard',
+          description: 'Main dashboard overview for doctors.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
+        },
+        {
+          id: 2,
+          icon: '👥',
+          name: 'Patients',
+          description: 'Patient management and list view.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
+        },
+        {
+          id: 3,
+          icon: '📖',
+          name: 'Patient Journal Management',
+          description: 'View and manage patient journal entries.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
+        },
+        {
+          id: 4,
+          icon: '📝',
+          name: 'Journal Template Management',
+          description: 'Create and manage journal templates for patients.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
+        },
+        {
+          id: 5,
+          icon: '📅',
+          name: 'Appointments',
+          description: 'Schedule and manage appointments with patients.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
+        },
+        {
+          id: 6,
+          icon: '💬',
+          name: 'Messages',
+          description: 'Secure messaging with patients.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
+        }
+      ];
+      
+      // Save the tenant with default settings
+      await tenant.save();
+      console.log(`✅ Default HIRS settings initialized for tenant ${tenantId}`);
+    }
+    
+    // 🔧 DEFENSIVE PROGRAMMING: Ensure hirsSettings is still an array after potential initialization
+    if (!Array.isArray(tenant.hirsSettings)) {
+      throw new Error('Failed to initialize hirsSettings as array');
+    }
+    
+    // Find the HIRS setting to update
     const hirsIndex = tenant.hirsSettings.findIndex(hirs => hirs.id === parseInt(hirsId));
     
     if (hirsIndex === -1) {
+      console.log(`❌ HIRS setting with ID ${hirsId} not found. Available IDs:`, tenant.hirsSettings.map(h => h.id));
       return res.status(404).json({
         success: false,
-        message: 'HIRS setting not found'
+        message: `HIRS setting with ID ${hirsId} not found`,
+        availableIds: tenant.hirsSettings.map(h => h.id)
       });
     }
     
@@ -2877,7 +2945,7 @@ exports.toggleHirsFeature = async (req, res) => {
     tenant.hirsSettings[hirsIndex].lastUpdated = lastUpdated || new Date().toLocaleDateString();
     tenant.updatedAt = new Date();
     
-    // Save tenant
+    // Save tenant with updated settings
     await tenant.save();
     
     console.log('✅ HIRS feature toggled successfully');
