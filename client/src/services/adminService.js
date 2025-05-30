@@ -603,6 +603,49 @@ uploadTenantAsset: async (formData) => {
   }
 },
 
+// ===== HIRS FEATURE MANAGEMENT METHODS =====
+
+// 🆕 NEW: Toggle individual HIRS feature
+toggleHirsFeature: async (tenantId, hirsId, isActive) => {
+  try {
+    console.log(`adminService.toggleHirsFeature called - Tenant: ${tenantId}, HIRS: ${hirsId}, Active: ${isActive}`);
+    const response = await api.patch(`/admin/tenant-settings/${tenantId}/hirs/${hirsId}`, { 
+      isActive,
+      lastUpdated: new Date().toLocaleDateString()
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error toggling HIRS feature:', error);
+    throw error;
+  }
+},
+
+// 🆕 NEW: Get HIRS feature statistics
+getHirsStats: async (tenantId) => {
+  try {
+    console.log(`adminService.getHirsStats called for tenant: ${tenantId}`);
+    const response = await api.get(`/admin/tenant-settings/${tenantId}/hirs/stats`);
+    return response.data;
+  } catch (error) {
+    console.error('Error getting HIRS stats:', error);
+    throw error;
+  }
+},
+
+// 🆕 NEW: Bulk update HIRS features
+bulkUpdateHirs: async (tenantId, hirsUpdates) => {
+  try {
+    console.log(`adminService.bulkUpdateHirs called for tenant: ${tenantId}`);
+    const response = await api.put(`/admin/tenant-settings/${tenantId}/hirs/bulk`, { 
+      updates: hirsUpdates 
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error bulk updating HIRS:', error);
+    throw error;
+  }
+},
+
 };
 
 export default adminService;

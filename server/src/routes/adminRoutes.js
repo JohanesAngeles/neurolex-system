@@ -89,6 +89,11 @@ router.get('/tenant-settings/:tenantId', adminAuth, adminController.getTenantSet
 router.put('/tenant-settings/:tenantId', adminAuth, adminController.updateTenantSettings);
 router.patch('/tenant-settings/:tenantId', adminAuth, adminController.updateIndividualTenantSetting);
 
+// 🆕 NEW: Add these HIRS routes here
+router.patch('/tenant-settings/:tenantId/hirs/:hirsId', adminAuth, adminController.toggleHirsFeature);
+router.get('/tenant-settings/:tenantId/hirs/stats', adminAuth, adminController.getHirsStats);
+router.put('/tenant-settings/:tenantId/hirs/bulk', adminAuth, adminController.bulkUpdateHirs);
+
 // ✅ FIXED: File upload route with proper middleware chain
 router.post('/upload-logo', 
   adminAuth,                    // Authentication first

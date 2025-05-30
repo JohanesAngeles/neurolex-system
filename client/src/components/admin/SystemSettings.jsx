@@ -1,6 +1,7 @@
-// client/src/components/admin/layout/SystemSettings.jsx - Enhanced with Real-time Updates
+// client/src/components/admin/layout/SystemSettings.jsx - Complete Enhanced with HIRS Toggle
 import React, { useState, useEffect, useCallback } from 'react';
 import adminService from '../../services/adminService';
+import HirsToggleModal from './HirsToggleModal'; // Import the modal component
 
 const SystemSettings = () => {
   // State management
@@ -10,6 +11,14 @@ const SystemSettings = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
+  
+  // 🔄 NEW: Modal state for HIRS toggle
+  const [modalState, setModalState] = useState({
+    isOpen: false,
+    hirsSetting: null,
+    action: null, // 'enable' or 'disable'
+    isLoading: false
+  });
   
   // Preview URLs state for ALL image types (Logo + Favicon)
   const [previewUrls, setPreviewUrls] = useState({
@@ -30,7 +39,7 @@ const SystemSettings = () => {
     hirsSettings: []
   });
 
-  // 🔄 NEW: Broadcast settings update to all open tabs/windows
+  // 🔄 Broadcast settings update to all open tabs/windows
   const broadcastSettingsUpdate = useCallback((tenantId, updatedSettings) => {
     console.log('📡 Broadcasting settings update to all tabs...');
     
@@ -86,6 +95,90 @@ const SystemSettings = () => {
     }
   };
 
+  // 🆕 NEW: Toggle HIRS feature function
+  const toggleHirsFeature = async (hirsId, newStatus) => {
+    if (!selectedTenant) {
+      alert('Please select a clinic first');
+      return;
+    }
+
+    try {
+      setModalState(prev => ({ ...prev, isLoading: true }));
+
+      // Update the HIRS settings array
+      const updatedHirsSettings = settings.hirsSettings.map(hirs => 
+        hirs.id === hirsId 
+          ? { 
+              ...hirs, 
+              isActive: newStatus, 
+              lastUpdated: new Date().toLocaleDateString() 
+            }
+          : hirs
+      );
+
+      // Save to backend
+      const updateData = { hirsSettings: updatedHirsSettings };
+      const response = await adminService.updateIndividualSetting(selectedTenant, updateData);
+      
+      if (response.success) {
+        // Update local state
+        setSettings(prev => ({
+          ...prev,
+          hirsSettings: updatedHirsSettings
+        }));
+
+        // 🔄 Broadcast the update to all open tabs (this will update doctor interface)
+        broadcastSettingsUpdate(selectedTenant, updateData);
+
+        // Show success message
+        const featureName = settings.hirsSettings.find(h => h.id === hirsId)?.name || 'Feature';
+        alert(`✅ ${featureName} has been ${newStatus ? 'enabled' : 'disabled'} successfully!`);
+
+        // Close modal
+        setModalState({ isOpen: false, hirsSetting: null, action: null, isLoading: false });
+
+        // Refresh settings after a short delay
+        setTimeout(() => {
+          fetchTenantSettings();
+        }, 500);
+      } else {
+        throw new Error(response.message || 'Update failed');
+      }
+    } catch (error) {
+      console.error('Error toggling HIRS feature:', error);
+      alert(`❌ Failed to update feature: ${error.message}`);
+      setModalState(prev => ({ ...prev, isLoading: false }));
+    }
+  };
+
+  // 🆕 NEW: Handle HIRS toggle button click
+  const handleHirsToggleClick = (hirs) => {
+    const newStatus = !hirs.isActive;
+    const action = newStatus ? 'enable' : 'disable';
+    
+    setModalState({
+      isOpen: true,
+      hirsSetting: hirs,
+      action: action,
+      isLoading: false
+    });
+  };
+
+  // 🆕 NEW: Handle modal confirmation
+  const handleModalConfirm = () => {
+    if (modalState.hirsSetting) {
+      const newStatus = modalState.action === 'enable';
+      toggleHirsFeature(modalState.hirsSetting.id, newStatus);
+    }
+  };
+
+  // 🆕 NEW: Handle modal close
+  const handleModalClose = () => {
+    if (!modalState.isLoading) {
+      setModalState({ isOpen: false, hirsSetting: null, action: null, isLoading: false });
+    }
+  };
+
   // Create default settings
   const createDefaultTenantSettings = useCallback(async () => {
     try {
@@ -97,16 +190,12 @@ const SystemSettings = () => {
         systemLogo: { light: null, dark: null },
         favicon: { light: null, dark: null },
         hirsSettings: [
-          { id: 1, icon: 'HR', name: 'User Dashboard', description: 'Controls the displays, names, and icons used by End Users on the Dashboard.', lastUpdated: new Date().toLocaleDateString(), isActive: true },
-          { id: 2, icon: 'JE', name: 'Journal Entries', description: 'Control what journal prompts are available for users.', lastUpdated: new Date().toLocaleDateString(), isActive: true },
-          { id: 3, icon: 'DR', name: 'Mood Tracking-Dr', description: 'Set up mood tracking functionality for doctors and patients.', lastUpdated: new Date().toLocaleDateString(), isActive: true },
-          { id: 4, icon: 'MA', name: 'Dr Mental Assessments', description: 'Mental health assessment tools for healthcare professionals.', lastUpdated: new Date().toLocaleDateString(), isActive: true },
-          { id: 5, icon: 'SM', name: 'Stress Managing', description: 'Stress management tools and resources.', lastUpdated: new Date().toLocaleDateString(), isActive: true },
-          { id: 6, icon: 'PS', name: 'User Profiles', description: 'User profile management and customization.', lastUpdated: new Date().toLocaleDateString(), isActive: true },
-          { id: 7, icon: 'NT', name: 'Notifications', description: 'Push notifications and alert system.', lastUpdated: new Date().toLocaleDateString(), isActive: true },
-          { id: 8, icon: 'DA', name: 'Data Analytics', description: 'Analytics dashboard and reporting tools.', lastUpdated: new Date().toLocaleDateString(), isActive: true },
-          { id: 9, icon: 'CA', name: 'Care / Report', description: 'Care management and reporting functionality.', lastUpdated: new Date().toLocaleDateString(), isActive: true },
-          { id: 10, icon: 'CF', name: 'Config', description: 'System configuration and settings.', lastUpdated: new Date().toLocaleDateString(), isActive: true }
+          { id: 1, icon: '📊', name: 'Dashboard', description: 'Main dashboard overview for doctors.', lastUpdated: new Date().toLocaleDateString(), isActive: true },
+          { id: 2, icon: '👥', name: 'Patients', description: 'Patient management and list view.', lastUpdated: new Date().toLocaleDateString(), isActive: true },
+          { id: 3, icon: '📖', name: 'Patient Journal Management', description: 'View and manage patient journal entries.', lastUpdated: new Date().toLocaleDateString(), isActive: true },
+          { id: 4, icon: '📝', name: 'Journal Template Management', description: 'Create and manage journal templates for patients.', lastUpdated: new Date().toLocaleDateString(), isActive: true },
+          { id: 5, icon: '📅', name: 'Appointments', description: 'Schedule and manage appointments with patients.', lastUpdated: new Date().toLocaleDateString(), isActive: true },
+          { id: 6, icon: '💬', name: 'Messages', description: 'Secure messaging with patients.', lastUpdated: new Date().toLocaleDateString(), isActive: true }
         ]
       };
       const data = await adminService.updateTenantSettings(selectedTenant, defaultSettings);
@@ -270,17 +359,6 @@ const SystemSettings = () => {
     }
   };
 
-  const handleHirsToggle = (hirsId) => {
-    setSettings(prev => ({
-      ...prev,
-      hirsSettings: prev.hirsSettings.map(hirs => 
-        hirs.id === hirsId 
-          ? { ...hirs, isActive: !hirs.isActive, lastUpdated: new Date().toLocaleDateString() }
-          : hirs
-      )
-    }));
-  };
-
   // 🔄 ENHANCED: Save settings with real-time updates
   const saveSettings = async () => {
     if (!selectedTenant) {
@@ -317,7 +395,7 @@ const SystemSettings = () => {
     }
   };
 
-  // 🔄 NEW: Show notification when settings are updated from another tab
+  // 🔄 Show notification when settings are updated from another tab
   useEffect(() => {
     const handleSettingsUpdate = () => {
       console.log('🔔 Settings updated from another source, refreshing...');
@@ -360,7 +438,7 @@ const SystemSettings = () => {
         width: '100%',
         minHeight: 'auto',
         padding: '24px',
-        paddingBottom: '150px', // Extra space for scrolling
+        paddingBottom: '150px',
         boxSizing: 'border-box'
       }}>
         
@@ -476,40 +554,83 @@ const SystemSettings = () => {
                 </div>
               </div>
 
-              {/* HIRS Management Table */}
+              {/* 🆕 ENHANCED: HIRS Management Table with Toggle Functionality */}
               <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '12px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                  <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '600', color: '#1e293b' }}>HIRS Management ({settings.hirsSettings.length} modules)</h2>
-                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                    <select style={{ padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px', backgroundColor: 'white' }}>
-                      <option>Year - 2025</option>
-                      <option>Year - 2024</option>
-                    </select>
-                    <button style={{ backgroundColor: '#22c55e', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>+ Add Entry</button>
+                  <div>
+                    <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '600', color: '#1e293b' }}>Doctor Navigation Menu Control</h2>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#64748b' }}>
+                      Control which features are visible in the doctor sidebar menu ({settings.hirsSettings.length} items)
+                    </p>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>
+                      {settings.hirsSettings.filter(h => h.isActive).length} enabled, {settings.hirsSettings.filter(h => !h.isActive).length} disabled
+                    </div>
+                    <div style={{ fontSize: '10px', color: '#9ca3af' }}>
+                      Changes apply immediately to all doctor sessions
+                    </div>
                   </div>
                 </div>
 
                 <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '80px 200px 1fr 150px 120px', gap: '16px', padding: '16px', backgroundColor: '#f9fafb', fontWeight: '600', fontSize: '14px', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>
                     <div>Icon</div>
-                    <div>Function / Menu Name</div>
+                    <div>Menu Item</div>
                     <div>Description</div>
                     <div>Last Updated</div>
-                    <div>Actions</div>
+                    <div>Status</div>
                   </div>
                   {settings.hirsSettings.map((hirs, index) => (
                     <div key={hirs.id} style={{ display: 'grid', gridTemplateColumns: '80px 200px 1fr 150px 120px', gap: '16px', padding: '16px', borderBottom: index < settings.hirsSettings.length - 1 ? '1px solid #f3f4f6' : 'none', alignItems: 'center', backgroundColor: 'white' }}>
-                      <div style={{ width: '40px', height: '40px', backgroundColor: hirs.isActive ? '#22c55e' : '#9ca3af', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold' }}>{hirs.icon}</div>
+                      <div style={{ fontSize: '32px', textAlign: 'center' }}>{hirs.icon}</div>
                       <div style={{ fontWeight: '500', color: '#1f2937' }}>{hirs.name}</div>
                       <div style={{ fontSize: '14px', color: '#6b7280' }}>{hirs.description}</div>
                       <div style={{ fontSize: '14px', color: '#6b7280' }}>{hirs.lastUpdated}</div>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '18px', padding: '4px', borderRadius: '4px' }} title="View">👁️</button>
-                        <button style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '18px', padding: '4px', borderRadius: '4px' }} title="Edit">✏️</button>
-                        <button style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '18px', padding: '4px', borderRadius: '4px' }} onClick={() => handleHirsToggle(hirs.id)} title={hirs.isActive ? 'Deactivate' : 'Activate'}>{hirs.isActive ? '🟢' : '🔴'}</button>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <button
+                          onClick={() => handleHirsToggleClick(hirs)}
+                          disabled={modalState.isLoading || (hirs.id === 1)} // Dashboard cannot be disabled
+                          style={{
+                            backgroundColor: hirs.id === 1 ? '#9ca3af' : (hirs.isActive ? '#dc2626' : '#22c55e'),
+                            color: 'white',
+                            border: 'none',
+                            padding: '8px 12px',
+                            borderRadius: '6px',
+                            cursor: (modalState.isLoading || hirs.id === 1) ? 'not-allowed' : 'pointer',
+                            fontSize: '12px',
+                            fontWeight: '500',
+                            opacity: (modalState.isLoading || hirs.id === 1) ? 0.6 : 1,
+                            minWidth: '80px'
+                          }}
+                          title={hirs.id === 1 ? 'Dashboard cannot be disabled (critical feature)' : `Click to ${hirs.isActive ? 'disable' : 'enable'} this feature for all doctors`}
+                        >
+                          {hirs.id === 1 ? '🔒 Always On' : (hirs.isActive ? '🚫 Disable' : '✅ Enable')}
+                        </button>
                       </div>
                     </div>
                   ))}
+                </div>
+                
+                {/* 🆕 NEW: Feature Summary */}
+                <div style={{ marginTop: '16px', padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                  <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '12px', height: '12px', backgroundColor: '#22c55e', borderRadius: '50%' }}></div>
+                      <span style={{ fontSize: '14px', color: '#374151' }}>
+                        {settings.hirsSettings.filter(h => h.isActive).length} Features Enabled
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '12px', height: '12px', backgroundColor: '#dc2626', borderRadius: '50%' }}></div>
+                      <span style={{ fontSize: '14px', color: '#374151' }}>
+                        {settings.hirsSettings.filter(h => !h.isActive).length} Features Disabled
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#64748b', marginLeft: 'auto' }}>
+                      💡 Disabled features will be hidden from the doctor sidebar menu
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -547,6 +668,16 @@ const SystemSettings = () => {
             </div>
           )}
         </div>
+
+        {/* 🆕 NEW: HIRS Toggle Modal */}
+        <HirsToggleModal
+          isOpen={modalState.isOpen}
+          onClose={handleModalClose}
+          onConfirm={handleModalConfirm}
+          hirsSetting={modalState.hirsSetting}
+          action={modalState.action}
+          isLoading={modalState.isLoading}
+        />
 
         {/* CSS Animation for loading spinner */}
         <style jsx>{`

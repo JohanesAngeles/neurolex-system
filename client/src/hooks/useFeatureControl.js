@@ -1,35 +1,27 @@
-// client/src/hooks/useFeatureControl.js
+// client/src/hooks/useFeatureControl.js - Updated for simplified menu
 import { useTenant } from '../context/TenantContext';
 
 export const useFeatureControl = () => {
   const { isFeatureEnabled, tenantSettings } = useTenant();
 
-  // Define feature mappings
+  // 🔄 UPDATED: Define feature mappings to match doctor sidebar menu
   const FEATURES = {
-    USER_DASHBOARD: 'User Dashboard',
-    JOURNAL_ENTRIES: 'Journal Entries', 
-    MOOD_TRACKING: 'Mood Tracking-Dr',
-    MENTAL_ASSESSMENTS: 'Dr Mental Assessments',
-    STRESS_MANAGING: 'Stress Managing',
-    USER_PROFILES: 'User Profiles',
-    NOTIFICATIONS: 'Notifications',
-    DATA_ANALYTICS: 'Data Analytics',
-    CARE_REPORTS: 'Care / Report',
-    CONFIG: 'Config'
+    DASHBOARD: 'Dashboard',
+    PATIENTS: 'Patients', 
+    PATIENT_JOURNAL: 'Patient Journal Management',
+    JOURNAL_TEMPLATES: 'Journal Template Management',
+    APPOINTMENTS: 'Appointments',
+    MESSAGES: 'Messages'
   };
 
   return {
-    // Individual feature checks
-    canAccessDashboard: () => isFeatureEnabled(FEATURES.USER_DASHBOARD),
-    canAccessJournal: () => isFeatureEnabled(FEATURES.JOURNAL_ENTRIES),
-    canAccessMoodTracking: () => isFeatureEnabled(FEATURES.MOOD_TRACKING),
-    canAccessAssessments: () => isFeatureEnabled(FEATURES.MENTAL_ASSESSMENTS),
-    canAccessStressManaging: () => isFeatureEnabled(FEATURES.STRESS_MANAGING),
-    canAccessProfiles: () => isFeatureEnabled(FEATURES.USER_PROFILES),
-    canAccessNotifications: () => isFeatureEnabled(FEATURES.NOTIFICATIONS),
-    canAccessAnalytics: () => isFeatureEnabled(FEATURES.DATA_ANALYTICS),
-    canAccessReports: () => isFeatureEnabled(FEATURES.CARE_REPORTS),
-    canAccessConfig: () => isFeatureEnabled(FEATURES.CONFIG),
+    // 🔄 UPDATED: Individual feature checks for actual menu items
+    canAccessDashboard: () => isFeatureEnabled(FEATURES.DASHBOARD),
+    canAccessPatients: () => isFeatureEnabled(FEATURES.PATIENTS),
+    canAccessPatientJournal: () => isFeatureEnabled(FEATURES.PATIENT_JOURNAL),
+    canAccessJournalTemplates: () => isFeatureEnabled(FEATURES.JOURNAL_TEMPLATES),
+    canAccessAppointments: () => isFeatureEnabled(FEATURES.APPOINTMENTS),
+    canAccessMessages: () => isFeatureEnabled(FEATURES.MESSAGES),
     
     // General feature check
     isFeatureEnabled,
@@ -44,6 +36,17 @@ export const useFeatureControl = () => {
     getDisabledFeatures: () => {
       if (!tenantSettings?.hirsSettings) return [];
       return tenantSettings.hirsSettings.filter(hirs => !hirs.isActive);
+    },
+
+    // 🆕 NEW: Get feature count for admin dashboard
+    getFeatureStats: () => {
+      if (!tenantSettings?.hirsSettings) return { total: 0, active: 0, disabled: 0 };
+      
+      const total = tenantSettings.hirsSettings.length;
+      const active = tenantSettings.hirsSettings.filter(hirs => hirs.isActive).length;
+      const disabled = total - active;
+      
+      return { total, active, disabled };
     }
   };
 };

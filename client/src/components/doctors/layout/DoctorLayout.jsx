@@ -1,22 +1,25 @@
-// client/src/components/doctor/layout/DoctorLayout.jsx - Enhanced with Real-time Updates
+// client/src/components/doctor/layout/DoctorLayout.jsx - Updated with Feature Control
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useFeatureControl } from '../../../hooks/useFeatureControl';
 import { useTenant } from '../../../context/TenantContext';
 import '../../../styles/components/doctor/DoctorLayout.css';
 
-// Import original icons (keeping your existing structure)
+// Import original icons
 import logoImage from '../../../assets/images/Neurolex_Logo_New.png';
 import dashboardIcon from '../../../assets/icons/dashboard_icon.svg';
 import patientsIcon from '../../../assets/icons/UserManagement_Icon.svg';
 import journalIcon from '../../../assets/icons/journal_icon.svg';
 import templatesIcon from '../../../assets/icons/JournalManagement_Icon.svg';
 import appointmentsIcon from '../../../assets/icons/appointment_icon.svg';
-import messageIcon from '../../../assets/icons/messages_icon.svg'; // 🔄 CHANGED: Settings to Message icon
+import messageIcon from '../../../assets/icons/messages_icon.svg';
 
 const DoctorLayout = () => {
   const navigate = useNavigate();
+  
+  // 🔄 NEW: Use feature control hook
   const featureControl = useFeatureControl();
+  
   const { 
     currentTenant, 
     getThemeStyles, 
@@ -28,12 +31,12 @@ const DoctorLayout = () => {
   
   const [currentUser, setCurrentUser] = useState(null);
   const [logoError, setLogoError] = useState(false);
-  const [logoKey, setLogoKey] = useState(Date.now()); // 🔄 Force logo refresh
+  const [logoKey, setLogoKey] = useState(Date.now());
 
-  // Get tenant theme styles - this will now be dynamic from system settings
+  // Get tenant theme styles
   const theme = getThemeStyles();
 
-  // 🔧 FIXED: Load current doctor info ONLY ONCE
+  // Load current doctor info
   useEffect(() => {
     const loadDoctorInfo = () => {
       try {
@@ -47,31 +50,28 @@ const DoctorLayout = () => {
       }
     };
     loadDoctorInfo();
-  }, []); // 🔧 EMPTY DEPENDENCY - RUNS ONLY ONCE
+  }, []);
 
-  // 🔧 FIXED: Apply CSS variables ONLY when specific theme properties change
+  // Apply CSS variables for theming
   useEffect(() => {
     if (theme && typeof document !== 'undefined') {
       const root = document.documentElement;
       
-      // Set CSS custom properties for dynamic theming
       root.style.setProperty('--tenant-primary-color', theme.primaryColor || '#4CAF50');
       root.style.setProperty('--tenant-secondary-color', theme.secondaryColor || '#2196F3');
       root.style.setProperty('--tenant-primary-rgb', hexToRgb(theme.primaryColor || '#4CAF50'));
       root.style.setProperty('--tenant-secondary-rgb', hexToRgb(theme.secondaryColor || '#2196F3'));
     }
-  }, [theme?.primaryColor, theme?.secondaryColor]); // 🔧 SPECIFIC DEPENDENCIES ONLY
+  }, [theme?.primaryColor, theme?.secondaryColor]);
 
   // 🔄 NEW: Listen for tenant settings updates and refresh logo
   useEffect(() => {
     const handleSettingsUpdate = (event) => {
       console.log('🔔 [DoctorLayout] Received tenant settings update:', event.detail);
       
-      // Force logo refresh by updating the key
       setLogoKey(Date.now());
       setLogoError(false);
       
-      // Refresh tenant settings if needed
       if (refreshTenantSettings) {
         setTimeout(() => {
           refreshTenantSettings(true);
@@ -79,10 +79,8 @@ const DoctorLayout = () => {
       }
     };
 
-    // Listen for custom events from admin panel
     window.addEventListener('tenantSettingsUpdated', handleSettingsUpdate);
     
-    // Also listen for storage events (settings updated in another tab)
     const handleStorageChange = (event) => {
       if (event.key === 'tenantSettingsUpdated') {
         console.log('🔔 [DoctorLayout] Detected settings update from storage');
@@ -105,7 +103,7 @@ const DoctorLayout = () => {
     };
   }, [refreshTenantSettings]);
 
-  // 🔄 NEW: Update logo key when theme changes to force refresh
+  // Update logo key when theme changes
   useEffect(() => {
     if (theme?.systemLogo?.light || theme?.logo) {
       setLogoKey(Date.now());
@@ -113,16 +111,16 @@ const DoctorLayout = () => {
     }
   }, [theme?.systemLogo?.light, theme?.logo, lastRefresh]);
 
-  // Helper function to convert hex to RGB for CSS variables
+  // Helper function to convert hex to RGB
   const hexToRgb = (hex) => {
     if (!hex) return '76, 175, 80';
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result 
       ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`
-      : '76, 175, 80'; // Default green fallback
+      : '76, 175, 80';
   };
 
-  // 🔧 UPDATED: Only 6 navigation menu items as requested
+  // 🔄 UPDATED: Menu items with feature control integration
   const menuItems = React.useMemo(() => {
     const allItems = [
       { 
@@ -130,7 +128,7 @@ const DoctorLayout = () => {
         label: 'Dashboard', 
         path: '/doctor', 
         icon: dashboardIcon,
-        feature: 'User Dashboard',
+        feature: 'Dashboard',
         alwaysShow: true, // Dashboard should always be available
         implemented: true
       },
@@ -139,7 +137,7 @@ const DoctorLayout = () => {
         label: 'Patients', 
         path: '/doctor/patients', 
         icon: patientsIcon,
-        feature: 'User Profiles',
+        feature: 'Patients',
         implemented: true
       },
       { 
@@ -147,7 +145,7 @@ const DoctorLayout = () => {
         label: 'Patient Journal Management', 
         path: '/doctor/journal-entries', 
         icon: journalIcon,
-        feature: 'Journal Entries',
+        feature: 'Patient Journal Management',
         implemented: true
       },
       { 
@@ -155,7 +153,7 @@ const DoctorLayout = () => {
         label: 'Journal Template Management', 
         path: '/doctor/form-templates', 
         icon: templatesIcon,
-        feature: 'Journal Entries', // Templates are part of journal functionality
+        feature: 'Journal Template Management',
         implemented: true
       },
       { 
@@ -163,36 +161,32 @@ const DoctorLayout = () => {
         label: 'Appointments', 
         path: '/doctor/appointments', 
         icon: appointmentsIcon,
-        feature: 'Care / Report',
+        feature: 'Appointments',
         implemented: true
       },
       { 
         id: 'messages', 
         label: 'Messages', 
         path: '/doctor/messages', 
-        icon: messageIcon, // 🔄 FIXED: Now using proper message icon
-        feature: 'Notifications', // Map to notifications feature
+        icon: messageIcon,
+        feature: 'Messages',
         implemented: false // Not yet implemented
       }
     ];
     
-    // Return only the 6 specified menu items
+    // 🔄 NEW: Filter items based on feature control
     return allItems.filter(item => {
-      // Always show dashboard and items marked as alwaysShow
+      // Always show dashboard
       if (item.alwaysShow) {
         return true;
       }
       
-      // Show all 6 items regardless of implementation status for now
-      return true;
-      
-      // Later you can uncomment this to filter by feature control:
-      // return featureControl.isFeatureEnabled && featureControl.isFeatureEnabled(item.feature);
+      // 🔄 CHECK: Use feature control to determine visibility
+      return featureControl.isFeatureEnabled && featureControl.isFeatureEnabled(item.feature);
     });
-  }, [featureControl]); // 🔧 MEMOIZED WITH SPECIFIC DEPENDENCY
+  }, [featureControl]);
 
   const handleLogout = () => {
-    // Clear all stored data
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('tenant');
@@ -200,55 +194,31 @@ const DoctorLayout = () => {
     sessionStorage.removeItem('user');
     sessionStorage.removeItem('tenant');
     
-    // Redirect to login page
     navigate('/login');
   };
 
-  // 🔧 MEMOIZED: Doctor info to prevent recalculation (keeping for future use)
-  const doctorInfo = React.useMemo(() => {
-    if (currentUser) {
-      return {
-        name: `Dr. ${currentUser.firstName} ${currentUser.lastName}`,
-        role: currentUser.specialization || 'Doctor',
-        initials: `${currentUser.firstName?.[0] || 'D'}${currentUser.lastName?.[0] || 'R'}`
-      };
-    }
-    
-    return {
-      name: 'Dr. Loading...',
-      role: 'Doctor',
-      initials: 'DR'
-    };
-  }, [currentUser]); // 🔧 MEMOIZED WITH SPECIFIC DEPENDENCY
-
-  // 🔄 NEW: Enhanced logo source with fallback and cache busting
+  // Enhanced logo source with fallback and cache busting
   const getLogoSource = () => {
-    // Determine which logo to use
     let logoUrl = null;
     
-    // Priority: systemLogo.light > logo > fallback
     if (theme?.systemLogo?.light) {
       logoUrl = theme.systemLogo.light;
     } else if (theme?.logo) {
       logoUrl = theme.logo;
     }
     
-    // If we have a tenant logo URL, add cache busting
     if (logoUrl && !logoError) {
       return `${logoUrl}?key=${logoKey}`;
     }
     
-    // Fallback to default logo
     return logoImage;
   };
 
-  // 🔄 NEW: Handle logo load errors
   const handleLogoError = () => {
     console.warn('🖼️ [DoctorLayout] Logo failed to load, using fallback');
     setLogoError(true);
   };
 
-  // 🔄 NEW: Handle successful logo load
   const handleLogoLoad = () => {
     console.log('✅ [DoctorLayout] Logo loaded successfully');
     setLogoError(false);
@@ -277,9 +247,8 @@ const DoctorLayout = () => {
       {/* Left Sidebar */}
       <div className="doctor-sidebar">
         <div className="sidebar-header">
-          {/* 🔄 ENHANCED: Logo with real-time updates and error handling */}
           <img 
-            key={logoKey} // Force re-render when key changes
+            key={logoKey}
             src={getLogoSource()} 
             alt={`${platformName} Logo`} 
             className="doctor-logo" 
@@ -290,7 +259,7 @@ const DoctorLayout = () => {
               opacity: logoError ? 0.7 : 1
             }}
           />
-          {/* 🔄 NEW: Debug info in development */}
+          {/* Debug info in development */}
           {process.env.NODE_ENV === 'development' && (
             <div style={{ 
               fontSize: '10px', 
@@ -315,7 +284,7 @@ const DoctorLayout = () => {
                   className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}
                   end={item.path === '/doctor'}
                   style={{
-                    opacity: item.implemented ? 1 : 0.6 // Slightly fade unimplemented items
+                    opacity: item.implemented ? 1 : 0.6
                   }}
                 >
                   <img src={item.icon} alt={item.label} className="nav-icon" />
@@ -340,26 +309,26 @@ const DoctorLayout = () => {
             ))}
           </ul>
           
-          {/* Feature Status Panel (Development Only) */}
-          {process.env.NODE_ENV === 'development' && featureControl.getActiveFeatures && (
+          {/* 🔄 NEW: Feature Status Panel (Development Only) */}
+          {process.env.NODE_ENV === 'development' && (
             <div className="dev-feature-status">
-              <strong className="dev-title">🔧 Dev: Menu Status</strong>
+              <strong className="dev-title">🔧 Dev: Menu Control</strong>
               <div className="feature-list">
                 <div className="feature-item">
                   <span className="feature-dot active"/>
-                  <span className="feature-name">6 Menu Items Active</span>
+                  <span className="feature-name">{menuItems.length} Items Visible</span>
                 </div>
                 <div className="feature-item">
                   <span className="feature-dot" style={{ backgroundColor: '#4CAF50' }}/>
-                  <span className="feature-name">5 Implemented</span>
+                  <span className="feature-name">{menuItems.filter(i => i.implemented).length} Implemented</span>
                 </div>
                 <div className="feature-item">
                   <span className="feature-dot" style={{ backgroundColor: '#ff9800' }}/>
-                  <span className="feature-name">1 Pending (Messages)</span>
+                  <span className="feature-name">{menuItems.filter(i => !i.implemented).length} Pending</span>
                 </div>
               </div>
               
-              {/* 🔄 NEW: Settings update indicator */}
+              {/* Settings update indicator */}
               <div style={{ 
                 marginTop: '8px', 
                 padding: '4px 8px', 
@@ -376,7 +345,6 @@ const DoctorLayout = () => {
         </div>
         
         <div className="sidebar-footer">
-          {/* 🔄 REMOVED: Doctor profile section completely removed - will be implemented later */}
           <button className="logout-button" onClick={handleLogout}>
             <span>Logout</span>
           </button>
@@ -390,7 +358,7 @@ const DoctorLayout = () => {
         </div>
       </div>
       
-      {/* 🔄 NEW: Real-time update notification (development only) */}
+      {/* Real-time update notification (development only) */}
       {process.env.NODE_ENV === 'development' && (
         <div style={{
           position: 'fixed',
@@ -405,7 +373,7 @@ const DoctorLayout = () => {
           opacity: 0.8,
           pointerEvents: 'none'
         }}>
-          🔄 Live Updates Active
+          🔄 Live Feature Control Active
         </div>
       )}
     </div>

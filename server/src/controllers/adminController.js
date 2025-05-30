@@ -2858,3 +2858,227 @@ exports.uploadTenantAsset = async (req, res) => {
         });
       }
     };
+
+    // ===== HIRS FEATURE MANAGEMENT FUNCTIONS =====
+
+// 🆕 NEW: Toggle individual HIRS feature
+exports.toggleHirsFeature = async (req, res) => {
+  try {
+    const { tenantId, hirsId } = req.params;
+    const { isActive, lastUpdated } = req.body;
+    
+    console.log(`🔄 [ADMIN] Toggling HIRS feature - Tenant: ${tenantId}, HIRS: ${hirsId}, Active: ${isActive}`);
+    
+    // Validate tenantId format
+    if (!tenantId.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid tenant ID format'
+      });
+    }
+    
+    // Get master connection
+    const masterConn = getMasterConnection();
+    if (!masterConn) {
+      throw new Error('Failed to connect to master database');
+    }
+    
+    const Tenant = masterConn.model('Tenant');
+    
+    // Find tenant and update specific HIRS setting
+    const tenant = await Tenant.findById(tenantId);
+    if (!tenant) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tenant not found'
+      });
+    }
+    
+    // Update specific HIRS setting
+    const hirsIndex = tenant.hirsSettings.findIndex(hirs => hirs.id === parseInt(hirsId));
+    
+    if (hirsIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: 'HIRS setting not found'
+      });
+    }
+    
+    // Update the HIRS setting
+    tenant.hirsSettings[hirsIndex].isActive = isActive;
+    tenant.hirsSettings[hirsIndex].lastUpdated = lastUpdated || new Date().toLocaleDateString();
+    tenant.updatedAt = new Date();
+    
+    // Save tenant
+    await tenant.save();
+    
+    console.log('✅ HIRS feature toggled successfully');
+    res.json({
+      success: true,
+      message: `HIRS feature ${isActive ? 'enabled' : 'disabled'} successfully`,
+      data: {
+        tenantId,
+        hirsId: parseInt(hirsId),
+        isActive,
+        featureName: tenant.hirsSettings[hirsIndex].name,
+        lastUpdated: tenant.hirsSettings[hirsIndex].lastUpdated
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error toggling HIRS feature:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to toggle HIRS feature',
+      error: error.message
+    });
+  }
+};
+
+// 🆕 NEW: Get HIRS feature statistics
+exports.getHirsStats = async (req, res) => {
+  try {
+    const { tenantId } = req.params;
+    
+    console.log(`📊 [ADMIN] Getting HIRS stats for tenant: ${tenantId}`);
+    
+    // Validate tenantId format
+    if (!tenantId.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid tenant ID format'
+      });
+    }
+    
+    // Get master connection
+    const masterConn = getMasterConnection();
+    if (!masterConn) {
+      throw new Error('Failed to connect to master database');
+    }
+    
+    const Tenant = masterConn.model('Tenant');
+    
+    // Find tenant
+    const tenant = await Tenant.findById(tenantId);
+    if (!tenant) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tenant not found'
+      });
+    }
+    
+    // Calculate statistics
+    const totalFeatures = tenant.hirsSettings.length;
+    const activeFeatures = tenant.hirsSettings.filter(hirs => hirs.isActive).length;
+    const disabledFeatures = totalFeatures - activeFeatures;
+    
+    const stats = {
+      total: totalFeatures,
+      active: activeFeatures,
+      disabled: disabledFeatures,
+      activePercentage: totalFeatures > 0 ? Math.round((activeFeatures / totalFeatures) * 100) : 0,
+      features: tenant.hirsSettings.map(hirs => ({
+        id: hirs.id,
+        name: hirs.name,
+        isActive: hirs.isActive,
+        lastUpdated: hirs.lastUpdated
+      }))
+    };
+    
+    console.log('✅ HIRS stats retrieved successfully');
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('❌ Error getting HIRS stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get HIRS statistics',
+      error: error.message
+    });
+  }
+};
+
+// 🆕 NEW: Bulk update HIRS features
+exports.bulkUpdateHirs = async (req, res) => {
+  try {
+    const { tenantId } = req.params;
+    const { updates } = req.body; // Array of { hirsId, isActive }
+    
+    console.log(`🔄 [ADMIN] Bulk updating HIRS features for tenant: ${tenantId}`);
+    console.log('Updates:', updates);
+    
+    // Validate tenantId format
+    if (!tenantId.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid tenant ID format'
+      });
+    }
+    
+    if (!Array.isArray(updates) || updates.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Updates array is required'
+      });
+    }
+    
+    // Get master connection
+    const masterConn = getMasterConnection();
+    if (!masterConn) {
+      throw new Error('Failed to connect to master database');
+    }
+    
+    const Tenant = masterConn.model('Tenant');
+    
+    // Find tenant
+    const tenant = await Tenant.findById(tenantId);
+    if (!tenant) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tenant not found'
+      });
+    }
+    
+    // Apply updates
+    const updatedFeatures = [];
+    const currentDate = new Date().toLocaleDateString();
+    
+    for (const update of updates) {
+      const hirsIndex = tenant.hirsSettings.findIndex(hirs => hirs.id === update.hirsId);
+      
+      if (hirsIndex !== -1) {
+        tenant.hirsSettings[hirsIndex].isActive = update.isActive;
+        tenant.hirsSettings[hirsIndex].lastUpdated = currentDate;
+        
+        updatedFeatures.push({
+          id: update.hirsId,
+          name: tenant.hirsSettings[hirsIndex].name,
+          isActive: update.isActive
+        });
+      }
+    }
+    
+    // Save tenant
+    tenant.updatedAt = new Date();
+    await tenant.save();
+    
+    console.log('✅ HIRS features bulk updated successfully');
+    res.json({
+      success: true,
+      message: `${updatedFeatures.length} HIRS features updated successfully`,
+      data: {
+        tenantId,
+        updatedFeatures,
+        updatedAt: tenant.updatedAt
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error bulk updating HIRS features:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to bulk update HIRS features',
+      error: error.message
+    });
+  }
+};
