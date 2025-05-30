@@ -2944,27 +2944,19 @@ exports.toggleHirsFeature = async (req, res) => {
     
     console.log(`🔄 Updating ${featureName}: ${previousState} → ${isActive}`);
     
-    // 🚨 FIXED: Use MongoDB's $set operator for proper array element update
-    const updateResult = await Tenant.findOneAndUpdate(
-      { 
-        _id: tenantId,
-        'hirsSettings.id': hirsIdNum 
-      },
-      { 
-        $set: {
-          'hirsSettings.$.isActive': isActive,
-          'hirsSettings.$.lastUpdated': lastUpdated || new Date().toLocaleDateString(),
-          'updatedAt': new Date()
-        }
-      },
-      { 
-        new: true,
-        runValidators: false 
-      }
-    );
+    // 🚨 CRITICAL FIX: Update the array element directly and save
+    tenant.hirsSettings[hirsIndex].isActive = isActive;
+    tenant.hirsSettings[hirsIndex].lastUpdated = lastUpdated || new Date().toLocaleDateString();
+    tenant.updatedAt = new Date();
     
-    if (!updateResult) {
-      console.error('❌ Failed to update HIRS setting');
+    // Mark the hirsSettings array as modified (crucial for MongoDB)
+    tenant.markModified('hirsSettings');
+    
+    // Save the tenant document
+    const savedTenant = await tenant.save();
+    
+    if (!savedTenant) {
+      console.error('❌ Failed to save tenant document');
       return res.status(500).json({
         success: false,
         message: 'Failed to update HIRS setting'
@@ -2974,7 +2966,7 @@ exports.toggleHirsFeature = async (req, res) => {
     console.log('✅ HIRS feature updated successfully');
     
     // Verify the update
-    const updatedFeature = updateResult.hirsSettings.find(h => {
+    const updatedFeature = savedTenant.hirsSettings.find(h => {
       const hirsIdNumber = typeof h.id === 'number' ? h.id : parseInt(h.id);
       return hirsIdNumber === hirsIdNum;
     });
