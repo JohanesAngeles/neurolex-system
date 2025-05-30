@@ -2856,6 +2856,23 @@ exports.toggleHirsFeature = async (req, res) => {
       });
     }
     
+    // Validate hirsId
+    const hirsIdNum = parseInt(hirsId);
+    if (isNaN(hirsIdNum) || hirsIdNum < 1 || hirsIdNum > 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid HIRS ID. Must be between 1 and 6.'
+      });
+    }
+    
+    // Validate isActive
+    if (typeof isActive !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        message: 'isActive must be a boolean value'
+      });
+    }
+    
     // 🚨 FIXED: Use master connection to access Tenant model directly
     const masterConn = getMasterConnection();
     if (!masterConn) {
@@ -2874,13 +2891,14 @@ exports.toggleHirsFeature = async (req, res) => {
     }
     
     console.log(`🔍 [ADMIN] Found tenant: ${tenant.name}`);
-    console.log(`🔍 [ADMIN] Current hirsSettings:`, tenant.hirsSettings?.length || 0, 'features');
+    console.log(`🔍 [ADMIN] Current hirsSettings type:`, typeof tenant.hirsSettings);
+    console.log(`🔍 [ADMIN] Current hirsSettings:`, tenant.hirsSettings);
     
-    // 🔧 DEFENSIVE: Initialize hirsSettings if it doesn't exist
-    if (!tenant.hirsSettings || !Array.isArray(tenant.hirsSettings)) {
+    // 🔧 ROBUST DEFENSIVE: Ensure hirsSettings exists and is an array
+    if (!tenant.hirsSettings || !Array.isArray(tenant.hirsSettings) || tenant.hirsSettings.length === 0) {
       console.log(`⚠️ [ADMIN] Initializing default HIRS settings for tenant ${tenantId}`);
       
-      tenant.hirsSettings = [
+      const defaultHirsSettings = [
         {
           id: 1,
           icon: '📊',
@@ -2930,27 +2948,65 @@ exports.toggleHirsFeature = async (req, res) => {
           isActive: true
         }
       ];
+      
+      // Set the default settings
+      tenant.hirsSettings = defaultHirsSettings;
+      
+      // Save the tenant with initialized settings BEFORE proceeding
+      await tenant.save();
+      console.log(`✅ [ADMIN] Default HIRS settings initialized and saved`);
     }
     
+    // 🔧 EXTRA SAFETY: Double-check that hirsSettings is now a valid array
+    if (!Array.isArray(tenant.hirsSettings)) {
+      console.error(`❌ [ADMIN] hirsSettings is still not an array after initialization:`, typeof tenant.hirsSettings);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to initialize HIRS settings properly'
+      });
+    }
+    
+    console.log(`🔍 [ADMIN] hirsSettings array length:`, tenant.hirsSettings.length);
+    
     // Find the specific HIRS setting to update
-    const hirsIndex = tenant.hirsSettings.findIndex(hirs => hirs.id === parseInt(hirsId));
+    let hirsIndex = -1;
+    try {
+      hirsIndex = tenant.hirsSettings.findIndex(hirs => {
+        // Ensure both values are numbers for comparison
+        const hirsIdNumber = typeof hirs.id === 'number' ? hirs.id : parseInt(hirs.id);
+        return hirsIdNumber === hirsIdNum;
+      });
+    } catch (findError) {
+      console.error(`❌ [ADMIN] Error finding HIRS setting:`, findError);
+      console.error(`❌ [ADMIN] hirsSettings:`, tenant.hirsSettings);
+      
+      return res.status(500).json({
+        success: false,
+        message: 'Error searching for HIRS setting',
+        error: findError.message
+      });
+    }
     
     if (hirsIndex === -1) {
-      console.log(`❌ [ADMIN] HIRS setting with ID ${hirsId} not found. Available IDs:`, tenant.hirsSettings.map(h => h.id));
+      console.log(`❌ [ADMIN] HIRS setting with ID ${hirsIdNum} not found.`);
+      console.log(`Available HIRS settings:`, tenant.hirsSettings.map(h => ({ id: h.id, name: h.name })));
+      
       return res.status(404).json({
         success: false,
-        message: `HIRS setting with ID ${hirsId} not found`,
-        availableIds: tenant.hirsSettings.map(h => h.id)
+        message: `HIRS setting with ID ${hirsIdNum} not found`,
+        availableSettings: tenant.hirsSettings.map(h => ({ id: h.id, name: h.name }))
       });
     }
     
     // 🚨 UPDATE: Save directly to Tenant model
     const previousState = tenant.hirsSettings[hirsIndex].isActive;
+    const featureName = tenant.hirsSettings[hirsIndex].name;
+    
     tenant.hirsSettings[hirsIndex].isActive = isActive;
     tenant.hirsSettings[hirsIndex].lastUpdated = lastUpdated || new Date().toLocaleDateString();
     tenant.updatedAt = new Date();
     
-    console.log(`🔄 [ADMIN] Updating ${tenant.hirsSettings[hirsIndex].name}: ${previousState} → ${isActive}`);
+    console.log(`🔄 [ADMIN] Updating ${featureName}: ${previousState} → ${isActive}`);
     
     // Save the tenant with updated HIRS settings
     await tenant.save();
@@ -2959,27 +3015,35 @@ exports.toggleHirsFeature = async (req, res) => {
     
     // 🔧 VERIFICATION: Read back the saved data
     const verifyTenant = await Tenant.findById(tenantId).select('hirsSettings');
-    const verifyFeature = verifyTenant.hirsSettings.find(h => h.id === parseInt(hirsId));
+    const verifyFeature = verifyTenant.hirsSettings.find(h => {
+      const hirsIdNumber = typeof h.id === 'number' ? h.id : parseInt(h.id);
+      return hirsIdNumber === hirsIdNum;
+    });
+    
     console.log(`🔍 [ADMIN] Verification - ${verifyFeature.name} isActive: ${verifyFeature.isActive}`);
     
     res.json({
       success: true,
-      message: `HIRS feature ${isActive ? 'enabled' : 'disabled'} successfully`,
+      message: `${featureName} has been ${isActive ? 'enabled' : 'disabled'} successfully!`,
       data: {
         tenantId,
-        hirsId: parseInt(hirsId),
+        hirsId: hirsIdNum,
         isActive,
-        featureName: tenant.hirsSettings[hirsIndex].name,
+        featureName,
         lastUpdated: tenant.hirsSettings[hirsIndex].lastUpdated,
-        verified: verifyFeature.isActive === isActive
+        verified: verifyFeature.isActive === isActive,
+        previousState
       }
     });
   } catch (error) {
     console.error('❌ [ADMIN] Error toggling HIRS feature:', error);
+    console.error('❌ [ADMIN] Error stack:', error.stack);
+    
     res.status(500).json({
       success: false,
       message: 'Failed to toggle HIRS feature',
-      error: error.message
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 };
