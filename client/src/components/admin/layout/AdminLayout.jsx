@@ -12,15 +12,16 @@ import dashboardIcon from '../../../assets/icons/dashboard_icon.svg';
 import usersIcon from '../../../assets/icons/UserManagement_Icon.svg';
 import doctorIcon from '../../../assets/icons/DoctorManagement_Icon.svg';
 import journalIcon from '../../../assets/icons/JournalManagement_Icon.svg';
+import tenantIcon from '../../../assets/icons/clinic_icon.svg';
 import settingsIcon from '../../../assets/icons/Settings_icon.svg';
 
-
 const AdminLayout = () => {
-  // Menu items with proper icon imports
+  // Menu items with proper icon imports - 🆕 ADDED: Tenant Management
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', path: '/admin', icon: dashboardIcon },
     { id: 'users', label: 'User Management', path: '/admin/users', icon: usersIcon },
     { id: 'professionals', label: 'Doctor Management', path: '/admin/professionals', icon: doctorIcon },
+    { id: 'tenants', label: 'Tenant Management', path: '/admin/tenants', icon: tenantIcon }, // 🆕 NEW
     { id: 'journal', label: 'Journal Management', path: '/admin/journal', icon: journalIcon },
     { id: 'settings', label: 'System Settings', path: '/admin/settings', icon: settingsIcon }
   ];
@@ -73,4 +74,3 @@ const AdminLayout = () => {
 };
 
 export default AdminLayout;
-
