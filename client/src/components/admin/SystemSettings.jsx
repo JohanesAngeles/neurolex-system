@@ -1,7 +1,7 @@
-// client/src/components/admin/layout/SystemSettings.jsx - COMPLETELY FIXED - ALL ERRORS RESOLVED
+// client/src/components/admin/layout/SystemSettings.jsx - Complete Enhanced with HIRS Toggle
 import React, { useState, useEffect, useCallback } from 'react';
 import adminService from '../../services/adminService';
-import HirsToggleModal from './layout/HirsToggleModal';
+import HirsToggleModal from './layout/HirsToggleModal'; // Import the modal component
 
 const SystemSettings = () => {
   // State management
@@ -12,15 +12,15 @@ const SystemSettings = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
   
-  // Modal state for HIRS toggle
+  // 🔄 NEW: Modal state for HIRS toggle
   const [modalState, setModalState] = useState({
     isOpen: false,
     hirsSetting: null,
-    action: null,
+    action: null, // 'enable' or 'disable'
     isLoading: false
   });
   
-  // Preview URLs state for ALL image types
+  // Preview URLs state for ALL image types (Logo + Favicon)
   const [previewUrls, setPreviewUrls] = useState({
     lightLogo: '',
     darkLogo: '',
@@ -28,7 +28,7 @@ const SystemSettings = () => {
     darkFavicon: ''
   });
   
-  // Settings state with SAFE defaults
+  // Settings state
   const [settings, setSettings] = useState({
     platformName: '',
     platformDescription: '',
@@ -36,81 +36,39 @@ const SystemSettings = () => {
     favicon: { light: null, dark: null },
     primaryColor: '',
     secondaryColor: '',
-    hirsSettings: [] // Always initialize as empty array
+    hirsSettings: []
   });
 
-  // 🔧 CRITICAL: Safe helper functions to prevent ALL undefined errors
-  const safeGetHirsSettings = useCallback(() => {
-    try {
-      if (settings && settings.hirsSettings && Array.isArray(settings.hirsSettings)) {
-        return settings.hirsSettings;
-      }
-      return [];
-    } catch (error) {
-      console.warn('Error getting HIRS settings:', error);
-      return [];
-    }
-  }, [settings]);
-
-  const safeGetFeatureCounts = useCallback(() => {
-    try {
-      const hirsArray = safeGetHirsSettings();
-      return {
-        active: hirsArray.filter(h => h && typeof h.isActive === 'boolean' && h.isActive).length,
-        inactive: hirsArray.filter(h => h && typeof h.isActive === 'boolean' && !h.isActive).length,
-        total: hirsArray.length
-      };
-    } catch (error) {
-      console.warn('Error counting features:', error);
-      return { active: 0, inactive: 0, total: 0 };
-    }
-  }, [safeGetHirsSettings]);
-
-  const safeGetFeatureName = useCallback((hirsId) => {
-    try {
-      const hirsArray = safeGetHirsSettings();
-      const feature = hirsArray.find(h => h && h.id === hirsId);
-      return feature && feature.name ? feature.name : 'Feature';
-    } catch (error) {
-      console.warn('Error getting feature name:', error);
-      return 'Feature';
-    }
-  }, [safeGetHirsSettings]);
-
-  // Broadcast settings update to all open tabs/windows
+  // 🔄 Broadcast settings update to all open tabs/windows
   const broadcastSettingsUpdate = useCallback((tenantId, updatedSettings) => {
-    try {
-      console.log('📡 Broadcasting settings update to all tabs...');
-      
-      // Method 1: Custom event for same tab
-      const updateEvent = new CustomEvent('tenantSettingsUpdated', {
-        detail: {
-          tenantId,
-          updatedSettings,
-          timestamp: Date.now()
-        }
-      });
-      window.dispatchEvent(updateEvent);
-      
-      // Method 2: LocalStorage event for other tabs
-      localStorage.setItem('tenantSettingsUpdated', JSON.stringify({
+    console.log('📡 Broadcasting settings update to all tabs...');
+    
+    // Method 1: Custom event for same tab
+    const updateEvent = new CustomEvent('tenantSettingsUpdated', {
+      detail: {
         tenantId,
-        timestamp: Date.now(),
-        updatedSettings
-      }));
-      
-      // Clean up the localStorage flag after a short delay
-      setTimeout(() => {
-        localStorage.removeItem('tenantSettingsUpdated');
-      }, 1000);
-      
-      console.log('✅ Settings update broadcasted successfully');
-    } catch (error) {
-      console.error('Error broadcasting settings update:', error);
-    }
+        updatedSettings,
+        timestamp: Date.now()
+      }
+    });
+    window.dispatchEvent(updateEvent);
+    
+    // Method 2: LocalStorage event for other tabs
+    localStorage.setItem('tenantSettingsUpdated', JSON.stringify({
+      tenantId,
+      timestamp: Date.now(),
+      updatedSettings
+    }));
+    
+    // Clean up the localStorage flag after a short delay
+    setTimeout(() => {
+      localStorage.removeItem('tenantSettingsUpdated');
+    }, 1000);
+    
+    console.log('✅ Settings update broadcasted successfully');
   }, []);
 
-  // Individual setting save function with real-time updates
+  // 🔄 ENHANCED: Individual setting save function with real-time updates
   const saveIndividualSetting = async (settingType, value) => {
     if (!selectedTenant) {
       alert('Please select a clinic first');
@@ -120,8 +78,12 @@ const SystemSettings = () => {
       const updateData = { [settingType]: value };
       const data = await adminService.updateIndividualSetting(selectedTenant, updateData);
       if (data.success) {
+        // 🔄 Broadcast the update to all open tabs
         broadcastSettingsUpdate(selectedTenant, { [settingType]: value });
+        
         alert(`✅ ${settingType.replace(/([A-Z])/g, ' $1').toLowerCase()} saved successfully!`);
+        
+        // 🔄 Small delay to ensure backend is updated, then refresh preview
         setTimeout(() => {
           fetchTenantSettings();
         }, 500);
@@ -133,188 +95,159 @@ const SystemSettings = () => {
     }
   };
 
-  // 🔧 COMPLETELY FIXED: Toggle HIRS feature function with TOTAL error prevention
+  // 🆕 NEW: Toggle HIRS feature function
   const toggleHirsFeature = async (hirsId, newStatus) => {
-    if (!selectedTenant) {
-      alert('Please select a clinic first');
-      return;
-    }
+  if (!selectedTenant) {
+    alert('Please select a clinic first');
+    return;
+  }
 
-    try {
-      setModalState(prev => ({ ...prev, isLoading: true }));
+  try {
+    setModalState(prev => ({ ...prev, isLoading: true }));
 
-      console.log('🔄 [ADMIN] Toggling HIRS feature:', { hirsId, newStatus, selectedTenant });
+    console.log('🔄 [ADMIN] Toggling HIRS feature:', { hirsId, newStatus, selectedTenant });
 
-      const response = await fetch(`/api/admin/tenant-settings/${selectedTenant}/hirs/${hirsId}/toggle`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
-        },
-        body: JSON.stringify({
-          isActive: newStatus,
-          lastUpdated: new Date().toLocaleDateString()
-        })
-      });
+    // 🚨 FIXED: Use the correct API endpoint that matches your backend routes
+    const response = await fetch(`/api/admin/tenant-settings/${selectedTenant}/hirs/${hirsId}/toggle`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+      },
+      body: JSON.stringify({
+        isActive: newStatus,
+        lastUpdated: new Date().toLocaleDateString()
+      })
+    });
 
-      const data = await response.json();
-      console.log('🔄 [ADMIN] API Response:', data);
-      
-      if (data.success) {
-        // 🔧 SAFE: Get current hirsSettings array
-        const currentHirsSettings = safeGetHirsSettings();
-        
-        if (currentHirsSettings.length > 0) {
-          try {
-            // Update local state immediately with SAFE operations
-            const updatedHirsSettings = currentHirsSettings.map(hirs => {
-              if (hirs && typeof hirs.id !== 'undefined' && hirs.id === hirsId) {
-                return { 
-                  ...hirs, 
-                  isActive: newStatus, 
-                  lastUpdated: new Date().toLocaleDateString() 
-                };
-              }
-              return hirs;
-            });
-
-            setSettings(prev => ({
-              ...prev,
-              hirsSettings: updatedHirsSettings
-            }));
-
-            // Broadcast the update to all doctor tabs
-            const updateData = { hirsSettings: updatedHirsSettings };
-            
-            // Multiple broadcast methods
-            window.dispatchEvent(new CustomEvent('tenantSettingsUpdated', {
-              detail: {
-                tenantId: selectedTenant,
-                hirsId,
-                isActive: newStatus,
-                updatedSettings: updateData,
-                timestamp: Date.now()
-              }
-            }));
-            
-            localStorage.setItem('tenantSettingsUpdated', JSON.stringify({
-              tenantId: selectedTenant,
-              hirsId,
-              isActive: newStatus,
-              timestamp: Date.now(),
-              updatedSettings: updateData
-            }));
-            
-            if (window.BroadcastChannel) {
-              try {
-                const channel = new BroadcastChannel('tenant-settings');
-                channel.postMessage({
-                  type: 'HIRS_TOGGLE',
-                  tenantId: selectedTenant,
-                  hirsId,
-                  isActive: newStatus,
-                  timestamp: Date.now()
-                });
-                channel.close();
-              } catch (broadcastError) {
-                console.warn('BroadcastChannel error:', broadcastError);
-              }
+    const data = await response.json();
+    console.log('🔄 [ADMIN] API Response:', data);
+    
+    if (data.success) {
+      // Update local state immediately
+      const updatedHirsSettings = settings.hirsSettings.map(hirs => 
+        hirs.id === hirsId 
+          ? { 
+              ...hirs, 
+              isActive: newStatus, 
+              lastUpdated: new Date().toLocaleDateString() 
             }
+          : hirs
+      );
 
-            // Clean up localStorage
-            setTimeout(() => {
-              localStorage.removeItem('tenantSettingsUpdated');
-            }, 1000);
+      setSettings(prev => ({
+        ...prev,
+        hirsSettings: updatedHirsSettings
+      }));
 
-            // 🔧 SAFE: Get feature name
-            const featureName = safeGetFeatureName(hirsId);
-
-            alert(`✅ ${featureName} has been ${newStatus ? 'enabled' : 'disabled'} successfully!`);
-
-            // Force refresh signal for doctor tabs
-            localStorage.setItem('forceRefreshTenantSettings', JSON.stringify({
-              tenantId: selectedTenant,
-              timestamp: Date.now()
-            }));
-            
-            setTimeout(() => {
-              localStorage.removeItem('forceRefreshTenantSettings');
-            }, 2000);
-
-          } catch (updateError) {
-            console.error('Error updating local state:', updateError);
-            // Fallback to refresh
-            await fetchTenantSettings();
-            alert(`✅ Feature has been ${newStatus ? 'enabled' : 'disabled'} successfully!`);
-          }
-        } else {
-          console.warn('⚠️ hirsSettings array is empty, refreshing...');
-          await fetchTenantSettings();
-          alert(`✅ Feature has been ${newStatus ? 'enabled' : 'disabled'} successfully!`);
-        }
-
-        // Close modal
-        setModalState({ isOpen: false, hirsSetting: null, action: null, isLoading: false });
-
-      } else {
-        throw new Error(data.message || 'Update failed');
-      }
-    } catch (error) {
-      console.error('❌ [ADMIN] Error toggling HIRS feature:', error);
+      // 🚨 CRITICAL: Broadcast the update to all doctor tabs
+      const updateData = { hirsSettings: updatedHirsSettings };
       
-      let errorMessage = 'Failed to update feature';
-      if (error.message) {
-        if (error.message.includes('fetch')) {
-          errorMessage = 'Network error - please check your connection';
-        } else if (error.message.includes('401')) {
-          errorMessage = 'Authentication failed - please login again';
-        } else if (error.message.includes('404')) {
-          errorMessage = 'API endpoint not found - please contact support';
-        } else {
-          errorMessage = error.message;
+      // Method 1: Custom event for same tab
+      window.dispatchEvent(new CustomEvent('tenantSettingsUpdated', {
+        detail: {
+          tenantId: selectedTenant,
+          hirsId,
+          isActive: newStatus,
+          updatedSettings: updateData,
+          timestamp: Date.now()
         }
-      }
+      }));
       
-      alert(`❌ ${errorMessage}`);
-      setModalState(prev => ({ ...prev, isLoading: false }));
+      // Method 2: localStorage trigger for other tabs
+      localStorage.setItem('tenantSettingsUpdated', JSON.stringify({
+        tenantId: selectedTenant,
+        hirsId,
+        isActive: newStatus,
+        timestamp: Date.now(),
+        updatedSettings: updateData
+      }));
+      
+      // Method 3: Broadcast channel (if supported)
+      if (window.BroadcastChannel) {
+        const channel = new BroadcastChannel('tenant-settings');
+        channel.postMessage({
+          type: 'HIRS_TOGGLE',
+          tenantId: selectedTenant,
+          hirsId,
+          isActive: newStatus,
+          timestamp: Date.now()
+        });
+        channel.close();
+      }
+
+      // Clean up localStorage after a delay
+      setTimeout(() => {
+        localStorage.removeItem('tenantSettingsUpdated');
+      }, 1000);
+
+      // Show success message
+      const featureName = (settings.hirsSettings && Array.isArray(settings.hirsSettings)) 
+      ? settings.hirsSettings.find(h => h.id === hirsId)?.name || 'Feature'
+      : 'Feature';
+      alert(`✅ ${featureName} has been ${newStatus ? 'enabled' : 'disabled'} successfully!`);
+
+      // Close modal
+      setModalState({ isOpen: false, hirsSetting: null, action: null, isLoading: false });
+
+      // 🔄 Force refresh doctor interfaces by triggering multiple update methods
+      console.log('📡 [ADMIN] Broadcasting settings update to all doctor tabs...');
+      
+      // Additional trigger - force page refresh signal for doctor tabs
+      localStorage.setItem('forceRefreshTenantSettings', JSON.stringify({
+        tenantId: selectedTenant,
+        timestamp: Date.now()
+      }));
+      
+      setTimeout(() => {
+        localStorage.removeItem('forceRefreshTenantSettings');
+      }, 2000);
+
+    } else {
+      throw new Error(data.message || 'Update failed');
     }
-  };
+  } catch (error) {
+    console.error('❌ [ADMIN] Error toggling HIRS feature:', error);
+    
+    // More specific error messages
+    let errorMessage = 'Failed to update feature';
+    if (error.message.includes('fetch')) {
+      errorMessage = 'Network error - please check your connection';
+    } else if (error.message.includes('401')) {
+      errorMessage = 'Authentication failed - please login again';
+    } else if (error.message.includes('404')) {
+      errorMessage = 'API endpoint not found - please contact support';
+    } else {
+      errorMessage = error.message;
+    }
+    
+    alert(`❌ ${errorMessage}`);
+    setModalState(prev => ({ ...prev, isLoading: false }));
+  }
+};
 
-  // Handle HIRS toggle button click
+  // 🆕 NEW: Handle HIRS toggle button click
   const handleHirsToggleClick = (hirs) => {
-    try {
-      if (!hirs || typeof hirs.isActive === 'undefined') {
-        console.error('Invalid HIRS setting:', hirs);
-        return;
-      }
-      
-      const newStatus = !hirs.isActive;
-      const action = newStatus ? 'enable' : 'disable';
-      
-      setModalState({
-        isOpen: true,
-        hirsSetting: hirs,
-        action: action,
-        isLoading: false
-      });
-    } catch (error) {
-      console.error('Error handling HIRS toggle click:', error);
-    }
+    const newStatus = !hirs.isActive;
+    const action = newStatus ? 'enable' : 'disable';
+    
+    setModalState({
+      isOpen: true,
+      hirsSetting: hirs,
+      action: action,
+      isLoading: false
+    });
   };
 
-  // Handle modal confirmation
+  // 🆕 NEW: Handle modal confirmation
   const handleModalConfirm = () => {
-    try {
-      if (modalState.hirsSetting && modalState.hirsSetting.id) {
-        const newStatus = modalState.action === 'enable';
-        toggleHirsFeature(modalState.hirsSetting.id, newStatus);
-      }
-    } catch (error) {
-      console.error('Error confirming modal:', error);
+    if (modalState.hirsSetting) {
+      const newStatus = modalState.action === 'enable';
+      toggleHirsFeature(modalState.hirsSetting.id, newStatus);
     }
   };
 
-  // Handle modal close
+  // 🆕 NEW: Handle modal close
   const handleModalClose = () => {
     if (!modalState.isLoading) {
       setModalState({ isOpen: false, hirsSetting: null, action: null, isLoading: false });
@@ -343,6 +276,7 @@ const SystemSettings = () => {
       const data = await adminService.updateTenantSettings(selectedTenant, defaultSettings);
       if (data.success) {
         setSettings(defaultSettings);
+        // 🔄 Broadcast the update
         broadcastSettingsUpdate(selectedTenant, defaultSettings);
       }
     } catch (error) {
@@ -364,7 +298,7 @@ const SystemSettings = () => {
           favicon: data.data.favicon || { light: null, dark: null },
           primaryColor: data.data.primaryColor || '#4CAF50',
           secondaryColor: data.data.secondaryColor || '#2196F3',
-          hirsSettings: Array.isArray(data.data.hirsSettings) ? data.data.hirsSettings : []
+          hirsSettings: data.data.hirsSettings || []
         };
         setSettings(fetchedSettings);
         setPreviewUrls({
@@ -414,7 +348,7 @@ const SystemSettings = () => {
     setSettings(prev => ({ ...prev, [field]: value }));
   };
 
-  // File upload function with real-time updates
+  // 🔄 ENHANCED: File upload function with real-time updates
   const handleFileUpload = async (imageType, variant, file) => {
     if (!file || !selectedTenant) {
       alert('Please select a clinic first');
@@ -455,6 +389,7 @@ const SystemSettings = () => {
 
       const data = await response.json();
       if (data.success) {
+        // 🔄 Update preview with new URL immediately
         setTimeout(() => {
           const previewKey = `${variant}${imageType === 'logo' ? 'Logo' : 'Favicon'}`;
           setPreviewUrls(prev => ({ ...prev, [previewKey]: data.url + '?t=' + Date.now() }));
@@ -472,6 +407,7 @@ const SystemSettings = () => {
           }
         }));
 
+        // 🔄 Broadcast the image update to all open tabs
         const updateData = {
           [imageType === 'logo' ? 'systemLogo' : 'favicon']: {
             ...settings[imageType === 'logo' ? 'systemLogo' : 'favicon'],
@@ -482,6 +418,7 @@ const SystemSettings = () => {
 
         alert(`✅ ${imageType} uploaded successfully!`);
 
+        // Auto-save
         try {
           await adminService.updateIndividualSetting(selectedTenant, updateData);
         } catch (saveError) {
@@ -497,7 +434,7 @@ const SystemSettings = () => {
     }
   };
 
-  // Save settings with real-time updates
+  // 🔄 ENHANCED: Save settings with real-time updates
   const saveSettings = async () => {
     if (!selectedTenant) {
       alert('Please select a clinic first');
@@ -507,8 +444,12 @@ const SystemSettings = () => {
       setIsSaving(true);
       const data = await adminService.updateTenantSettings(selectedTenant, settings);
       if (data.success) {
+        // 🔄 Broadcast the complete settings update
         broadcastSettingsUpdate(selectedTenant, settings);
+        
         alert('✅ Settings saved successfully!');
+        
+        // 🔄 Small delay to ensure all tabs receive the update
         setTimeout(() => {
           fetchTenantSettings();
         }, 500);
@@ -529,7 +470,7 @@ const SystemSettings = () => {
     }
   };
 
-  // Show notification when settings are updated from another tab
+  // 🔄 Show notification when settings are updated from another tab
   useEffect(() => {
     const handleSettingsUpdate = () => {
       console.log('🔔 Settings updated from another source, refreshing...');
@@ -542,12 +483,9 @@ const SystemSettings = () => {
     return () => window.removeEventListener('tenantSettingsUpdated', handleSettingsUpdate);
   }, [selectedTenant, fetchTenantSettings]);
 
-  // Get feature counts for display
-  const featureCounts = safeGetFeatureCounts();
-  const hirsArray = safeGetHirsSettings();
-
   return (
     <>
+      {/* 🔧 CRITICAL CSS OVERRIDE TO FORCE SCROLLING */}
       <style jsx global>{`
         .admin-content-container {
           height: 100vh !important;
@@ -617,18 +555,92 @@ const SystemSettings = () => {
                 </div>
               </div>
 
-              {/* HIRS Management Table with COMPLETELY Fixed Toggle Functionality */}
+              {/* Logo Section */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
+                {/* System Logo Light */}
+                <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                  <h3 style={{ margin: '0 0 24px 0', fontSize: '20px', fontWeight: '600', color: '#1e293b' }}>System Logo (Version 1 - Light)</h3>
+                  <div style={{ width: '200px', height: '200px', border: '2px dashed #d1d5db', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px auto', backgroundColor: '#f8fafc', overflow: 'hidden', position: 'relative' }}>
+                    {(previewUrls.lightLogo || settings.systemLogo?.light) ? (
+                      <img src={previewUrls.lightLogo || settings.systemLogo?.light} alt="Light Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                    ) : (
+                      <div style={{ textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
+                        <div style={{ fontSize: '48px', marginBottom: '8px' }}>🖼️</div>
+                        <div>NEUROLEX_Logo_Light.png</div>
+                      </div>
+                    )}
+                  </div>
+                  <button style={{ width: '100%', backgroundColor: '#22c55e', color: 'white', border: 'none', padding: '12px 20px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }} onClick={() => document.getElementById('light-logo-input').click()}>Change Image</button>
+                  <input id="light-logo-input" type="file" accept="image/*" onChange={(e) => e.target.files[0] && handleFileUpload('logo', 'light', e.target.files[0])} style={{ display: 'none' }} />
+                </div>
+
+                {/* System Logo Dark */}
+                <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                  <h3 style={{ margin: '0 0 24px 0', fontSize: '20px', fontWeight: '600', color: '#1e293b' }}>System Logo (Version 1 - Dark)</h3>
+                  <div style={{ width: '200px', height: '200px', border: '2px dashed #d1d5db', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px auto', backgroundColor: '#1f2937', overflow: 'hidden', position: 'relative' }}>
+                    {(previewUrls.darkLogo || settings.systemLogo?.dark) ? (
+                      <img src={previewUrls.darkLogo || settings.systemLogo?.dark} alt="Dark Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                    ) : (
+                      <div style={{ textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
+                        <div style={{ fontSize: '48px', marginBottom: '8px' }}>🖼️</div>
+                        <div>NEUROLEX_Logo_Dark.png</div>
+                      </div>
+                    )}
+                  </div>
+                  <button style={{ width: '100%', backgroundColor: '#22c55e', color: 'white', border: 'none', padding: '12px 20px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }} onClick={() => document.getElementById('dark-logo-input').click()}>Change Image</button>
+                  <input id="dark-logo-input" type="file" accept="image/*" onChange={(e) => e.target.files[0] && handleFileUpload('logo', 'dark', e.target.files[0])} style={{ display: 'none' }} />
+                </div>
+              </div>
+
+              {/* Favicon Section */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
+                {/* Favicon Light */}
+                <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                  <h3 style={{ margin: '0 0 24px 0', fontSize: '20px', fontWeight: '600', color: '#1e293b' }}>Favicon (Light)</h3>
+                  <div style={{ width: '200px', height: '200px', border: '2px dashed #d1d5db', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px auto', backgroundColor: '#f8fafc', overflow: 'hidden', position: 'relative' }}>
+                    {(previewUrls.lightFavicon || settings.favicon?.light) ? (
+                      <img src={previewUrls.lightFavicon || settings.favicon?.light} alt="Light Favicon" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                    ) : (
+                      <div style={{ textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
+                        <div style={{ fontSize: '48px', marginBottom: '8px' }}>🔗</div>
+                        <div>NEUROLEX_Favicon_Light.ico</div>
+                      </div>
+                    )}
+                  </div>
+                  <button style={{ width: '100%', backgroundColor: '#22c55e', color: 'white', border: 'none', padding: '12px 20px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }} onClick={() => document.getElementById('light-favicon-input').click()}>Change Image</button>
+                  <input id="light-favicon-input" type="file" accept="image/*,.ico" onChange={(e) => e.target.files[0] && handleFileUpload('favicon', 'light', e.target.files[0])} style={{ display: 'none' }} />
+                </div>
+
+                {/* Favicon Dark */}
+                <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                  <h3 style={{ margin: '0 0 24px 0', fontSize: '20px', fontWeight: '600', color: '#1e293b' }}>Favicon (Dark)</h3>
+                  <div style={{ width: '200px', height: '200px', border: '2px dashed #d1d5db', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px auto', backgroundColor: '#1f2937', overflow: 'hidden', position: 'relative' }}>
+                    {(previewUrls.darkFavicon || settings.favicon?.dark) ? (
+                      <img src={previewUrls.darkFavicon || settings.favicon?.dark} alt="Dark Favicon" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                    ) : (
+                      <div style={{ textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
+                        <div style={{ fontSize: '48px', marginBottom: '8px' }}>🔗</div>
+                        <div>NEUROLEX_Favicon_Dark.ico</div>
+                      </div>
+                    )}
+                  </div>
+                  <button style={{ width: '100%', backgroundColor: '#22c55e', color: 'white', border: 'none', padding: '12px 20px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }} onClick={() => document.getElementById('dark-favicon-input').click()}>Change Image</button>
+                  <input id="dark-favicon-input" type="file" accept="image/*,.ico" onChange={(e) => e.target.files[0] && handleFileUpload('favicon', 'dark', e.target.files[0])} style={{ display: 'none' }} />
+                </div>
+              </div>
+
+              {/* 🆕 ENHANCED: HIRS Management Table with Toggle Functionality */}
               <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '12px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                   <div>
                     <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '600', color: '#1e293b' }}>Doctor Navigation Menu Control</h2>
                     <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#64748b' }}>
-                      Control which features are visible in the doctor sidebar menu ({featureCounts.total} items)
+                      Control which features are visible in the doctor sidebar menu ({settings.hirsSettings.length} items)
                     </p>
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>
-                      {featureCounts.active} enabled, {featureCounts.inactive} disabled
+                      {settings.hirsSettings.filter(h => h.isActive).length} enabled, {settings.hirsSettings.filter(h => !h.isActive).length} disabled
                     </div>
                     <div style={{ fontSize: '10px', color: '#9ca3af' }}>
                       Changes apply immediately to all doctor sessions
@@ -644,63 +656,50 @@ const SystemSettings = () => {
                     <div>Last Updated</div>
                     <div>Status</div>
                   </div>
-                  {hirsArray.length > 0 ? hirsArray.map((hirs, index) => {
-                    // 🔧 SAFE: Validate each HIRS item before rendering
-                    if (!hirs || typeof hirs.id === 'undefined') {
-                      return null;
-                    }
-                    
-                    return (
-                      <div key={hirs.id} style={{ display: 'grid', gridTemplateColumns: '80px 200px 1fr 150px 120px', gap: '16px', padding: '16px', borderBottom: index < hirsArray.length - 1 ? '1px solid #f3f4f6' : 'none', alignItems: 'center', backgroundColor: 'white' }}>
-                        <div style={{ fontSize: '32px', textAlign: 'center' }}>{hirs.icon || '⚙️'}</div>
-                        <div style={{ fontWeight: '500', color: '#1f2937' }}>{hirs.name || 'Unknown Feature'}</div>
-                        <div style={{ fontSize: '14px', color: '#6b7280' }}>{hirs.description || 'No description available'}</div>
-                        <div style={{ fontSize: '14px', color: '#6b7280' }}>{hirs.lastUpdated || 'N/A'}</div>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <button
-                            onClick={() => handleHirsToggleClick(hirs)}
-                            disabled={modalState.isLoading || (hirs.id === 1)}
-                            style={{
-                              backgroundColor: hirs.id === 1 ? '#9ca3af' : (hirs.isActive ? '#dc2626' : '#22c55e'),
-                              color: 'white',
-                              border: 'none',
-                              padding: '8px 12px',
-                              borderRadius: '6px',
-                              cursor: (modalState.isLoading || hirs.id === 1) ? 'not-allowed' : 'pointer',
-                              fontSize: '12px',
-                              fontWeight: '500',
-                              opacity: (modalState.isLoading || hirs.id === 1) ? 0.6 : 1,
-                              minWidth: '80px'
-                            }}
-                            title={hirs.id === 1 ? 'Dashboard cannot be disabled (critical feature)' : `Click to ${hirs.isActive ? 'disable' : 'enable'} this feature for all doctors`}
-                          >
-                            {hirs.id === 1 ? '🔒 Always On' : (hirs.isActive ? '🚫 Disable' : '✅ Enable')}
-                          </button>
-                        </div>
+                  {settings.hirsSettings.map((hirs, index) => (
+                    <div key={hirs.id} style={{ display: 'grid', gridTemplateColumns: '80px 200px 1fr 150px 120px', gap: '16px', padding: '16px', borderBottom: index < settings.hirsSettings.length - 1 ? '1px solid #f3f4f6' : 'none', alignItems: 'center', backgroundColor: 'white' }}>
+                      <div style={{ fontSize: '32px', textAlign: 'center' }}>{hirs.icon}</div>
+                      <div style={{ fontWeight: '500', color: '#1f2937' }}>{hirs.name}</div>
+                      <div style={{ fontSize: '14px', color: '#6b7280' }}>{hirs.description}</div>
+                      <div style={{ fontSize: '14px', color: '#6b7280' }}>{hirs.lastUpdated}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <button
+                          onClick={() => handleHirsToggleClick(hirs)}
+                          disabled={modalState.isLoading || (hirs.id === 1)} // Dashboard cannot be disabled
+                          style={{
+                            backgroundColor: hirs.id === 1 ? '#9ca3af' : (hirs.isActive ? '#dc2626' : '#22c55e'),
+                            color: 'white',
+                            border: 'none',
+                            padding: '8px 12px',
+                            borderRadius: '6px',
+                            cursor: (modalState.isLoading || hirs.id === 1) ? 'not-allowed' : 'pointer',
+                            fontSize: '12px',
+                            fontWeight: '500',
+                            opacity: (modalState.isLoading || hirs.id === 1) ? 0.6 : 1,
+                            minWidth: '80px'
+                          }}
+                          title={hirs.id === 1 ? 'Dashboard cannot be disabled (critical feature)' : `Click to ${hirs.isActive ? 'disable' : 'enable'} this feature for all doctors`}
+                        >
+                          {hirs.id === 1 ? '🔒 Always On' : (hirs.isActive ? '🚫 Disable' : '✅ Enable')}
+                        </button>
                       </div>
-                    );
-                  }) : (
-                    <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280', gridColumn: '1 / -1' }}>
-                      <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚙️</div>
-                      <div style={{ fontSize: '16px', fontWeight: '500', marginBottom: '8px' }}>No HIRS Features Available</div>
-                      <div style={{ fontSize: '14px' }}>HIRS settings will appear here once they are configured for this tenant.</div>
                     </div>
-                  )}
+                  ))}
                 </div>
                 
-                {/* Feature Summary */}
+                {/* 🆕 NEW: Feature Summary */}
                 <div style={{ marginTop: '16px', padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
                   <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <div style={{ width: '12px', height: '12px', backgroundColor: '#22c55e', borderRadius: '50%' }}></div>
                       <span style={{ fontSize: '14px', color: '#374151' }}>
-                        {featureCounts.active} Features Enabled
+                        {settings.hirsSettings.filter(h => h.isActive).length} Features Enabled
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <div style={{ width: '12px', height: '12px', backgroundColor: '#dc2626', borderRadius: '50%' }}></div>
                       <span style={{ fontSize: '14px', color: '#374151' }}>
-                        {featureCounts.inactive} Features Disabled
+                        {settings.hirsSettings.filter(h => !h.isActive).length} Features Disabled
                       </span>
                     </div>
                     <div style={{ fontSize: '12px', color: '#64748b', marginLeft: 'auto' }}>
@@ -745,17 +744,15 @@ const SystemSettings = () => {
           )}
         </div>
 
-        {/* HIRS Toggle Modal */}
-        {modalState.isOpen && modalState.hirsSetting && (
-          <HirsToggleModal
-            isOpen={modalState.isOpen}
-            onClose={handleModalClose}
-            onConfirm={handleModalConfirm}
-            hirsSetting={modalState.hirsSetting}
-            action={modalState.action}
-            isLoading={modalState.isLoading}
-          />
-        )}
+        {/* 🆕 NEW: HIRS Toggle Modal */}
+        <HirsToggleModal
+          isOpen={modalState.isOpen}
+          onClose={handleModalClose}
+          onConfirm={handleModalConfirm}
+          hirsSetting={modalState.hirsSetting}
+          action={modalState.action}
+          isLoading={modalState.isLoading}
+        />
 
         {/* CSS Animation for loading spinner */}
         <style jsx>{`
