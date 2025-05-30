@@ -1,4 +1,4 @@
-// server/src/routes/adminRoutes.js - FIXED VERSION
+// server/src/routes/adminRoutes.js - FIXED VERSION WITH HIRS TOGGLE
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
@@ -89,8 +89,14 @@ router.get('/tenant-settings/:tenantId', adminAuth, adminController.getTenantSet
 router.put('/tenant-settings/:tenantId', adminAuth, adminController.updateTenantSettings);
 router.patch('/tenant-settings/:tenantId', adminAuth, adminController.updateIndividualTenantSetting);
 
-// 🆕 NEW: Add these HIRS routes here
+// 🚨 FIXED: HIRS routes with the correct endpoints that match frontend calls
+// Main HIRS toggle route (this is what the frontend expects)
+router.put('/tenant-settings/:tenantId/hirs/:hirsId/toggle', adminAuth, adminController.toggleHirsFeature);
+
+// Alternative route for backward compatibility
 router.patch('/tenant-settings/:tenantId/hirs/:hirsId', adminAuth, adminController.toggleHirsFeature);
+
+// Additional HIRS management routes
 router.get('/tenant-settings/:tenantId/hirs/stats', adminAuth, adminController.getHirsStats);
 router.put('/tenant-settings/:tenantId/hirs/bulk', adminAuth, adminController.bulkUpdateHirs);
 
