@@ -184,16 +184,31 @@ export const TenantProvider = ({ children }) => {
 
   // Check if a feature is enabled for current tenant
   const isFeatureEnabled = (featureName) => {
-    if (!tenantSettings || !tenantSettings.hirsSettings) {
-      return true; // Default to enabled if no settings
-    }
+  console.log('🔍 [DEBUG] isFeatureEnabled called with:', featureName);
+  console.log('🔍 [DEBUG] tenantSettings:', tenantSettings);
+  console.log('🔍 [DEBUG] tenantSettings.hirsSettings:', tenantSettings?.hirsSettings);
+  
+  if (!tenantSettings || !tenantSettings.hirsSettings) {
+    console.log('🔍 [DEBUG] No tenantSettings or hirsSettings, returning true (default enabled)');
+    return true; // Default to enabled if no settings
+  }
 
-    const feature = tenantSettings.hirsSettings.find(
-      hirs => hirs.name === featureName || hirs.id === featureName
-    );
-    
-    return feature ? feature.isActive : true;
-  };
+  // Log all available features
+  console.log('🔍 [DEBUG] Available features:', tenantSettings.hirsSettings.map(h => ({ 
+    id: h.id, 
+    name: h.name, 
+    isActive: h.isActive 
+  })));
+
+  const feature = tenantSettings.hirsSettings.find(
+    hirs => hirs.name === featureName || hirs.id === featureName
+  );
+  
+  console.log('🔍 [DEBUG] Found feature for "' + featureName + '":', feature);
+  console.log('🔍 [DEBUG] Returning:', feature ? feature.isActive : true);
+  
+  return feature ? feature.isActive : true;
+};
 
   // 🎨 ENHANCED: Get tenant-specific styling with cache busting
   const getThemeStyles = () => {
