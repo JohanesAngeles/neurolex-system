@@ -350,12 +350,40 @@ exports.updateTenant = async (req, res) => {
  */
 exports.getPublicTenantById = async (req, res) => {
   try {
-    const { tenantId } = req.params;
+    // 🚨 FIX: Multiple ways to get tenantId (robust parameter extraction)
+    const tenantId = req.params.tenantId || req.params.id || req.query.tenantId;
+    
     console.log(`🔍 [getPublicTenantById] Fetching public tenant info for ID: ${tenantId}`);
+    console.log(`🔍 [getPublicTenantById] Route params:`, req.params);
+    console.log(`🔍 [getPublicTenantById] Query params:`, req.query);
+
+    // Validate tenantId
+    if (!tenantId) {
+      console.error(`❌ [getPublicTenantById] No tenant ID provided in request`);
+      return res.status(400).json({
+        success: false,
+        message: 'Tenant ID is required',
+        debug: {
+          params: req.params,
+          query: req.query,
+          path: req.path
+        }
+      });
+    }
+
+    // Validate tenantId format
+    if (!tenantId.match(/^[0-9a-fA-F]{24}$/)) {
+      console.error(`❌ [getPublicTenantById] Invalid tenant ID format: ${tenantId}`);
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid tenant ID format'
+      });
+    }
 
     // Get master connection
     const masterConn = getMasterConnection();
     if (!masterConn) {
+      console.error(`❌ [getPublicTenantById] Failed to get master connection`);
       return res.status(500).json({
         success: false,
         message: 'Database connection error'
@@ -364,15 +392,18 @@ exports.getPublicTenantById = async (req, res) => {
 
     const Tenant = masterConn.model('Tenant');
 
-    // Find tenant WITHOUT selecting specific fields (so we can modify and save)
+    // Find tenant
     const tenant = await Tenant.findById(tenantId);
     
     if (!tenant) {
+      console.error(`❌ [getPublicTenantById] Tenant not found: ${tenantId}`);
       return res.status(404).json({
         success: false,
         message: 'Tenant not found'
       });
     }
+
+    console.log(`🔍 [getPublicTenantById] Found tenant: ${tenant.name}`);
 
     // 🚨 CRITICAL FIX: Only create defaults if hirsSettings is completely missing or empty
     // Do NOT overwrite existing HIRS settings that may have been modified by admin
@@ -429,7 +460,7 @@ exports.getPublicTenantById = async (req, res) => {
     });
 
   } catch (error) {
-    console.error(`❌ [getPublicTenantById] Error fetching tenant ${req.params.tenantId}:`, error);
+    console.error(`❌ [getPublicTenantById] Error fetching tenant ${req.params.tenantId || req.params.id || 'unknown'}:`, error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
