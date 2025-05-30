@@ -1,7 +1,6 @@
-// client/src/components/doctor/layout/DoctorLayout.jsx - Updated with Feature Control
+// client/src/components/doctor/layout/DoctorLayout.jsx - FIXED VERSION
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { useFeatureControl } from '../../../hooks/useFeatureControl';
 import { useTenant } from '../../../context/TenantContext';
 import '../../../styles/components/doctor/DoctorLayout.css';
 
@@ -17,16 +16,15 @@ import messageIcon from '../../../assets/icons/messages_icon.svg';
 const DoctorLayout = () => {
   const navigate = useNavigate();
   
-  // 🔄 NEW: Use feature control hook
-  const featureControl = useFeatureControl();
-  
   const { 
     currentTenant, 
     getThemeStyles, 
     platformName, 
     isLoading,
     refreshTenantSettings,
-    lastRefresh
+    lastRefresh,
+    isFeatureEnabled,  // 🚨 FIXED: Get this from useTenant
+    tenantSettings     // 🚨 FIXED: Get this from useTenant
   } = useTenant();
   
   const [currentUser, setCurrentUser] = useState(null);
@@ -120,7 +118,7 @@ const DoctorLayout = () => {
       : '76, 175, 80';
   };
 
-  // 🔄 UPDATED: Menu items with feature control integration
+  // 🚨 FIXED: Menu items with proper feature control integration
   const menuItems = React.useMemo(() => {
     const allItems = [
       { 
@@ -174,17 +172,28 @@ const DoctorLayout = () => {
       }
     ];
     
-    // 🔄 NEW: Filter items based on feature control
-    return allItems.filter(item => {
+    // 🔍 DEBUG: Add logging to see what's happening
+    console.log('🔍 [DoctorLayout] Building menu items...');
+    console.log('🔍 [DoctorLayout] tenantSettings:', tenantSettings);
+    console.log('🔍 [DoctorLayout] hirsSettings:', tenantSettings?.hirsSettings);
+    
+    // 🚨 FIXED: Use isFeatureEnabled directly from useTenant
+    const filteredItems = allItems.filter(item => {
       // Always show dashboard
       if (item.alwaysShow) {
+        console.log(`🔍 [DoctorLayout] ${item.label} - Always show`);
         return true;
       }
       
-      // 🔄 CHECK: Use feature control to determine visibility
-      return featureControl.isFeatureEnabled && featureControl.isFeatureEnabled(item.feature);
+      // 🚨 FIXED: Use isFeatureEnabled directly from useTenant
+      const enabled = isFeatureEnabled(item.feature);
+      console.log(`🔍 [DoctorLayout] ${item.label} (${item.feature}) - Enabled: ${enabled}`);
+      return enabled;
     });
-  }, [featureControl]);
+    
+    console.log('🔍 [DoctorLayout] Final filtered menu items:', filteredItems.map(i => i.label));
+    return filteredItems;
+  }, [isFeatureEnabled, tenantSettings]); // 🚨 FIXED: Correct dependencies
 
   const handleLogout = () => {
     localStorage.removeItem('token');
