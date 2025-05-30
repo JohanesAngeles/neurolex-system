@@ -182,7 +182,9 @@ const SystemSettings = () => {
       }, 1000);
 
       // Show success message
-      const featureName = settings.hirsSettings.find(h => h.id === hirsId)?.name || 'Feature';
+      const featureName = (settings.hirsSettings && Array.isArray(settings.hirsSettings)) 
+      ? settings.hirsSettings.find(h => h.id === hirsId)?.name || 'Feature'
+      : 'Feature';
       alert(`✅ ${featureName} has been ${newStatus ? 'enabled' : 'disabled'} successfully!`);
 
       // Close modal
