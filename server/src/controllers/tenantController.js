@@ -344,6 +344,9 @@ exports.updateTenant = async (req, res) => {
 /**
  * Get public tenant info by ID - accessible without authentication
  * Only returns non-sensitive information INCLUDING hirsSettings for feature control
+ * Get public tenant info by ID - accessible without authentication
+ * Only returns non-sensitive information INCLUDING hirsSettings for feature control
+ * 🚨 FIXED: Now saves default HIRS settings to database instead of just returning them
  */
 exports.getPublicTenantById = async (req, res) => {
   try {
@@ -354,8 +357,8 @@ exports.getPublicTenantById = async (req, res) => {
     const masterConn = getMasterConnection();
     const Tenant = masterConn.model('Tenant');
     
-    // 🚨 FIXED: Include all necessary fields including hirsSettings
-    const tenant = await Tenant.findById(id).select('name description logoUrl darkLogoUrl faviconUrl darkFaviconUrl primaryColor secondaryColor active hirsSettings');
+    // 🚨 FIXED: Find tenant without select to allow saving
+    const tenant = await Tenant.findById(id);
     
     if (!tenant) {
       console.warn(`⚠️ [getPublicTenantById] Tenant not found for ID: ${id}`);
@@ -374,26 +377,71 @@ exports.getPublicTenantById = async (req, res) => {
       });
     }
 
-    // 🔧 Get hirsSettings directly from tenant model or use defaults
-    let hirsSettings = tenant.hirsSettings;
-    
-    if (!hirsSettings || hirsSettings.length === 0) {
-      console.log(`ℹ️ [getPublicTenantById] No HIRS settings found for tenant ${id}, using defaults`);
+    // 🚨 CRITICAL FIX: Save default HIRS settings to database if they don't exist
+    if (!tenant.hirsSettings || !Array.isArray(tenant.hirsSettings) || tenant.hirsSettings.length === 0) {
+      console.log(`⚠️ [getPublicTenantById] No HIRS settings found for tenant ${id}, creating and SAVING defaults to database`);
       
-      // 🔧 Provide default HIRS settings if none exist
-      hirsSettings = [
-        { id: 1, icon: '📊', name: 'Dashboard', description: 'Main dashboard overview for doctors.', isActive: true, lastUpdated: new Date().toLocaleDateString() },
-        { id: 2, icon: '👥', name: 'Patients', description: 'Patient management and list view.', isActive: true, lastUpdated: new Date().toLocaleDateString() },
-        { id: 3, icon: '📖', name: 'Patient Journal Management', description: 'View and manage patient journal entries.', isActive: true, lastUpdated: new Date().toLocaleDateString() },
-        { id: 4, icon: '📝', name: 'Journal Template Management', description: 'Create and manage journal templates for patients.', isActive: true, lastUpdated: new Date().toLocaleDateString() },
-        { id: 5, icon: '📅', name: 'Appointments', description: 'Schedule and manage appointments with patients.', isActive: true, lastUpdated: new Date().toLocaleDateString() },
-        { id: 6, icon: '💬', name: 'Messages', description: 'Secure messaging with patients.', isActive: true, lastUpdated: new Date().toLocaleDateString() }
+      const defaultHirsSettings = [
+        {
+          id: 1,
+          icon: '📊',
+          name: 'Dashboard',
+          description: 'Main dashboard overview for doctors.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
+        },
+        {
+          id: 2,
+          icon: '👥',
+          name: 'Patients',
+          description: 'Patient management and list view.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
+        },
+        {
+          id: 3,
+          icon: '📖',
+          name: 'Patient Journal Management',
+          description: 'View and manage patient journal entries.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
+        },
+        {
+          id: 4,
+          icon: '📝',
+          name: 'Journal Template Management',
+          description: 'Create and manage journal templates for patients.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
+        },
+        {
+          id: 5,
+          icon: '📅',
+          name: 'Appointments',
+          description: 'Schedule and manage appointments with patients.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
+        },
+        {
+          id: 6,
+          icon: '💬',
+          name: 'Messages',
+          description: 'Secure messaging with patients.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
+        }
       ];
+      
+      // 🚨 SAVE TO DATABASE instead of just using defaults
+      tenant.hirsSettings = defaultHirsSettings;
+      await tenant.save();
+      
+      console.log(`✅ [getPublicTenantById] Default HIRS settings SAVED to database for tenant ${id}`);
     } else {
-      console.log(`✅ [getPublicTenantById] Found ${hirsSettings.length} HIRS settings for tenant ${id}`);
+      console.log(`✅ [getPublicTenantById] Found existing ${tenant.hirsSettings.length} HIRS settings for tenant ${id}`);
     }
 
-    // 🚨 FIXED: Structure response to match TenantContext expectations
+    // Structure response to match TenantContext expectations
     const responseData = {
       platformName: tenant.name || 'NEUROLEX',
       platformDescription: tenant.description || 'AI-powered mental wellness platform',
@@ -407,12 +455,16 @@ exports.getPublicTenantById = async (req, res) => {
       },
       primaryColor: tenant.primaryColor || '#4CAF50',
       secondaryColor: tenant.secondaryColor || '#2196F3',
-      hirsSettings: hirsSettings, // 🔧 Include feature settings with proper structure
+      hirsSettings: tenant.hirsSettings, // Now guaranteed to exist in database
       active: tenant.active
     };
 
-    console.log(`✅ [getPublicTenantById] Successfully returning tenant data with ${hirsSettings.length} HIRS settings`);
-    console.log(`🔍 [getPublicTenantById] HIRS settings preview:`, hirsSettings.map(h => ({ id: h.id, name: h.name, isActive: h.isActive })));
+    console.log(`✅ [getPublicTenantById] Successfully returning tenant data with ${tenant.hirsSettings.length} HIRS settings`);
+    console.log(`🔍 [getPublicTenantById] HIRS settings preview:`, tenant.hirsSettings.map(h => ({ 
+      id: h.id, 
+      name: h.name, 
+      isActive: h.isActive 
+    })));
     
     res.status(200).json({
       success: true,
@@ -427,7 +479,6 @@ exports.getPublicTenantById = async (req, res) => {
     });
   }
 };
-
 
 /**
  * Get all public tenant information for login/registration
