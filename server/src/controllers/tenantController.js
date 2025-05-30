@@ -350,135 +350,131 @@ exports.updateTenant = async (req, res) => {
  */
 exports.getPublicTenantById = async (req, res) => {
   try {
-    // Extract tenantId from route params
-    const tenantId = req.params.id || req.params.tenantId;
+    const { id } = req.params;
     
-    console.log(`🔍 [getPublicTenantById] Fetching public tenant info for ID: ${tenantId}`);
-    console.log(`🔍 [getPublicTenantById] Route params:`, req.params);
-    console.log(`🔍 [getPublicTenantById] Query params:`, req.query);
-
-    // Validate tenantId
-    if (!tenantId) {
-      console.error(`❌ [getPublicTenantById] No tenant ID provided in request`);
-      return res.status(400).json({
-        success: false,
-        message: 'Tenant ID is required'
-      });
-    }
-
-    // Validate tenantId format
-    if (!tenantId.match(/^[0-9a-fA-F]{24}$/)) {
-      console.error(`❌ [getPublicTenantById] Invalid tenant ID format: ${tenantId}`);
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid tenant ID format'
-      });
-    }
-
-    // Get master connection
+    console.log(`🔍 [getPublicTenantById] Fetching public tenant info for ID: ${id}`);
+    
     const masterConn = getMasterConnection();
-    if (!masterConn) {
-      console.error(`❌ [getPublicTenantById] Failed to get master connection`);
-      return res.status(500).json({
-        success: false,
-        message: 'Database connection error'
-      });
-    }
-
     const Tenant = masterConn.model('Tenant');
-
-    // 🚨 CRITICAL FIX: Find tenant and populate hirsSettings properly
-    const tenant = await Tenant.findById(tenantId).lean();
+    
+    // 🚨 FIXED: Find tenant without select to allow saving
+    const tenant = await Tenant.findById(id);
     
     if (!tenant) {
-      console.error(`❌ [getPublicTenantById] Tenant not found: ${tenantId}`);
+      console.warn(`⚠️ [getPublicTenantById] Tenant not found for ID: ${id}`);
       return res.status(404).json({
         success: false,
-        message: 'Tenant not found'
+        message: 'Clinic not found'
+      });
+    }
+    
+    // Check if tenant is active
+    if (!tenant.active) {
+      console.warn(`⚠️ [getPublicTenantById] Tenant is inactive for ID: ${id}`);
+      return res.status(403).json({
+        success: false,
+        message: 'This clinic is currently inactive'
       });
     }
 
-    console.log(`🔍 [getPublicTenantById] Found tenant: ${tenant.name}`);
-    console.log(`🔍 [getPublicTenantById] Raw hirsSettings from DB:`, tenant.hirsSettings);
-
-    // 🚨 CRITICAL: Check if hirsSettings exists AND has data
-    let hirsSettings = tenant.hirsSettings;
-    
-    if (!hirsSettings || !Array.isArray(hirsSettings) || hirsSettings.length === 0) {
-      console.log(`⚠️ [getPublicTenantById] No HIRS settings found for tenant ${tenantId}, creating and SAVING defaults to database`);
+    // 🚨 CRITICAL FIX: Save default HIRS settings to database if they don't exist
+    if (!tenant.hirsSettings || !Array.isArray(tenant.hirsSettings) || tenant.hirsSettings.length === 0) {
+      console.log(`⚠️ [getPublicTenantById] No HIRS settings found for tenant ${id}, creating and SAVING defaults to database`);
       
-      // Create default HIRS settings
       const defaultHirsSettings = [
-        { id: 1, icon: '📊', name: 'Dashboard', description: 'Main dashboard overview for doctors.', lastUpdated: new Date().toLocaleDateString(), isActive: true },
-        { id: 2, icon: '👥', name: 'Patients', description: 'Patient management and list view.', lastUpdated: new Date().toLocaleDateString(), isActive: true },
-        { id: 3, icon: '📖', name: 'Patient Journal Management', description: 'View and manage patient journal entries.', lastUpdated: new Date().toLocaleDateString(), isActive: true },
-        { id: 4, icon: '📝', name: 'Journal Template Management', description: 'Create and manage journal templates for patients.', lastUpdated: new Date().toLocaleDateString(), isActive: true },
-        { id: 5, icon: '📅', name: 'Appointments', description: 'Schedule and manage appointments with patients.', lastUpdated: new Date().toLocaleDateString(), isActive: true },
-        { id: 6, icon: '💬', name: 'Messages', description: 'Secure messaging with patients.', lastUpdated: new Date().toLocaleDateString(), isActive: true }
-      ];
-
-      // 🚨 CRITICAL: Update using findByIdAndUpdate to ensure it saves
-      const updatedTenant = await Tenant.findByIdAndUpdate(
-        tenantId,
-        { 
-          $set: { 
-            hirsSettings: defaultHirsSettings,
-            updatedAt: new Date()
-          }
+        {
+          id: 1,
+          icon: '📊',
+          name: 'Dashboard',
+          description: 'Main dashboard overview for doctors.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
         },
-        { 
-          new: true, 
-          upsert: false,
-          runValidators: false
+        {
+          id: 2,
+          icon: '👥',
+          name: 'Patients',
+          description: 'Patient management and list view.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
+        },
+        {
+          id: 3,
+          icon: '📖',
+          name: 'Patient Journal Management',
+          description: 'View and manage patient journal entries.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
+        },
+        {
+          id: 4,
+          icon: '📝',
+          name: 'Journal Template Management',
+          description: 'Create and manage journal templates for patients.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
+        },
+        {
+          id: 5,
+          icon: '📅',
+          name: 'Appointments',
+          description: 'Schedule and manage appointments with patients.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
+        },
+        {
+          id: 6,
+          icon: '💬',
+          name: 'Messages',
+          description: 'Secure messaging with patients.',
+          lastUpdated: new Date().toLocaleDateString(),
+          isActive: true
         }
-      );
+      ];
       
-      if (updatedTenant) {
-        hirsSettings = updatedTenant.hirsSettings;
-        console.log(`✅ [getPublicTenantById] Default HIRS settings SAVED to database for tenant ${tenantId}`);
-      } else {
-        console.error(`❌ [getPublicTenantById] Failed to save default HIRS settings for tenant ${tenantId}`);
-        hirsSettings = defaultHirsSettings; // Use defaults even if save failed
-      }
+      // 🚨 SAVE TO DATABASE instead of just using defaults
+      tenant.hirsSettings = defaultHirsSettings;
+      await tenant.save();
+      
+      console.log(`✅ [getPublicTenantById] Default HIRS settings SAVED to database for tenant ${id}`);
     } else {
-      // 🎯 FIXED: HIRS settings exist - preserve them (don't overwrite admin changes)
-      console.log(`✅ [getPublicTenantById] Found existing HIRS settings for tenant ${tenantId}, preserving admin changes`);
-      console.log(`🔍 [getPublicTenantById] Current HIRS states:`, hirsSettings.map(h => `${h.name}: ${h.isActive}`));
+      console.log(`✅ [getPublicTenantById] Found existing ${tenant.hirsSettings.length} HIRS settings for tenant ${id}`);
     }
 
-    console.log(`✅ [getPublicTenantById] Successfully returning tenant data with ${hirsSettings?.length || 0} HIRS settings`);
+    // Structure response to match TenantContext expectations
+    const responseData = {
+      platformName: tenant.name || 'NEUROLEX',
+      platformDescription: tenant.description || 'AI-powered mental wellness platform',
+      systemLogo: {
+        light: tenant.logoUrl || null,
+        dark: tenant.darkLogoUrl || null
+      },
+      favicon: {
+        light: tenant.faviconUrl || null,
+        dark: tenant.darkFaviconUrl || null
+      },
+      primaryColor: tenant.primaryColor || '#4CAF50',
+      secondaryColor: tenant.secondaryColor || '#2196F3',
+      hirsSettings: tenant.hirsSettings, // Now guaranteed to exist in database
+      active: tenant.active
+    };
+
+    console.log(`✅ [getPublicTenantById] Successfully returning tenant data with ${tenant.hirsSettings.length} HIRS settings`);
+    console.log(`🔍 [getPublicTenantById] HIRS settings preview:`, tenant.hirsSettings.map(h => ({ 
+      id: h.id, 
+      name: h.name, 
+      isActive: h.isActive 
+    })));
     
-    // Log current HIRS settings for debugging
-    console.log(`🔍 [getPublicTenantById] HIRS settings preview: [`);
-    if (hirsSettings && hirsSettings.length > 0) {
-      hirsSettings.forEach(setting => {
-        console.log(`  { id: ${setting.id}, name: '${setting.name}', isActive: ${setting.isActive} },`);
-      });
-    }
-    console.log(`]`);
-
-    // Return the public tenant information
-    res.json({
+    res.status(200).json({
       success: true,
-      data: {
-        _id: tenant._id,
-        name: tenant.name,
-        logoUrl: tenant.logoUrl,
-        darkLogoUrl: tenant.darkLogoUrl,
-        faviconUrl: tenant.faviconUrl,
-        darkFaviconUrl: tenant.darkFaviconUrl,
-        primaryColor: tenant.primaryColor,
-        secondaryColor: tenant.secondaryColor,
-        description: tenant.description,
-        hirsSettings: hirsSettings || []
-      }
+      data: responseData
     });
-
   } catch (error) {
-    console.error(`❌ [getPublicTenantById] Error fetching tenant ${req.params.id || req.params.tenantId || 'unknown'}:`, error);
+    console.error('❌ [getPublicTenantById] Error fetching public tenant info:', error);
     res.status(500).json({
       success: false,
-      message: 'Internal server error',
+      message: 'Error fetching clinic information',
       error: error.message
     });
   }
