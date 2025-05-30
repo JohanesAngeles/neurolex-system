@@ -97,15 +97,34 @@ const SystemSettings = () => {
 
   // 🆕 NEW: Toggle HIRS feature function
   const toggleHirsFeature = async (hirsId, newStatus) => {
-    if (!selectedTenant) {
-      alert('Please select a clinic first');
-      return;
-    }
+  if (!selectedTenant) {
+    alert('Please select a clinic first');
+    return;
+  }
 
-    try {
-      setModalState(prev => ({ ...prev, isLoading: true }));
+  try {
+    setModalState(prev => ({ ...prev, isLoading: true }));
 
-      // Update the HIRS settings array
+    console.log('🔄 Toggling HIRS feature:', { hirsId, newStatus, selectedTenant });
+
+    // 🚨 FIXED: Use the dedicated HIRS toggle endpoint that exists in your routes
+    const response = await fetch(`/api/admin/tenant-settings/${selectedTenant}/hirs/${hirsId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+      },
+      body: JSON.stringify({
+        isActive: newStatus,
+        lastUpdated: new Date().toLocaleDateString()
+      })
+    });
+
+    const data = await response.json();
+    console.log('🔄 API Response:', data);
+    
+    if (data.success) {
+      // Update local state
       const updatedHirsSettings = settings.hirsSettings.map(hirs => 
         hirs.id === hirsId 
           ? { 
@@ -116,40 +135,35 @@ const SystemSettings = () => {
           : hirs
       );
 
-      // Save to backend
+      setSettings(prev => ({
+        ...prev,
+        hirsSettings: updatedHirsSettings
+      }));
+
+      // 🔄 Broadcast the update to all open tabs (this will update doctor interface)
       const updateData = { hirsSettings: updatedHirsSettings };
-      const response = await adminService.updateIndividualSetting(selectedTenant, updateData);
-      
-      if (response.success) {
-        // Update local state
-        setSettings(prev => ({
-          ...prev,
-          hirsSettings: updatedHirsSettings
-        }));
+      broadcastSettingsUpdate(selectedTenant, updateData);
 
-        // 🔄 Broadcast the update to all open tabs (this will update doctor interface)
-        broadcastSettingsUpdate(selectedTenant, updateData);
+      // Show success message
+      const featureName = settings.hirsSettings.find(h => h.id === hirsId)?.name || 'Feature';
+      alert(`✅ ${featureName} has been ${newStatus ? 'enabled' : 'disabled'} successfully!`);
 
-        // Show success message
-        const featureName = settings.hirsSettings.find(h => h.id === hirsId)?.name || 'Feature';
-        alert(`✅ ${featureName} has been ${newStatus ? 'enabled' : 'disabled'} successfully!`);
+      // Close modal
+      setModalState({ isOpen: false, hirsSetting: null, action: null, isLoading: false });
 
-        // Close modal
-        setModalState({ isOpen: false, hirsSetting: null, action: null, isLoading: false });
-
-        // Refresh settings after a short delay
-        setTimeout(() => {
-          fetchTenantSettings();
-        }, 500);
-      } else {
-        throw new Error(response.message || 'Update failed');
-      }
-    } catch (error) {
-      console.error('Error toggling HIRS feature:', error);
-      alert(`❌ Failed to update feature: ${error.message}`);
-      setModalState(prev => ({ ...prev, isLoading: false }));
+      // Refresh settings after a short delay to confirm the update
+      setTimeout(() => {
+        fetchTenantSettings();
+      }, 1000);
+    } else {
+      throw new Error(data.message || 'Update failed');
     }
-  };
+  } catch (error) {
+    console.error('❌ Error toggling HIRS feature:', error);
+    alert(`❌ Failed to update feature: ${error.message}`);
+    setModalState(prev => ({ ...prev, isLoading: false }));
+  }
+};
 
   // 🆕 NEW: Handle HIRS toggle button click
   const handleHirsToggleClick = (hirs) => {
