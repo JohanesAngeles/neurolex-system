@@ -105,11 +105,11 @@ const SystemSettings = () => {
   try {
     setModalState(prev => ({ ...prev, isLoading: true }));
 
-    console.log('🔄 Toggling HIRS feature:', { hirsId, newStatus, selectedTenant });
+    console.log('🔄 [ADMIN] Toggling HIRS feature:', { hirsId, newStatus, selectedTenant });
 
-    // 🚨 FIXED: Use the dedicated HIRS toggle endpoint that exists in your routes
-    const response = await fetch(`/api/admin/tenant-settings/${selectedTenant}/hirs/${hirsId}`, {
-      method: 'PATCH',
+    // 🚨 FIXED: Use the correct API endpoint that matches your backend routes
+    const response = await fetch(`/api/admin/tenant-settings/${selectedTenant}/hirs/${hirsId}/toggle`, {
+      method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
@@ -121,10 +121,10 @@ const SystemSettings = () => {
     });
 
     const data = await response.json();
-    console.log('🔄 API Response:', data);
+    console.log('🔄 [ADMIN] API Response:', data);
     
     if (data.success) {
-      // Update local state
+      // Update local state immediately
       const updatedHirsSettings = settings.hirsSettings.map(hirs => 
         hirs.id === hirsId 
           ? { 
@@ -140,9 +140,46 @@ const SystemSettings = () => {
         hirsSettings: updatedHirsSettings
       }));
 
-      // 🔄 Broadcast the update to all open tabs (this will update doctor interface)
+      // 🚨 CRITICAL: Broadcast the update to all doctor tabs
       const updateData = { hirsSettings: updatedHirsSettings };
-      broadcastSettingsUpdate(selectedTenant, updateData);
+      
+      // Method 1: Custom event for same tab
+      window.dispatchEvent(new CustomEvent('tenantSettingsUpdated', {
+        detail: {
+          tenantId: selectedTenant,
+          hirsId,
+          isActive: newStatus,
+          updatedSettings: updateData,
+          timestamp: Date.now()
+        }
+      }));
+      
+      // Method 2: localStorage trigger for other tabs
+      localStorage.setItem('tenantSettingsUpdated', JSON.stringify({
+        tenantId: selectedTenant,
+        hirsId,
+        isActive: newStatus,
+        timestamp: Date.now(),
+        updatedSettings: updateData
+      }));
+      
+      // Method 3: Broadcast channel (if supported)
+      if (window.BroadcastChannel) {
+        const channel = new BroadcastChannel('tenant-settings');
+        channel.postMessage({
+          type: 'HIRS_TOGGLE',
+          tenantId: selectedTenant,
+          hirsId,
+          isActive: newStatus,
+          timestamp: Date.now()
+        });
+        channel.close();
+      }
+
+      // Clean up localStorage after a delay
+      setTimeout(() => {
+        localStorage.removeItem('tenantSettingsUpdated');
+      }, 1000);
 
       // Show success message
       const featureName = settings.hirsSettings.find(h => h.id === hirsId)?.name || 'Feature';
@@ -151,16 +188,38 @@ const SystemSettings = () => {
       // Close modal
       setModalState({ isOpen: false, hirsSetting: null, action: null, isLoading: false });
 
-      // Refresh settings after a short delay to confirm the update
+      // 🔄 Force refresh doctor interfaces by triggering multiple update methods
+      console.log('📡 [ADMIN] Broadcasting settings update to all doctor tabs...');
+      
+      // Additional trigger - force page refresh signal for doctor tabs
+      localStorage.setItem('forceRefreshTenantSettings', JSON.stringify({
+        tenantId: selectedTenant,
+        timestamp: Date.now()
+      }));
+      
       setTimeout(() => {
-        fetchTenantSettings();
-      }, 1000);
+        localStorage.removeItem('forceRefreshTenantSettings');
+      }, 2000);
+
     } else {
       throw new Error(data.message || 'Update failed');
     }
   } catch (error) {
-    console.error('❌ Error toggling HIRS feature:', error);
-    alert(`❌ Failed to update feature: ${error.message}`);
+    console.error('❌ [ADMIN] Error toggling HIRS feature:', error);
+    
+    // More specific error messages
+    let errorMessage = 'Failed to update feature';
+    if (error.message.includes('fetch')) {
+      errorMessage = 'Network error - please check your connection';
+    } else if (error.message.includes('401')) {
+      errorMessage = 'Authentication failed - please login again';
+    } else if (error.message.includes('404')) {
+      errorMessage = 'API endpoint not found - please contact support';
+    } else {
+      errorMessage = error.message;
+    }
+    
+    alert(`❌ ${errorMessage}`);
     setModalState(prev => ({ ...prev, isLoading: false }));
   }
 };
