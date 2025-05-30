@@ -354,8 +354,8 @@ exports.getPublicTenantById = async (req, res) => {
     const masterConn = getMasterConnection();
     const Tenant = masterConn.model('Tenant');
     
-    // Get tenant info including hirsSettings (stored directly in Tenant model)
-    const tenant = await Tenant.findById(id).select('name logoUrl primaryColor secondaryColor active systemLogo favicon hirsSettings');
+    // 🚨 FIXED: Include all necessary fields including hirsSettings
+    const tenant = await Tenant.findById(id).select('name description logoUrl darkLogoUrl faviconUrl darkFaviconUrl primaryColor secondaryColor active hirsSettings');
     
     if (!tenant) {
       console.warn(`⚠️ [getPublicTenantById] Tenant not found for ID: ${id}`);
@@ -382,31 +382,37 @@ exports.getPublicTenantById = async (req, res) => {
       
       // 🔧 Provide default HIRS settings if none exist
       hirsSettings = [
-        { id: 1, name: 'Dashboard', isActive: true },
-        { id: 2, name: 'Patients', isActive: true },
-        { id: 3, name: 'Patient Journal Management', isActive: true },
-        { id: 4, name: 'Journal Template Management', isActive: true },
-        { id: 5, name: 'Appointments', isActive: true },
-        { id: 6, name: 'Messages', isActive: true }
+        { id: 1, icon: '📊', name: 'Dashboard', description: 'Main dashboard overview for doctors.', isActive: true, lastUpdated: new Date().toLocaleDateString() },
+        { id: 2, icon: '👥', name: 'Patients', description: 'Patient management and list view.', isActive: true, lastUpdated: new Date().toLocaleDateString() },
+        { id: 3, icon: '📖', name: 'Patient Journal Management', description: 'View and manage patient journal entries.', isActive: true, lastUpdated: new Date().toLocaleDateString() },
+        { id: 4, icon: '📝', name: 'Journal Template Management', description: 'Create and manage journal templates for patients.', isActive: true, lastUpdated: new Date().toLocaleDateString() },
+        { id: 5, icon: '📅', name: 'Appointments', description: 'Schedule and manage appointments with patients.', isActive: true, lastUpdated: new Date().toLocaleDateString() },
+        { id: 6, icon: '💬', name: 'Messages', description: 'Secure messaging with patients.', isActive: true, lastUpdated: new Date().toLocaleDateString() }
       ];
     } else {
       console.log(`✅ [getPublicTenantById] Found ${hirsSettings.length} HIRS settings for tenant ${id}`);
     }
 
-    // 🚨 UPDATED: Include hirsSettings in the response
+    // 🚨 FIXED: Structure response to match TenantContext expectations
     const responseData = {
-      _id: tenant._id,
-      name: tenant.name,
-      logoUrl: tenant.logoUrl,
-      primaryColor: tenant.primaryColor,
-      secondaryColor: tenant.secondaryColor,
-      systemLogo: tenant.systemLogo,
-      favicon: tenant.favicon,
-      hirsSettings: hirsSettings, // 🔧 Include feature settings
+      platformName: tenant.name || 'NEUROLEX',
+      platformDescription: tenant.description || 'AI-powered mental wellness platform',
+      systemLogo: {
+        light: tenant.logoUrl || null,
+        dark: tenant.darkLogoUrl || null
+      },
+      favicon: {
+        light: tenant.faviconUrl || null,
+        dark: tenant.darkFaviconUrl || null
+      },
+      primaryColor: tenant.primaryColor || '#4CAF50',
+      secondaryColor: tenant.secondaryColor || '#2196F3',
+      hirsSettings: hirsSettings, // 🔧 Include feature settings with proper structure
       active: tenant.active
     };
 
     console.log(`✅ [getPublicTenantById] Successfully returning tenant data with ${hirsSettings.length} HIRS settings`);
+    console.log(`🔍 [getPublicTenantById] HIRS settings preview:`, hirsSettings.map(h => ({ id: h.id, name: h.name, isActive: h.isActive })));
     
     res.status(200).json({
       success: true,
