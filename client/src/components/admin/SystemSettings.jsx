@@ -640,7 +640,7 @@ const SystemSettings = () => {
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>
-                      {settings.hirsSettings.filter(h => h.isActive).length} enabled, {settings.hirsSettings.filter(h => !h.isActive).length} disabled
+                      {(settings.hirsSettings && Array.isArray(settings.hirsSettings)) ? settings.hirsSettings.filter(h => h.isActive).length : 0} enabled, {(settings.hirsSettings && Array.isArray(settings.hirsSettings)) ? settings.hirsSettings.filter(h => !h.isActive).length : 0} disabled
                     </div>
                     <div style={{ fontSize: '10px', color: '#9ca3af' }}>
                       Changes apply immediately to all doctor sessions
@@ -656,7 +656,7 @@ const SystemSettings = () => {
                     <div>Last Updated</div>
                     <div>Status</div>
                   </div>
-                  {settings.hirsSettings.map((hirs, index) => (
+                  {(settings.hirsSettings && Array.isArray(settings.hirsSettings)) ? settings.hirsSettings.map((hirs, index) => (
                     <div key={hirs.id} style={{ display: 'grid', gridTemplateColumns: '80px 200px 1fr 150px 120px', gap: '16px', padding: '16px', borderBottom: index < settings.hirsSettings.length - 1 ? '1px solid #f3f4f6' : 'none', alignItems: 'center', backgroundColor: 'white' }}>
                       <div style={{ fontSize: '32px', textAlign: 'center' }}>{hirs.icon}</div>
                       <div style={{ fontWeight: '500', color: '#1f2937' }}>{hirs.name}</div>
@@ -684,7 +684,7 @@ const SystemSettings = () => {
                         </button>
                       </div>
                     </div>
-                  ))}
+                  )) : <div>No HIRS settings available</div>}
                 </div>
                 
                 {/* 🆕 NEW: Feature Summary */}
@@ -693,13 +693,13 @@ const SystemSettings = () => {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <div style={{ width: '12px', height: '12px', backgroundColor: '#22c55e', borderRadius: '50%' }}></div>
                       <span style={{ fontSize: '14px', color: '#374151' }}>
-                        {settings.hirsSettings.filter(h => h.isActive).length} Features Enabled
+                        {(settings.hirsSettings && Array.isArray(settings.hirsSettings)) ? settings.hirsSettings.filter(h => h.isActive).length : 0} Features Enabled
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <div style={{ width: '12px', height: '12px', backgroundColor: '#dc2626', borderRadius: '50%' }}></div>
                       <span style={{ fontSize: '14px', color: '#374151' }}>
-                        {settings.hirsSettings.filter(h => !h.isActive).length} Features Disabled
+                        {(settings.hirsSettings && Array.isArray(settings.hirsSettings)) ? settings.hirsSettings.filter(h => !h.isActive).length : 0} Features Disabled
                       </span>
                     </div>
                     <div style={{ fontSize: '12px', color: '#64748b', marginLeft: 'auto' }}>
