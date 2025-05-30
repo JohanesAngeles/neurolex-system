@@ -1,7 +1,7 @@
 // client/src/components/admin/layout/SystemSettings.jsx - Complete Enhanced with HIRS Toggle
 import React, { useState, useEffect, useCallback } from 'react';
 import adminService from '../../services/adminService';
-import HirsToggleModal from './HirsToggleModal'; // Import the modal component
+import HirsToggleModal from './layout/HirsToggleModal'; // Import the modal component
 
 const SystemSettings = () => {
   // State management
