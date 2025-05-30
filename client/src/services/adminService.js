@@ -609,14 +609,27 @@ uploadTenantAsset: async (formData) => {
 toggleHirsFeature: async (tenantId, hirsId, isActive) => {
   try {
     console.log(`adminService.toggleHirsFeature called - Tenant: ${tenantId}, HIRS: ${hirsId}, Active: ${isActive}`);
-    const response = await api.patch(`/admin/tenant-settings/${tenantId}/hirs/${hirsId}`, { 
+    
+    // 🚨 CRITICAL FIX: Use the correct endpoint that matches your backend route
+    const response = await api.put(`/admin/tenant-settings/${tenantId}/hirs/${hirsId}/toggle`, { 
       isActive,
       lastUpdated: new Date().toLocaleDateString()
     });
+    
+    console.log('toggleHirsFeature response:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error toggling HIRS feature:', error);
-    throw error;
+    
+    // 🔧 IMPROVED: Better error handling
+    if (error.response) {
+      const errorMessage = error.response.data?.message || `HTTP ${error.response.status}: ${error.response.statusText}`;
+      throw new Error(errorMessage);
+    } else if (error.request) {
+      throw new Error('Network error - please check your connection');
+    } else {
+      throw new Error(error.message || 'Unknown error occurred');
+    }
   }
 },
 

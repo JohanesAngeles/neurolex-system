@@ -1,4 +1,4 @@
-// client/src/components/admin/layout/SystemSettings.jsx - COMPLETELY FIXED - ALL ERRORS RESOLVED
+// client/src/components/admin/layout/SystemSettings.jsx - COMPLETE FIXED VERSION
 import React, { useState, useEffect, useCallback } from 'react';
 import adminService from '../../services/adminService';
 import HirsToggleModal from './layout/HirsToggleModal';
@@ -77,6 +77,93 @@ const SystemSettings = () => {
     }
   }, [safeGetHirsSettings]);
 
+  // 🚨 FIXED: Use adminService instead of direct fetch
+  const toggleHirsFeature = async (hirsId, newStatus) => {
+    if (!selectedTenant) {
+      alert('Please select a clinic first');
+      return;
+    }
+
+    try {
+      setModalState(prev => ({ ...prev, isLoading: true }));
+
+      console.log('🔄 [ADMIN] Toggling HIRS feature via adminService:', { hirsId, newStatus, selectedTenant });
+
+      // 🚨 FIXED: Use adminService instead of direct fetch
+      const data = await adminService.toggleHirsFeature(selectedTenant, hirsId, newStatus);
+      
+      console.log('🔄 [ADMIN] AdminService Response:', data);
+      
+      if (data.success) {
+        // 🔧 SAFE: Get current hirsSettings array
+        const currentHirsSettings = safeGetHirsSettings();
+        
+        if (currentHirsSettings.length > 0) {
+          try {
+            // Update local state immediately with SAFE operations
+            const updatedHirsSettings = currentHirsSettings.map(hirs => {
+              if (hirs && typeof hirs.id !== 'undefined' && hirs.id === hirsId) {
+                return { 
+                  ...hirs, 
+                  isActive: newStatus, 
+                  lastUpdated: new Date().toLocaleDateString() 
+                };
+              }
+              return hirs;
+            });
+
+            setSettings(prev => ({
+              ...prev,
+              hirsSettings: updatedHirsSettings
+            }));
+
+            // Broadcast the update to all doctor tabs
+            broadcastSettingsUpdate(selectedTenant, { hirsSettings: updatedHirsSettings });
+
+            // 🔧 SAFE: Get feature name
+            const featureName = safeGetFeatureName(hirsId);
+            alert(`✅ ${featureName} has been ${newStatus ? 'enabled' : 'disabled'} successfully!`);
+
+          } catch (updateError) {
+            console.error('Error updating local state:', updateError);
+            // Fallback to refresh
+            await fetchTenantSettings();
+            alert(`✅ Feature has been ${newStatus ? 'enabled' : 'disabled'} successfully!`);
+          }
+        } else {
+          console.warn('⚠️ hirsSettings array is empty, refreshing...');
+          await fetchTenantSettings();
+          alert(`✅ Feature has been ${newStatus ? 'enabled' : 'disabled'} successfully!`);
+        }
+
+        // Close modal
+        setModalState({ isOpen: false, hirsSetting: null, action: null, isLoading: false });
+
+      } else {
+        throw new Error(data.message || 'Update failed');
+      }
+    } catch (error) {
+      console.error('❌ [ADMIN] Error toggling HIRS feature:', error);
+      
+      let errorMessage = 'Failed to update feature';
+      
+      if (error.message) {
+        if (error.message.includes('401') || error.message.includes('403')) {
+          errorMessage = 'Authentication failed - please login again';
+        } else if (error.message.includes('404')) {
+          errorMessage = 'Feature not found - please refresh the page';
+        } else if (error.message.includes('Network Error') || error.message.includes('Failed to fetch')) {
+          errorMessage = 'Network error - please check your connection';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      alert(`❌ ${errorMessage}`);
+      setModalState(prev => ({ ...prev, isLoading: false }));
+    }
+  };
+
   // Broadcast settings update to all open tabs/windows
   const broadcastSettingsUpdate = useCallback((tenantId, updatedSettings) => {
     try {
@@ -130,153 +217,6 @@ const SystemSettings = () => {
       }
     } catch (error) {
       alert(`❌ Failed to save ${settingType}: ${error.response?.data?.message || error.message}`);
-    }
-  };
-
-  // 🔧 COMPLETELY FIXED: Toggle HIRS feature function with TOTAL error prevention
-  const toggleHirsFeature = async (hirsId, newStatus) => {
-    if (!selectedTenant) {
-      alert('Please select a clinic first');
-      return;
-    }
-
-    try {
-      setModalState(prev => ({ ...prev, isLoading: true }));
-
-      console.log('🔄 [ADMIN] Toggling HIRS feature:', { hirsId, newStatus, selectedTenant });
-
-      const response = await fetch(`/api/admin/tenant-settings/${selectedTenant}/hirs/${hirsId}/toggle`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
-        },
-        body: JSON.stringify({
-          isActive: newStatus,
-          lastUpdated: new Date().toLocaleDateString()
-        })
-      });
-
-      const data = await response.json();
-      console.log('🔄 [ADMIN] API Response:', data);
-      
-      if (data.success) {
-        // 🔧 SAFE: Get current hirsSettings array
-        const currentHirsSettings = safeGetHirsSettings();
-        
-        if (currentHirsSettings.length > 0) {
-          try {
-            // Update local state immediately with SAFE operations
-            const updatedHirsSettings = currentHirsSettings.map(hirs => {
-              if (hirs && typeof hirs.id !== 'undefined' && hirs.id === hirsId) {
-                return { 
-                  ...hirs, 
-                  isActive: newStatus, 
-                  lastUpdated: new Date().toLocaleDateString() 
-                };
-              }
-              return hirs;
-            });
-
-            setSettings(prev => ({
-              ...prev,
-              hirsSettings: updatedHirsSettings
-            }));
-
-            // Broadcast the update to all doctor tabs
-            const updateData = { hirsSettings: updatedHirsSettings };
-            
-            // Multiple broadcast methods
-            window.dispatchEvent(new CustomEvent('tenantSettingsUpdated', {
-              detail: {
-                tenantId: selectedTenant,
-                hirsId,
-                isActive: newStatus,
-                updatedSettings: updateData,
-                timestamp: Date.now()
-              }
-            }));
-            
-            localStorage.setItem('tenantSettingsUpdated', JSON.stringify({
-              tenantId: selectedTenant,
-              hirsId,
-              isActive: newStatus,
-              timestamp: Date.now(),
-              updatedSettings: updateData
-            }));
-            
-            if (window.BroadcastChannel) {
-              try {
-                const channel = new BroadcastChannel('tenant-settings');
-                channel.postMessage({
-                  type: 'HIRS_TOGGLE',
-                  tenantId: selectedTenant,
-                  hirsId,
-                  isActive: newStatus,
-                  timestamp: Date.now()
-                });
-                channel.close();
-              } catch (broadcastError) {
-                console.warn('BroadcastChannel error:', broadcastError);
-              }
-            }
-
-            // Clean up localStorage
-            setTimeout(() => {
-              localStorage.removeItem('tenantSettingsUpdated');
-            }, 1000);
-
-            // 🔧 SAFE: Get feature name
-            const featureName = safeGetFeatureName(hirsId);
-
-            alert(`✅ ${featureName} has been ${newStatus ? 'enabled' : 'disabled'} successfully!`);
-
-            // Force refresh signal for doctor tabs
-            localStorage.setItem('forceRefreshTenantSettings', JSON.stringify({
-              tenantId: selectedTenant,
-              timestamp: Date.now()
-            }));
-            
-            setTimeout(() => {
-              localStorage.removeItem('forceRefreshTenantSettings');
-            }, 2000);
-
-          } catch (updateError) {
-            console.error('Error updating local state:', updateError);
-            // Fallback to refresh
-            await fetchTenantSettings();
-            alert(`✅ Feature has been ${newStatus ? 'enabled' : 'disabled'} successfully!`);
-          }
-        } else {
-          console.warn('⚠️ hirsSettings array is empty, refreshing...');
-          await fetchTenantSettings();
-          alert(`✅ Feature has been ${newStatus ? 'enabled' : 'disabled'} successfully!`);
-        }
-
-        // Close modal
-        setModalState({ isOpen: false, hirsSetting: null, action: null, isLoading: false });
-
-      } else {
-        throw new Error(data.message || 'Update failed');
-      }
-    } catch (error) {
-      console.error('❌ [ADMIN] Error toggling HIRS feature:', error);
-      
-      let errorMessage = 'Failed to update feature';
-      if (error.message) {
-        if (error.message.includes('fetch')) {
-          errorMessage = 'Network error - please check your connection';
-        } else if (error.message.includes('401')) {
-          errorMessage = 'Authentication failed - please login again';
-        } else if (error.message.includes('404')) {
-          errorMessage = 'API endpoint not found - please contact support';
-        } else {
-          errorMessage = error.message;
-        }
-      }
-      
-      alert(`❌ ${errorMessage}`);
-      setModalState(prev => ({ ...prev, isLoading: false }));
     }
   };
 
@@ -414,7 +354,7 @@ const SystemSettings = () => {
     setSettings(prev => ({ ...prev, [field]: value }));
   };
 
-  // File upload function with real-time updates
+  // 🚨 FIXED: File upload using adminService
   const handleFileUpload = async (imageType, variant, file) => {
     if (!file || !selectedTenant) {
       alert('Please select a clinic first');
@@ -440,29 +380,20 @@ const SystemSettings = () => {
       };
       fileReader.readAsDataURL(file);
 
-      // Upload to server
+      // Upload using adminService
       const formData = new FormData();
       formData.append('logo', file);
       formData.append('logoType', variant);
       formData.append('imageType', imageType);
       formData.append('tenantId', selectedTenant);
 
-      const response = await fetch('/api/admin/upload-logo', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` },
-        body: formData
-      });
-
-      const data = await response.json();
+      const data = await adminService.uploadTenantAsset(formData);
+      
       if (data.success) {
         setTimeout(() => {
           const previewKey = `${variant}${imageType === 'logo' ? 'Logo' : 'Favicon'}`;
           setPreviewUrls(prev => ({ ...prev, [previewKey]: data.url + '?t=' + Date.now() }));
         }, 500);
-
-        const updatedImageData = {
-          [variant]: data.url
-        };
 
         setSettings(prev => ({
           ...prev,
@@ -617,7 +548,7 @@ const SystemSettings = () => {
                 </div>
               </div>
 
-              {/* HIRS Management Table with COMPLETELY Fixed Toggle Functionality */}
+              {/* HIRS Management Table - Using AdminService */}
               <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '12px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                   <div>
