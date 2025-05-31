@@ -1,4 +1,3 @@
-// client/src/components/admin/layout/AdminLayout.jsx
 import React from 'react';
 import { Outlet, NavLink } from 'react-router-dom';
 import { AdminProvider } from '../../../context/AdminContext';
@@ -16,13 +15,13 @@ import tenantIcon from '../../../assets/icons/clinic_icon.svg';
 import settingsIcon from '../../../assets/icons/Settings_icon.svg';
 
 const AdminLayout = () => {
-  // Menu items with proper icon imports - 🆕 ADDED: Tenant Management
+  // Menu items with proper icon imports - 🆕 FIXED: Journal Management path
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', path: '/admin', icon: dashboardIcon },
     { id: 'users', label: 'User Management', path: '/admin/users', icon: usersIcon },
     { id: 'professionals', label: 'Doctor Management', path: '/admin/professionals', icon: doctorIcon },
-    { id: 'tenants', label: 'Tenant Management', path: '/admin/tenants', icon: tenantIcon }, // 🆕 NEW
-    { id: 'journal', label: 'Journal Management', path: '/admin/journal', icon: journalIcon },
+    { id: 'tenants', label: 'Tenant Management', path: '/admin/tenants', icon: tenantIcon },
+    { id: 'templates', label: 'Journal Management', path: '/admin/templates', icon: journalIcon }, // 🔧 FIXED: Changed from /admin/journal to /admin/templates
     { id: 'settings', label: 'System Settings', path: '/admin/settings', icon: settingsIcon }
   ];
 
