@@ -178,6 +178,20 @@ router.use((error, req, res, next) => {
   });
 });
 
+  // ===== TEMPLATE MANAGEMENT ROUTES =====
+console.log('Adding template management routes...');
+
+// Templates
+router.get('/templates', adminController.getTemplates);
+router.get('/templates/stats', adminController.getTemplateStats);
+router.get('/templates/:id', adminController.getTemplate);
+router.post('/templates', adminController.createTemplate);
+router.put('/templates/:id', adminController.updateTemplate);
+router.delete('/templates/:id', adminController.deleteTemplate);
+router.post('/templates/:id/assign', adminController.assignTemplate);
+
+console.log('Template management routes added successfully');
+
 console.log('✅ Admin routes with proper file upload configuration and tenant management loaded successfully');
 
 module.exports = router;

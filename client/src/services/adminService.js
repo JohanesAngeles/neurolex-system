@@ -849,6 +849,151 @@ bulkUpdateHirs: async (tenantId, hirsUpdates) => {
   }
 },
 
+// ===== TEMPLATE MANAGEMENT METHODS =====
+
+// Get all templates
+getTemplates: async () => {
+  try {
+    console.log('🔍 Fetching templates via adminService...');
+    const response = await api.get('/admin/templates');
+    console.log('✅ Templates fetched successfully:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('❌ Error fetching templates:', error);
+    throw error;
+  }
+},
+
+// Get template by ID
+getTemplate: async (id) => {
+  try {
+    console.log(`🔍 Fetching template ${id} via adminService...`);
+    const response = await api.get(`/admin/templates/${id}`);
+    console.log('✅ Template fetched successfully:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error(`❌ Error fetching template ${id}:`, error);
+    throw error;
+  }
+},
+
+// Create new template
+createTemplate: async (templateData) => {
+  try {
+    console.log('🔍 Creating template with data:', templateData);
+    
+    // Try to get the user info from localStorage
+    let userId = null;
+    
+    // First try to get user object from localStorage
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        userId = user._id || user.id;
+        console.log('Found user ID in localStorage:', userId);
+      } catch (e) {
+        console.error('Error parsing user data from localStorage:', e);
+      }
+    }
+    
+    // If we still don't have a userId, try to decode it from the admin token
+    if (!userId) {
+      const adminToken = localStorage.getItem('adminToken');
+      if (adminToken) {
+        try {
+          // Split the token and get the payload
+          const parts = adminToken.split('.');
+          if (parts.length === 3) {
+            // Decode the payload
+            const payload = JSON.parse(atob(parts[1]));
+            userId = payload.id || payload._id;
+            console.log('Extracted user ID from admin token:', userId);
+          }
+        } catch (e) {
+          console.error('Error extracting user ID from admin token:', e);
+        }
+      }
+    }
+    
+    // Include the user ID in the template data
+    const dataWithCreator = {
+      ...templateData,
+      createdBy: userId
+    };
+    
+    console.log('Sending template with createdBy:', dataWithCreator);
+    
+    // Make the API request
+    const response = await api.post('/admin/templates', dataWithCreator);
+    
+    console.log('✅ Template created successfully:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('❌ Error creating template:', error);
+    
+    if (error.response) {
+      console.error('Server response:', error.response.data);
+      throw new Error(`Server error: ${error.response.data.message || 'Error creating template'}`);
+    } else {
+      throw new Error(`Failed to save template: ${error.message}`);
+    }
+  }
+},
+
+// Update template
+updateTemplate: async (id, templateData) => {
+  try {
+    console.log(`🔍 Updating template ${id} via adminService...`);
+    const response = await api.put(`/admin/templates/${id}`, templateData);
+    console.log('✅ Template updated successfully:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error(`❌ Error updating template ${id}:`, error);
+    throw error;
+  }
+},
+
+// Delete template
+deleteTemplate: async (id) => {
+  try {
+    console.log(`🔍 Deleting template ${id} via adminService...`);
+    const response = await api.delete(`/admin/templates/${id}`);
+    console.log('✅ Template deleted successfully:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error(`❌ Error deleting template ${id}:`, error);
+    throw error;
+  }
+},
+
+// Assign template to patients
+assignTemplate: async (id, assignmentData) => {
+  try {
+    console.log(`🔍 Assigning template ${id} via adminService...`);
+    const response = await api.post(`/admin/templates/${id}/assign`, assignmentData);
+    console.log('✅ Template assigned successfully:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error(`❌ Error assigning template ${id}:`, error);
+    throw error;
+  }
+},
+
+// Get template statistics
+getTemplateStats: async () => {
+  try {
+    console.log('🔍 Fetching template statistics via adminService...');
+    const response = await api.get('/admin/templates/stats');
+    console.log('✅ Template stats fetched successfully:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('❌ Error fetching template stats:', error);
+    throw error;
+  }
+},
+
+
 };
 
 export default adminService;

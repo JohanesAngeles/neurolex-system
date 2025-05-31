@@ -3153,3 +3153,439 @@ exports.bulkUpdateHirs = async (req, res) => {
     });
   }
 };
+
+// ===== TEMPLATE MANAGEMENT METHODS =====
+
+// Get all templates (admin can see all templates across all tenants)
+exports.getTemplates = async (req, res) => {
+  try {
+    console.log('Admin getting all templates');
+    console.log('Admin context:', {
+      adminId: req.user.id || req.user._id,
+      role: req.user.role
+    });
+    
+    // Admin can see templates from all tenants, so we don't filter by tenant
+    // Use the global FormTemplate model
+    const FormTemplate = require('../models/FormTemplate');
+    
+    // Get all templates with creator information
+    const templates = await FormTemplate.find()
+      .populate('createdBy', 'firstName lastName email role')
+      .sort({ createdAt: -1 });
+    
+    console.log(`Found ${templates.length} templates across all tenants`);
+    
+    return res.status(200).json({
+      success: true,
+      templates,
+      total: templates.length
+    });
+  } catch (error) {
+    console.error('Error fetching templates (admin):', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching templates',
+      error: error.message
+    });
+  }
+};
+
+// Get template statistics
+exports.getTemplateStats = async (req, res) => {
+  try {
+    console.log('Admin getting template statistics');
+    
+    const FormTemplate = require('../models/FormTemplate');
+    
+    // Get template counts by status
+    const totalTemplates = await FormTemplate.countDocuments();
+    const activeTemplates = await FormTemplate.countDocuments({ isActive: true });
+    const defaultTemplates = await FormTemplate.countDocuments({ isDefault: true });
+    
+    // Get templates by category
+    const templatesByCategory = await FormTemplate.aggregate([
+      {
+        $group: {
+          _id: '$category',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+    
+    // Get most recent templates
+    const recentTemplates = await FormTemplate.find()
+      .populate('createdBy', 'firstName lastName')
+      .sort({ createdAt: -1 })
+      .limit(5);
+    
+    return res.status(200).json({
+      success: true,
+      stats: {
+        total: totalTemplates,
+        active: activeTemplates,
+        inactive: totalTemplates - activeTemplates,
+        default: defaultTemplates,
+        byCategory: templatesByCategory,
+        recent: recentTemplates
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching template stats (admin):', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching template statistics',
+      error: error.message
+    });
+  }
+};
+
+// Get a specific template
+exports.getTemplate = async (req, res) => {
+  try {
+    console.log('Admin getting template with ID:', req.params.id);
+    
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Template ID is required'
+      });
+    }
+    
+    const FormTemplate = require('../models/FormTemplate');
+    
+    // Admin can access any template
+    const template = await FormTemplate.findById(id)
+      .populate('createdBy', 'firstName lastName email role');
+    
+    if (!template) {
+      return res.status(404).json({
+        success: false,
+        message: 'Template not found'
+      });
+    }
+    
+    console.log('Template found successfully:', {
+      id: template._id,
+      name: template.name,
+      createdBy: template.createdBy?.email || 'Unknown'
+    });
+    
+    return res.status(200).json({
+      success: true,
+      data: template
+    });
+  } catch (error) {
+    console.error('Error fetching template (admin):', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching template',
+      error: error.message
+    });
+  }
+};
+
+// Create a new template (admin)
+exports.createTemplate = async (req, res) => {
+  try {
+    console.log('Admin creating template with data:', req.body);
+    
+    // Get adminId from the authenticated user
+    let adminId = req.user && (req.user._id || req.user.id);
+    console.log('Admin ID from authentication:', adminId);
+    
+    if (!adminId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required. Admin ID could not be determined.'
+      });
+    }
+    
+    // Extract template data from request body
+    const { name, description, fields, isDefault, category } = req.body;
+    
+    const FormTemplate = require('../models/FormTemplate');
+    
+    // Create the template with admin as creator
+    const templateData = {
+      name,
+      description,
+      fields: fields || [],
+      createdBy: adminId,
+      isDefault: isDefault || false,
+      category: category || 'custom',
+      isActive: true
+    };
+    
+    console.log('Creating template with data:', templateData);
+    
+    const template = new FormTemplate(templateData);
+    const savedTemplate = await template.save();
+    
+    console.log('Template created successfully:', {
+      id: savedTemplate._id,
+      name: savedTemplate.name,
+      createdBy: savedTemplate.createdBy
+    });
+    
+    // Populate the creator info before returning
+    await savedTemplate.populate('createdBy', 'firstName lastName email role');
+    
+    return res.status(201).json({
+      success: true,
+      data: savedTemplate
+    });
+  } catch (error) {
+    console.error('Error creating template (admin):', error);
+    
+    // Provide better error messages based on error type
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error: ' + error.message,
+        details: Object.keys(error.errors).map(key => ({ 
+          field: key, 
+          message: error.errors[key].message 
+        }))
+      });
+    }
+    
+    return res.status(500).json({
+      success: false,
+      message: 'Error creating template',
+      error: error.message
+    });
+  }
+};
+
+// Update a template (admin)
+exports.updateTemplate = async (req, res) => {
+  try {
+    console.log('Admin updating template with ID:', req.params.id);
+    console.log('Update data:', req.body);
+    
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Template ID is required'
+      });
+    }
+    
+    // Extract updated template data from request body
+    const { name, description, fields, isDefault, category, isActive } = req.body;
+    
+    const FormTemplate = require('../models/FormTemplate');
+    
+    // Find the template (admin can update any template)
+    const template = await FormTemplate.findById(id);
+    
+    if (!template) {
+      return res.status(404).json({
+        success: false,
+        message: 'Template not found'
+      });
+    }
+    
+    // Update template fields
+    if (name !== undefined) template.name = name;
+    if (description !== undefined) template.description = description;
+    if (fields !== undefined) template.fields = fields;
+    if (isDefault !== undefined) template.isDefault = isDefault;
+    if (category !== undefined) template.category = category;
+    if (isActive !== undefined) template.isActive = isActive;
+    
+    // Save the updated template
+    console.log('Saving updated template');
+    await template.save();
+    
+    // Populate creator info
+    await template.populate('createdBy', 'firstName lastName email role');
+    
+    console.log('Template updated successfully');
+    
+    return res.status(200).json({
+      success: true,
+      data: template
+    });
+  } catch (error) {
+    console.error('Error updating template (admin):', error);
+    
+    // Check for validation errors
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error: ' + error.message,
+        details: Object.keys(error.errors).map(key => ({ 
+          field: key, 
+          message: error.errors[key].message 
+        }))
+      });
+    }
+    
+    return res.status(500).json({
+      success: false,
+      message: 'Error updating template',
+      error: error.message
+    });
+  }
+};
+
+// Delete a template (admin)
+exports.deleteTemplate = async (req, res) => {
+  try {
+    console.log('Admin deleting template with ID:', req.params.id);
+    
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Template ID is required'
+      });
+    }
+    
+    const FormTemplate = require('../models/FormTemplate');
+    
+    // Find and delete the template (admin can delete any template)
+    const template = await FormTemplate.findByIdAndDelete(id);
+    
+    if (!template) {
+      return res.status(404).json({
+        success: false,
+        message: 'Template not found'
+      });
+    }
+    
+    console.log('Template deleted successfully:', template._id);
+    
+    // Also remove this template from any patient-doctor associations
+    try {
+      const PatientDoctorAssociation = require('../models/PatientDoctorAssociation');
+      
+      const updateResult = await PatientDoctorAssociation.updateMany(
+        { 'assignedTemplates.template': id },
+        { $pull: { assignedTemplates: { template: id } } }
+      );
+      
+      console.log('Updated associations result:', {
+        matchedCount: updateResult.matchedCount,
+        modifiedCount: updateResult.modifiedCount
+      });
+    } catch (assocError) {
+      console.error('Error removing template from associations:', assocError);
+      // Continue anyway since the template was deleted
+    }
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Template deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting template (admin):', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error deleting template',
+      error: error.message
+    });
+  }
+};
+
+// Assign template to patients (admin)
+exports.assignTemplate = async (req, res) => {
+  try {
+    console.log('Admin assigning template:', req.params.id);
+    const templateId = req.params.id;
+    const { patientIds, doctorId } = req.body;
+    
+    if (!patientIds || !Array.isArray(patientIds) || patientIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Patient IDs array is required'
+      });
+    }
+    
+    const FormTemplate = require('../models/FormTemplate');
+    const PatientDoctorAssociation = require('../models/PatientDoctorAssociation');
+    
+    // Verify template exists
+    const template = await FormTemplate.findById(templateId);
+    
+    if (!template) {
+      return res.status(404).json({
+        success: false,
+        message: 'Template not found'
+      });
+    }
+    
+    // Process each patient
+    const results = {
+      success: [],
+      failed: []
+    };
+    
+    for (const patientId of patientIds) {
+      try {
+        // Find or create association between patient and doctor
+        let association = await PatientDoctorAssociation.findOne({
+          doctor: doctorId,
+          patient: patientId
+        });
+        
+        if (!association) {
+          // Create new association
+          association = new PatientDoctorAssociation({
+            doctor: doctorId,
+            patient: patientId,
+            status: 'active',
+            assignedTemplates: [{
+              template: templateId,
+              assignedDate: new Date(),
+              active: true
+            }]
+          });
+        } else {
+          // Check if template is already assigned
+          const existingAssignment = association.assignedTemplates.find(
+            assignment => assignment.template.toString() === templateId
+          );
+          
+          if (existingAssignment) {
+            // Update existing assignment
+            existingAssignment.active = true;
+            existingAssignment.assignedDate = new Date();
+          } else {
+            // Add new assignment
+            association.assignedTemplates.push({
+              template: templateId,
+              assignedDate: new Date(),
+              active: true
+            });
+          }
+        }
+        
+        await association.save();
+        results.success.push(patientId);
+      } catch (error) {
+        console.error(`Error assigning template to patient ${patientId}:`, error);
+        results.failed.push({
+          patientId,
+          message: error.message
+        });
+      }
+    }
+    
+    return res.status(200).json({
+      success: true,
+      message: `Template assigned to ${results.success.length} patients, failed for ${results.failed.length} patients`,
+      data: results
+    });
+  } catch (error) {
+    console.error('Error assigning template (admin):', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error assigning template',
+      error: error.message
+    });
+  }
+};

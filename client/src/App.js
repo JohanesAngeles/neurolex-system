@@ -65,6 +65,9 @@ import SystemSettings from './components/admin/SystemSettings';
 // 🆕 NEW: Import TenantManagement component
 import TenantManagement from './components/admin/TenantManagement';
 
+// 🆕 NEW: Import AdminFormTemplates component
+import AdminFormTemplates from './components/admin/FormTemplates';
+
 // User Management Components
 import UserManagement from '../src/components/admin/UserManagement';
 import UserForm from '../src/pages/admin/user_management/UserForm';
@@ -441,7 +444,8 @@ const App = () => {
                   <Route path="reports" element={<PlaceholderComponent name="Reports" />} />
                   {/* ✅ System Settings now uses the actual SystemSettings component */}
                   <Route path="settings" element={<SystemSettings />} />
-                  <Route path="templates" element={<PlaceholderComponent name="Template Management" />} />
+                  {/* 🆕 NEW: Admin Template Management Route - CHANGED FROM PLACEHOLDER */}
+                  <Route path="templates" element={<AdminFormTemplates />} />
                   <Route path="feedback" element={<PlaceholderComponent name="Feedback Tracking" />} />
                   <Route path="backup" element={<PlaceholderComponent name="System Backup" />} />
                 </Route>
