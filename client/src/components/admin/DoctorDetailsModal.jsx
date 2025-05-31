@@ -124,6 +124,49 @@ const DoctorDetailsModal = ({ doctorId, isOpen, onClose, onApprove, onReject }) 
     ).join(', ');
   };
 
+  const renderAvailabilitySchedule = (availability) => {
+    if (!availability) return <p className="no-data">No availability information provided</p>;
+    
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const dayLabels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    
+    const availableDays = days.filter(day => availability[day]?.available);
+    
+    if (availableDays.length === 0) {
+      return <p className="no-data">No available days set</p>;
+    }
+    
+    return (
+      <div className="availability-schedule">
+        {days.map((day, index) => {
+          const dayData = availability[day];
+          if (!dayData?.available) return null;
+          
+          return (
+            <div key={day} className="availability-day">
+              <div className="day-name">{dayLabels[index]}</div>
+              <div className="time-slots">
+                {dayData.slots && dayData.slots.length > 0 ? (
+                  dayData.slots.map((slot, slotIndex) => (
+                    <div key={slotIndex} className="time-slot">
+                      <span className="start-time">{slot.startTime || 'Not set'}</span>
+                      <span className="time-separator">-</span>
+                      <span className="end-time">{slot.endTime || 'Not set'}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="time-slot">
+                    <span className="no-times">No specific times set</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   const renderDocumentLink = (url, label) => {
     if (!url) return <span className="no-document">Not provided</span>;
     
@@ -225,22 +268,30 @@ const DoctorDetailsModal = ({ doctorId, isOpen, onClose, onApprove, onReject }) 
               {/* Availability Section */}
               <div className="details-section">
                 <h3 className="section-title">Availability</h3>
-                <div className="details-grid">
-                  <div className="detail-item full-width">
-                    <label>Available Days:</label>
+                <div className="availability-content">
+                  <div className="availability-summary">
+                    <label>Summary:</label>
                     <span>{formatAvailability(doctor.availability)}</span>
                   </div>
-                  <div className="detail-item">
-                    <label>In-Person Appointments:</label>
-                    <span className={`status-badge ${doctor.inPerson || doctor.appointmentTypes?.inPerson ? 'available' : 'unavailable'}`}>
-                      {doctor.inPerson || doctor.appointmentTypes?.inPerson ? 'Available' : 'Not Available'}
-                    </span>
+                  
+                  <div className="availability-details">
+                    <label>Schedule Details:</label>
+                    {renderAvailabilitySchedule(doctor.availability)}
                   </div>
-                  <div className="detail-item">
-                    <label>Telehealth Appointments:</label>
-                    <span className={`status-badge ${doctor.telehealth || doctor.appointmentTypes?.telehealth ? 'available' : 'unavailable'}`}>
-                      {doctor.telehealth || doctor.appointmentTypes?.telehealth ? 'Available' : 'Not Available'}
-                    </span>
+                  
+                  <div className="details-grid">
+                    <div className="detail-item">
+                      <label>In-Person Appointments:</label>
+                      <span className={`status-badge ${doctor.inPerson || doctor.appointmentTypes?.inPerson ? 'available' : 'unavailable'}`}>
+                        {doctor.inPerson || doctor.appointmentTypes?.inPerson ? 'Available' : 'Not Available'}
+                      </span>
+                    </div>
+                    <div className="detail-item">
+                      <label>Telehealth Appointments:</label>
+                      <span className={`status-badge ${doctor.telehealth || doctor.appointmentTypes?.telehealth ? 'available' : 'unavailable'}`}>
+                        {doctor.telehealth || doctor.appointmentTypes?.telehealth ? 'Available' : 'Not Available'}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
