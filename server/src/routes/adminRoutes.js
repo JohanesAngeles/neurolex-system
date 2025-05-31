@@ -1,9 +1,12 @@
-// server/src/routes/adminRoutes.js - FIXED VERSION WITH HIRS TOGGLE
+// server/src/routes/adminRoutes.js - UPDATED WITH TENANT MANAGEMENT
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const adminController = require('../controllers/adminController');
 const adminAuth = require('../middleware/adminAuth');
+
+// 🆕 NEW: Import tenant routes
+const tenantRoutes = require('./tenantRoutes');
 
 console.log('Loading admin routes with proper file upload configuration...');
 
@@ -126,6 +129,10 @@ router.put('/feedback/status/:id', adminAuth, adminController.updateFeedbackStat
 // Data Export
 router.get('/backup', adminAuth, adminController.generateBackup);
 
+// 🆕 NEW: Mount tenant management routes
+// This makes all tenant routes available under /admin/tenants/*
+router.use('/tenants', tenantRoutes);
+
 // ✅ Error handling middleware for multer errors
 router.use((error, req, res, next) => {
   if (error instanceof multer.MulterError) {
@@ -170,6 +177,6 @@ router.use((error, req, res, next) => {
   });
 });
 
-console.log('✅ Admin routes with proper file upload configuration loaded successfully');
+console.log('✅ Admin routes with proper file upload configuration and tenant management loaded successfully');
 
 module.exports = router;

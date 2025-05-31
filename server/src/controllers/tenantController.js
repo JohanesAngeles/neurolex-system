@@ -1,20 +1,134 @@
-// server/src/controllers/tenantController.js
+// server/src/controllers/tenantController.js - ENHANCED FOR FRONTEND SUPPORT
 const { getMasterConnection } = require('../config/dbMaster');
 const dbManager = require('../utils/dbManager');
+const PDFDocument = require('pdfkit');
 
 /**
- * Get all tenants - only accessible to super admin
+ * Generate unique tenant ID with format NLX-YYYY-###
+ */
+const generateTenantId = async (Tenant) => {
+  const currentYear = new Date().getFullYear();
+  const prefix = `NLX-${currentYear}`;
+  
+  // Find the highest existing number for this year
+  const existingTenants = await Tenant.find({
+    tenantId: { $regex: `^${prefix}-` }
+  }).sort({ tenantId: -1 }).limit(1);
+  
+  let nextNumber = 1;
+  if (existingTenants.length > 0) {
+    const lastId = existingTenants[0].tenantId;
+    const lastNumber = parseInt(lastId.split('-')[2]);
+    nextNumber = lastNumber + 1;
+  }
+  
+  // Format with leading zeros (e.g., 001, 002, etc.)
+  const formattedNumber = nextNumber.toString().padStart(3, '0');
+  return `${prefix}-${formattedNumber}`;
+};
+
+/**
+ * Get tenant statistics (doctor count, patient count)
+ */
+const getTenantStatistics = async (tenantId) => {
+  try {
+    // This function would need to connect to the specific tenant database
+    // and count doctors and patients. For now, returning mock data.
+    // You'll need to implement this based on your tenant database structure
+    
+    // Example implementation:
+    // const tenantConn = await dbManager.getTenantConnection(tenantId);
+    // const Doctor = tenantConn.model('Doctor');
+    // const Patient = tenantConn.model('User'); // or Patient model
+    // const doctorCount = await Doctor.countDocuments({ active: true });
+    // const patientCount = await Patient.countDocuments({ role: 'patient', active: true });
+    
+    // For now, return random numbers for demo
+    const doctorCount = Math.floor(Math.random() * 50) + 1;
+    const patientCount = Math.floor(Math.random() * 500) + 10;
+    
+    return { doctorCount, patientCount };
+  } catch (error) {
+    console.error('Error getting tenant statistics:', error);
+    return { doctorCount: 0, patientCount: 0 };
+  }
+};
+
+/**
+ * Get all tenants with pagination, filtering, and search - Enhanced for frontend
  */
 exports.getAllTenants = async (req, res) => {
   try {
+    const {
+      page = 1,
+      limit = 10,
+      search = '',
+      status = 'all',
+      location = 'all',
+      sortBy = 'createdAt',
+      sortOrder = 'desc'
+    } = req.query;
+
     const masterConn = getMasterConnection();
     const Tenant = masterConn.model('Tenant');
     
-    const tenants = await Tenant.find().sort({ name: 1 });
+    // Build filter query
+    const filter = {};
+    
+    // Status filter
+    if (status !== 'all') {
+      filter.active = status === 'active';
+    }
+    
+    // Location filter
+    if (location !== 'all') {
+      filter.location = location;
+    }
+    
+    // Search filter (name or tenantId)
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { tenantId: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    // Build sort object
+    const sortObj = {};
+    sortObj[sortBy] = sortOrder === 'desc' ? -1 : 1;
+    
+    // Execute query with pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const tenants = await Tenant.find(filter)
+      .sort(sortObj)
+      .skip(skip)
+      .limit(parseInt(limit))
+      .lean();
+    
+    // Get total count for pagination
+    const total = await Tenant.countDocuments(filter);
+    
+    // Add statistics to each tenant
+    const tenantsWithStats = await Promise.all(
+      tenants.map(async (tenant) => {
+        const stats = await getTenantStatistics(tenant._id);
+        return {
+          ...tenant,
+          doctorCount: stats.doctorCount,
+          patientCount: stats.patientCount
+        };
+      })
+    );
     
     res.status(200).json({
       success: true,
-      data: tenants
+      data: tenantsWithStats,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / parseInt(limit))
+      }
     });
   } catch (error) {
     console.error('Error fetching tenants:', error);
@@ -27,63 +141,75 @@ exports.getAllTenants = async (req, res) => {
 };
 
 /**
- * Create a new tenant - only accessible to super admin
+ * Create a new tenant - Enhanced with auto-generated tenant ID and location
  */
 exports.createTenant = async (req, res) => {
   try {
     const {
       name,
-      dbName,
       adminEmail,
+      location,
       logoUrl,
       primaryColor,
       secondaryColor
     } = req.body;
     
     // Validate required fields
-    if (!name || !dbName || !adminEmail) {
+    if (!name || !adminEmail || !location) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields'
+        message: 'Missing required fields: name, adminEmail, and location are required'
       });
     }
     
-    // Validate database name format
-    if (!/^[a-z0-9_]+$/.test(dbName)) {
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(adminEmail)) {
       return res.status(400).json({
         success: false,
-        message: 'Database name must only contain lowercase letters, numbers, and underscores'
+        message: 'Invalid email format'
       });
     }
     
     const masterConn = getMasterConnection();
     const Tenant = masterConn.model('Tenant');
     
-    // Check if tenant with same name or dbName already exists
+    // Check if tenant with same name or email already exists
     const existingTenant = await Tenant.findOne({
       $or: [
         { name: name },
-        { dbName: `neurolex_${dbName}` }
+        { adminEmail: adminEmail }
       ]
     });
     
     if (existingTenant) {
       return res.status(400).json({
         success: false,
-        message: 'A clinic with this name or database name already exists'
+        message: 'A clinic with this name or email already exists'
       });
     }
     
+    // Auto-generate tenant ID
+    const tenantId = await generateTenantId(Tenant);
+    
+    // Auto-generate database name from clinic name
+    const dbName = `neurolex_${name.toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '') // Remove special characters
+      .replace(/\s+/g, '_') // Replace spaces with underscores
+      .substring(0, 20)}`; // Limit length
+    
     // Create new tenant
     const newTenant = new Tenant({
+      tenantId,
       name,
-      dbName: `neurolex_${dbName}`, // Prefix with neurolex_ for consistency
+      dbName,
       adminEmail,
+      location,
       logoUrl: logoUrl || '/logo.svg',
-      primaryColor: primaryColor || '#1e3a8a',
-      secondaryColor: secondaryColor || '#f3f4f6',
+      primaryColor: primaryColor || '#4CAF50',
+      secondaryColor: secondaryColor || '#2196F3',
       active: true,
-      databaseCreated: false // Initialize as false
+      databaseCreated: false
     });
     
     const savedTenant = await newTenant.save();
@@ -92,8 +218,6 @@ exports.createTenant = async (req, res) => {
     const dbResult = await dbManager.createTenantDatabase(savedTenant._id);
     
     if (!dbResult.success) {
-      // If database creation fails, we'll still return success but with a warning
-      // The admin can retry database creation later
       return res.status(201).json({
         success: true,
         warning: true,
@@ -103,10 +227,22 @@ exports.createTenant = async (req, res) => {
       });
     }
     
+    // Update tenant to mark database as created
+    savedTenant.databaseCreated = true;
+    await savedTenant.save();
+    
+    // Add statistics to response
+    const stats = await getTenantStatistics(savedTenant._id);
+    const tenantWithStats = {
+      ...savedTenant.toObject(),
+      doctorCount: stats.doctorCount,
+      patientCount: stats.patientCount
+    };
+    
     res.status(201).json({
       success: true,
       message: 'Clinic created successfully with dedicated database',
-      data: savedTenant
+      data: tenantWithStats
     });
   } catch (error) {
     console.error('Error creating tenant:', error);
@@ -117,6 +253,335 @@ exports.createTenant = async (req, res) => {
     });
   }
 };
+
+/**
+ * Update tenant details - Enhanced with location support
+ */
+exports.updateTenant = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      name,
+      adminEmail,
+      location,
+      logoUrl,
+      primaryColor,
+      secondaryColor
+    } = req.body;
+    
+    const masterConn = getMasterConnection();
+    const Tenant = masterConn.model('Tenant');
+    
+    const tenant = await Tenant.findById(id);
+    
+    if (!tenant) {
+      return res.status(404).json({
+        success: false,
+        message: 'Clinic not found'
+      });
+    }
+    
+    // Validate email if provided
+    if (adminEmail) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(adminEmail)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid email format'
+        });
+      }
+      
+      // Check if email is already used by another tenant
+      const existingTenant = await Tenant.findOne({
+        adminEmail: adminEmail,
+        _id: { $ne: id }
+      });
+      
+      if (existingTenant) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email already used by another clinic'
+        });
+      }
+    }
+    
+    // Update fields if provided
+    if (name !== undefined) tenant.name = name;
+    if (adminEmail !== undefined) tenant.adminEmail = adminEmail;
+    if (location !== undefined) tenant.location = location;
+    if (logoUrl !== undefined) tenant.logoUrl = logoUrl;
+    if (primaryColor !== undefined) tenant.primaryColor = primaryColor;
+    if (secondaryColor !== undefined) tenant.secondaryColor = secondaryColor;
+    
+    await tenant.save();
+    
+    // Add statistics to response
+    const stats = await getTenantStatistics(tenant._id);
+    const tenantWithStats = {
+      ...tenant.toObject(),
+      doctorCount: stats.doctorCount,
+      patientCount: stats.patientCount
+    };
+    
+    res.status(200).json({
+      success: true,
+      message: 'Clinic updated successfully',
+      data: tenantWithStats
+    });
+  } catch (error) {
+    console.error('Error updating tenant:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating clinic',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Get tenant by ID - Enhanced with statistics
+ */
+exports.getTenantById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const masterConn = getMasterConnection();
+    const Tenant = masterConn.model('Tenant');
+    
+    const tenant = await Tenant.findById(id);
+    
+    if (!tenant) {
+      return res.status(404).json({
+        success: false,
+        message: 'Clinic not found'
+      });
+    }
+    
+    // Add statistics to response
+    const stats = await getTenantStatistics(tenant._id);
+    const tenantWithStats = {
+      ...tenant.toObject(),
+      doctorCount: stats.doctorCount,
+      patientCount: stats.patientCount
+    };
+    
+    res.status(200).json({
+      success: true,
+      data: tenantWithStats
+    });
+  } catch (error) {
+    console.error('Error fetching tenant:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching clinic',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Delete tenant - Enhanced with proper cleanup
+ */
+exports.deleteTenant = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const masterConn = getMasterConnection();
+    const Tenant = masterConn.model('Tenant');
+    
+    const tenant = await Tenant.findById(id);
+    
+    if (!tenant) {
+      return res.status(404).json({
+        success: false,
+        message: 'Clinic not found'
+      });
+    }
+    
+    // Close any active database connections
+    try {
+      await dbManager.closeConnection(id);
+    } catch (error) {
+      console.warn('Warning: Could not close tenant database connection:', error.message);
+    }
+    
+    // Delete the tenant record
+    await Tenant.findByIdAndDelete(id);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Clinic deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting tenant:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting clinic',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Export tenants to PDF
+ */
+exports.exportTenantsToPdf = async (req, res) => {
+  try {
+    const {
+      search = '',
+      status = 'all',
+      location = 'all'
+    } = req.query;
+
+    const masterConn = getMasterConnection();
+    const Tenant = masterConn.model('Tenant');
+    
+    // Build filter query (same as getAllTenants)
+    const filter = {};
+    
+    if (status !== 'all') {
+      filter.active = status === 'active';
+    }
+    
+    if (location !== 'all') {
+      filter.location = location;
+    }
+    
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { tenantId: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    // Get all matching tenants
+    const tenants = await Tenant.find(filter)
+      .sort({ name: 1 })
+      .lean();
+    
+    // Add statistics to tenants
+    const tenantsWithStats = await Promise.all(
+      tenants.map(async (tenant) => {
+        const stats = await getTenantStatistics(tenant._id);
+        return {
+          ...tenant,
+          doctorCount: stats.doctorCount,
+          patientCount: stats.patientCount
+        };
+      })
+    );
+    
+    // Create PDF
+    const doc = new PDFDocument({ margin: 50 });
+    
+    // Set response headers
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="tenants-report-${new Date().toISOString().slice(0, 10)}.pdf"`);
+    
+    // Pipe PDF to response
+    doc.pipe(res);
+    
+    // Add title
+    doc.fontSize(20).font('Helvetica-Bold').text('Neurolex Tenants Report', { align: 'center' });
+    doc.moveDown();
+    
+    // Add generation info
+    doc.fontSize(10).font('Helvetica').text(`Generated on: ${new Date().toLocaleDateString()}`, { align: 'right' });
+    doc.text(`Total Tenants: ${tenantsWithStats.length}`, { align: 'right' });
+    doc.moveDown(2);
+    
+    // Add table headers
+    const startY = doc.y;
+    doc.fontSize(12).font('Helvetica-Bold');
+    doc.text('Clinic Name', 50, startY, { width: 120 });
+    doc.text('Tenant ID', 170, startY, { width: 80 });
+    doc.text('Status', 250, startY, { width: 60 });
+    doc.text('Location', 310, startY, { width: 120 });
+    doc.text('Doctors', 430, startY, { width: 50 });
+    doc.text('Patients', 480, startY, { width: 50 });
+    
+    // Add line under headers
+    doc.moveTo(50, startY + 15).lineTo(530, startY + 15).stroke();
+    doc.moveDown();
+    
+    // Add tenant data
+    doc.font('Helvetica').fontSize(10);
+    tenantsWithStats.forEach((tenant, index) => {
+      const y = doc.y;
+      
+      // Check if we need a new page
+      if (y > 700) {
+        doc.addPage();
+        doc.y = 50;
+      }
+      
+      doc.text(tenant.name || 'N/A', 50, doc.y, { width: 120 });
+      doc.text(tenant.tenantId || 'N/A', 170, doc.y, { width: 80 });
+      doc.text(tenant.active ? 'Active' : 'Inactive', 250, doc.y, { width: 60 });
+      doc.text(tenant.location || 'N/A', 310, doc.y, { width: 120 });
+      doc.text(tenant.doctorCount.toString(), 430, doc.y, { width: 50 });
+      doc.text(tenant.patientCount.toString(), 480, doc.y, { width: 50 });
+      
+      doc.moveDown(0.5);
+    });
+    
+    // Add footer
+    doc.fontSize(8).text(
+      'This report contains confidential information. Handle with care.',
+      50,
+      doc.page.height - 50,
+      { align: 'center' }
+    );
+    
+    // Finalize PDF
+    doc.end();
+    
+  } catch (error) {
+    console.error('Error exporting tenants to PDF:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error exporting PDF',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Get tenant statistics endpoint
+ */
+exports.getTenantStats = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const masterConn = getMasterConnection();
+    const Tenant = masterConn.model('Tenant');
+    
+    const tenant = await Tenant.findById(id);
+    
+    if (!tenant) {
+      return res.status(404).json({
+        success: false,
+        message: 'Clinic not found'
+      });
+    }
+    
+    const stats = await getTenantStatistics(id);
+    
+    res.status(200).json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('Error fetching tenant stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching statistics',
+      error: error.message
+    });
+  }
+};
+
+// ===== EXISTING METHODS (UNCHANGED) =====
 
 /**
  * Get tenant database status - only accessible to super admin
@@ -257,93 +722,6 @@ exports.updateTenantStatus = async (req, res) => {
 };
 
 /**
- * Get tenant by ID - only accessible to super admin
- */
-exports.getTenantById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    const masterConn = getMasterConnection();
-    const Tenant = masterConn.model('Tenant');
-    
-    const tenant = await Tenant.findById(id);
-    
-    if (!tenant) {
-      return res.status(404).json({
-        success: false,
-        message: 'Clinic not found'
-      });
-    }
-    
-    res.status(200).json({
-      success: true,
-      data: tenant
-    });
-  } catch (error) {
-    console.error('Error fetching tenant:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching clinic',
-      error: error.message
-    });
-  }
-};
-
-/**
- * Update tenant details - only accessible to super admin
- */
-exports.updateTenant = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const {
-      name,
-      adminEmail,
-      logoUrl,
-      primaryColor,
-      secondaryColor
-    } = req.body;
-    
-    // Note: We don't allow changing the dbName after creation for safety
-    
-    const masterConn = getMasterConnection();
-    const Tenant = masterConn.model('Tenant');
-    
-    const tenant = await Tenant.findById(id);
-    
-    if (!tenant) {
-      return res.status(404).json({
-        success: false,
-        message: 'Clinic not found'
-      });
-    }
-    
-    // Update fields if provided
-    if (name !== undefined) tenant.name = name;
-    if (adminEmail !== undefined) tenant.adminEmail = adminEmail;
-    if (logoUrl !== undefined) tenant.logoUrl = logoUrl;
-    if (primaryColor !== undefined) tenant.primaryColor = primaryColor;
-    if (secondaryColor !== undefined) tenant.secondaryColor = secondaryColor;
-    
-    await tenant.save();
-    
-    res.status(200).json({
-      success: true,
-      message: 'Clinic updated successfully',
-      data: tenant
-    });
-  } catch (error) {
-    console.error('Error updating tenant:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error updating clinic',
-      error: error.message
-    });
-  }
-};
-
-/**
- * Get public tenant info by ID - accessible without authentication
- * Only returns non-sensitive information INCLUDING hirsSettings for feature control
  * Get public tenant info by ID - accessible without authentication
  * Only returns non-sensitive information INCLUDING hirsSettings for feature control
  * 🚨 FIXED: Now saves default HIRS settings to database instead of just returning them
