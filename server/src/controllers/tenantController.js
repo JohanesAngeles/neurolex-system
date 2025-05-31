@@ -30,26 +30,42 @@ const generateTenantId = async (Tenant) => {
 /**
  * Get tenant statistics (doctor count, patient count)
  */
+/**
+ * Get tenant statistics (doctor count, patient count) - FIXED VERSION
+ * Now actually queries the tenant database instead of returning mock data
+ */
 const getTenantStatistics = async (tenantId) => {
   try {
-    // This function would need to connect to the specific tenant database
-    // and count doctors and patients. For now, returning mock data.
-    // You'll need to implement this based on your tenant database structure
+    console.log(`📊 Fetching statistics for tenant: ${tenantId}`);
     
-    // Example implementation:
-    // const tenantConn = await dbManager.getTenantConnection(tenantId);
-    // const Doctor = tenantConn.model('Doctor');
-    // const Patient = tenantConn.model('User'); // or Patient model
-    // const doctorCount = await Doctor.countDocuments({ active: true });
-    // const patientCount = await Patient.countDocuments({ role: 'patient', active: true });
+    // Connect to the specific tenant database
+    const tenantConnection = await dbManager.connectTenant(tenantId);
     
-    // For now, return random numbers for demo
-    const doctorCount = Math.floor(Math.random() * 50) + 1;
-    const patientCount = Math.floor(Math.random() * 500) + 10;
+    if (!tenantConnection) {
+      console.error(`❌ Failed to connect to tenant database: ${tenantId}`);
+      return { doctorCount: 0, patientCount: 0 };
+    }
+    
+    // Get the User model from the tenant connection
+    const UserModel = tenantConnection.model('User');
+    
+    // Count active doctors
+    const doctorCount = await UserModel.countDocuments({ 
+      role: 'doctor',
+      isActive: true 
+    });
+    
+    // Count active patients  
+    const patientCount = await UserModel.countDocuments({ 
+      role: 'patient',
+      isActive: true 
+    });
+    
+    console.log(`✅ Statistics for tenant ${tenantId}: ${doctorCount} doctors, ${patientCount} patients`);
     
     return { doctorCount, patientCount };
   } catch (error) {
-    console.error('Error getting tenant statistics:', error);
+    console.error(`❌ Error getting tenant statistics for ${tenantId}:`, error);
     return { doctorCount: 0, patientCount: 0 };
   }
 };
