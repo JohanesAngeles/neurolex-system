@@ -59,8 +59,11 @@ import AdminLayout from './components/admin/layout/AdminLayout';
 import AdminDashboard from './components/admin/AdminDashboard';
 import ProfessionalVerification from './components/admin/ProfessionalVerification';
 
-// ✅ NEW: Import SystemSettings component
+// ✅ Import SystemSettings component
 import SystemSettings from './components/admin/SystemSettings';
+
+// 🆕 NEW: Import TenantManagement component
+import TenantManagement from './components/admin/TenantManagement';
 
 // User Management Components
 import UserManagement from '../src/components/admin/UserManagement';
@@ -432,9 +435,11 @@ const App = () => {
                     <Route path=":id/edit" element={<UserForm />} />
                   </Route>
                   <Route path="professionals" element={<ProfessionalVerification />} />
+                  {/* 🆕 NEW: Tenant Management Route */}
+                  <Route path="tenants" element={<TenantManagement />} />
                   <Route path="content" element={<PlaceholderComponent name="Content Moderation" />} />
                   <Route path="reports" element={<PlaceholderComponent name="Reports" />} />
-                  {/* ✅ CHANGED: System Settings now uses the actual SystemSettings component */}
+                  {/* ✅ System Settings now uses the actual SystemSettings component */}
                   <Route path="settings" element={<SystemSettings />} />
                   <Route path="templates" element={<PlaceholderComponent name="Template Management" />} />
                   <Route path="feedback" element={<PlaceholderComponent name="Feedback Tracking" />} />
