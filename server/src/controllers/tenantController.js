@@ -380,7 +380,7 @@ exports.getTenantById = async (req, res) => {
 };
 
 /**
- * Delete tenant - Enhanced with proper cleanup
+ * Delete tenant - Enhanced with proper database cleanup
  */
 exports.deleteTenant = async (req, res) => {
   try {
@@ -398,6 +398,21 @@ exports.deleteTenant = async (req, res) => {
       });
     }
     
+    // Store tenant info for logging
+    const tenantName = tenant.name;
+    const dbName = tenant.dbName;
+    
+    // 🚨 NEW: Delete the actual tenant database
+    console.log(`🗑️ Deleting database for tenant: ${tenantName} (${dbName})`);
+    const dbDeleteResult = await dbManager.deleteTenantDatabase(id);
+    
+    if (!dbDeleteResult.success) {
+      console.warn(`⚠️ Database deletion failed: ${dbDeleteResult.error}`);
+      // Continue with tenant record deletion even if database deletion fails
+    } else {
+      console.log(`✅ Database deleted successfully: ${dbName}`);
+    }
+    
     // Close any active database connections
     try {
       await dbManager.closeConnection(id);
@@ -405,12 +420,16 @@ exports.deleteTenant = async (req, res) => {
       console.warn('Warning: Could not close tenant database connection:', error.message);
     }
     
-    // Delete the tenant record
+    // Delete the tenant record from master database
     await Tenant.findByIdAndDelete(id);
+    
+    console.log(`✅ Tenant record deleted: ${tenantName}`);
     
     res.status(200).json({
       success: true,
-      message: 'Clinic deleted successfully'
+      message: `Clinic "${tenantName}" and its database deleted successfully`,
+      dbDeleted: dbDeleteResult.success,
+      dbError: dbDeleteResult.success ? null : dbDeleteResult.error
     });
   } catch (error) {
     console.error('Error deleting tenant:', error);

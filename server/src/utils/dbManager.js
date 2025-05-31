@@ -303,6 +303,72 @@ const dbManager = {
       return { success: false, error: error.message };
     }
   },
+
+  /**
+   * Delete a tenant database completely
+   * @param {string} tenantId - The ID of the tenant
+   * @returns {Promise<Object>} Result of the operation
+   */
+  deleteTenantDatabase: async (tenantId) => {
+    try {
+      // Get tenant details from master database
+      const masterConn = getMasterConnection();
+      if (!masterConn) {
+        console.error('Cannot connect to master database');
+        return { success: false, error: 'Cannot connect to master database' };
+      }
+      
+      const Tenant = masterConn.model('Tenant');
+      
+      const tenant = await Tenant.findById(tenantId);
+      
+      if (!tenant) {
+        return { success: false, error: `Tenant not found: ${tenantId}` };
+      }
+      
+      // Close any existing connections first
+      if (connections[tenantId]) {
+        try {
+          await connections[tenantId].close();
+          delete connections[tenantId];
+          console.log(`Closed existing connection for tenant: ${tenantId}`);
+        } catch (closeError) {
+          console.warn('Error closing connection:', closeError.message);
+        }
+      }
+      
+      // Create the tenant URI
+      const baseUri = getBaseUri();
+      const uri = `${baseUri}/${tenant.dbName}`;
+      const options = getConnectionOptions();
+      
+      // Connect using MongoDB native driver for admin operations
+      try {
+        const client = new MongoClient(uri, options);
+        await client.connect();
+        
+        // Drop the entire database
+        const db = client.db(tenant.dbName);
+        await db.dropDatabase();
+        
+        console.log(`✅ Deleted database: ${tenant.dbName}`);
+        
+        // Close the client connection
+        await client.close();
+        
+        return { 
+          success: true, 
+          message: `Database ${tenant.dbName} deleted successfully` 
+        };
+      } catch (mongoError) {
+        console.error('Error deleting database with MongoDB client:', mongoError);
+        return { success: false, error: mongoError.message };
+      }
+    } catch (error) {
+      console.error('Error deleting tenant database:', error);
+      return { success: false, error: error.message };
+    }
+  },
   
   /**
    * Get tenant database status
