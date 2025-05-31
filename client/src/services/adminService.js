@@ -319,158 +319,167 @@ const adminService = {
   
   // Get all tenants with filtering, sorting, and pagination
   getTenants: async (params = {}) => {
-    try {
-      console.log('adminService.getTenants called with params:', params);
-      
-      // Convert params to query string
-      const queryParams = new URLSearchParams();
-      
-      // Add pagination params
-      if (params.page) queryParams.append('page', params.page);
-      if (params.limit) queryParams.append('limit', params.limit);
-      
-      // Add filter params
-      if (params.search) queryParams.append('search', params.search);
-      if (params.status && params.status !== 'all') queryParams.append('status', params.status);
-      if (params.location && params.location !== 'all') queryParams.append('location', params.location);
-      
-      // Add sorting params
-      if (params.sortBy) queryParams.append('sortBy', params.sortBy);
-      if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder);
-      
-      const response = await api.get(`/api/tenants?${queryParams.toString()}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching tenants:', error);
-      throw error;
-    }
-  },
+  try {
+    console.log('adminService.getTenants called with params:', params);
+    
+    // Convert params to query string
+    const queryParams = new URLSearchParams();
+    
+    // Add pagination params
+    if (params.page) queryParams.append('page', params.page);
+    if (params.limit) queryParams.append('limit', params.limit);
+    
+    // Add filter params
+    if (params.search) queryParams.append('search', params.search);
+    if (params.status && params.status !== 'all') queryParams.append('status', params.status);
+    if (params.location && params.location !== 'all') queryParams.append('location', params.location);
+    
+    // Add sorting params
+    if (params.sortBy) queryParams.append('sortBy', params.sortBy);
+    if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+    
+    // 🔧 FIX: Use /admin/tenants instead of /api/tenants
+    const response = await api.get(`/admin/tenants?${queryParams.toString()}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching tenants:', error);
+    throw error;
+  }
+},
+
   
   // Get tenant by ID
   getTenantById: async (tenantId) => {
-    try {
-      console.log(`adminService.getTenantById called for ID: ${tenantId}`);
-      const response = await api.get(`/api/tenants/${tenantId}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error fetching tenant ${tenantId}:`, error);
-      throw error;
-    }
-  },
+  try {
+    console.log(`adminService.getTenantById called for ID: ${tenantId}`);
+    // 🔧 FIX: Use /admin/tenants
+    const response = await api.get(`/admin/tenants/${tenantId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching tenant ${tenantId}:`, error);
+    throw error;
+  }
+},
   
   // Create new tenant
   createTenant: async (tenantData) => {
-    try {
-      console.log('adminService.createTenant called with data:', tenantData);
-      
-      // Transform the frontend form data to match backend expectations
-      const apiData = {
-        name: tenantData.name,
-        adminEmail: tenantData.primaryEmail,
-        location: tenantData.location,
-        // Auto-generate database name from clinic name
-        dbName: tenantData.name.toLowerCase()
-          .replace(/[^a-z0-9\s]/g, '') // Remove special characters
-          .replace(/\s+/g, '_') // Replace spaces with underscores
-          .substring(0, 20), // Limit length
-      };
-      
-      const response = await api.post('/api/tenants', apiData);
-      return response.data;
-    } catch (error) {
-      console.error('Error creating tenant:', error);
-      throw error;
-    }
-  },
+  try {
+    console.log('adminService.createTenant called with data:', tenantData);
+    
+    // Transform the frontend form data to match backend expectations
+    const apiData = {
+      name: tenantData.name,
+      adminEmail: tenantData.primaryEmail,
+      location: tenantData.location,
+      // Auto-generate database name from clinic name
+      dbName: tenantData.name.toLowerCase()
+        .replace(/[^a-z0-9\s]/g, '') // Remove special characters
+        .replace(/\s+/g, '_') // Replace spaces with underscores
+        .substring(0, 20), // Limit length
+    };
+    
+    // 🔧 FIX: Use /admin/tenants
+    const response = await api.post('/admin/tenants', apiData);
+    return response.data;
+  } catch (error) {
+    console.error('Error creating tenant:', error);
+    throw error;
+  }
+},
   
   // Update tenant
-  updateTenant: async (tenantId, tenantData) => {
-    try {
-      console.log(`adminService.updateTenant called for ID: ${tenantId} with data:`, tenantData);
-      
-      // Transform the frontend form data to match backend expectations
-      const apiData = {
-        name: tenantData.name,
-        adminEmail: tenantData.primaryEmail,
-        location: tenantData.location,
-      };
-      
-      const response = await api.put(`/api/tenants/${tenantId}`, apiData);
-      return response.data;
-    } catch (error) {
-      console.error(`Error updating tenant ${tenantId}:`, error);
-      throw error;
-    }
-  },
+ updateTenant: async (tenantId, tenantData) => {
+  try {
+    console.log(`adminService.updateTenant called for ID: ${tenantId} with data:`, tenantData);
+    
+    // Transform the frontend form data to match backend expectations
+    const apiData = {
+      name: tenantData.name,
+      adminEmail: tenantData.primaryEmail,
+      location: tenantData.location,
+    };
+    
+    // 🔧 FIX: Use /admin/tenants
+    const response = await api.put(`/admin/tenants/${tenantId}`, apiData);
+    return response.data;
+  } catch (error) {
+    console.error(`Error updating tenant ${tenantId}:`, error);
+    throw error;
+  }
+},
   
   // Update tenant status (activate/deactivate)
   updateTenantStatus: async (tenantId, statusData) => {
-    try {
-      console.log(`adminService.updateTenantStatus called for tenant ${tenantId}:`, statusData);
-      const response = await api.patch(`/api/tenants/${tenantId}/status`, statusData);
-      return response.data;
-    } catch (error) {
-      console.error(`Error updating tenant ${tenantId} status:`, error);
-      throw error;
-    }
-  },
+  try {
+    console.log(`adminService.updateTenantStatus called for tenant ${tenantId}:`, statusData);
+    // 🔧 FIX: Use /admin/tenants
+    const response = await api.patch(`/admin/tenants/${tenantId}/status`, statusData);
+    return response.data;
+  } catch (error) {
+    console.error(`Error updating tenant ${tenantId} status:`, error);
+    throw error;
+  }
+},
   
   // Delete tenant
   deleteTenant: async (tenantId) => {
-    try {
-      console.log(`adminService.deleteTenant called for ID: ${tenantId}`);
-      const response = await api.delete(`/api/tenants/${tenantId}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error deleting tenant ${tenantId}:`, error);
-      throw error;
-    }
-  },
+  try {
+    console.log(`adminService.deleteTenant called for ID: ${tenantId}`);
+    // 🔧 FIX: Use /admin/tenants
+    const response = await api.delete(`/admin/tenants/${tenantId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error deleting tenant ${tenantId}:`, error);
+    throw error;
+  }
+},
   
   // Export tenants to PDF
   exportTenantsToPdf: async (filters = {}) => {
-    try {
-      console.log('adminService.exportTenantsToPdf called with filters:', filters);
-      
-      const response = await api.get('/admin/tenants/export/pdf', {
-        params: filters,
-        responseType: 'blob'
-      });
-      
-      // Create a download link and trigger it
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      
-      // Generate filename with current date
-      const date = new Date().toISOString().slice(0, 10);
-      link.setAttribute('download', `tenants-report-${date}.pdf`);
-      
-      document.body.appendChild(link);
-      link.click();
-      
-      // Clean up
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      
-      return { success: true };
-    } catch (error) {
-      console.error('Error exporting tenants to PDF:', error);
-      throw error;
-    }
-  },
+  try {
+    console.log('adminService.exportTenantsToPdf called with filters:', filters);
+    
+    // 🔧 FIX: Use /admin/tenants
+    const response = await api.get('/admin/tenants/export/pdf', {
+      params: filters,
+      responseType: 'blob'
+    });
+    
+    // Create a download link and trigger it
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    
+    // Generate filename with current date
+    const date = new Date().toISOString().slice(0, 10);
+    link.setAttribute('download', `tenants-report-${date}.pdf`);
+    
+    document.body.appendChild(link);
+    link.click();
+    
+    // Clean up
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error exporting tenants to PDF:', error);
+    throw error;
+  }
+},
   
   // Get tenant statistics (doctor count, patient count)
   getTenantStats: async (tenantId) => {
-    try {
-      console.log(`adminService.getTenantStats called for tenant: ${tenantId}`);
-      const response = await api.get(`/api/tenants/${tenantId}/stats`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error fetching tenant ${tenantId} stats:`, error);
-      throw error;
-    }
-  },
+  try {
+    console.log(`adminService.getTenantStats called for tenant: ${tenantId}`);
+    // 🔧 FIX: Use /admin/tenants
+    const response = await api.get(`/admin/tenants/${tenantId}/stats`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching tenant ${tenantId} stats:`, error);
+    throw error;
+  }
+},
   
   // Get tenant database status
   getTenantDatabaseStatus: async (tenantId) => {
