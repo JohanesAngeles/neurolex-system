@@ -4,6 +4,7 @@ const router = express.Router();
 const multer = require('multer');
 const adminController = require('../controllers/adminController');
 const adminAuth = require('../middleware/adminAuth');
+const tenantController = require('../controllers/tenantController');
 
 // 🆕 NEW: Import tenant routes
 const tenantRoutes = require('./tenantRoutes');
@@ -55,7 +56,7 @@ router.get('/dashboard', adminAuth, adminController.getDashboardData);
 // Patient Management
 router.get('/patients', adminAuth, adminController.getAllPatients);
 router.delete('/patients/:patientId', adminAuth, adminController.deletePatient);
-router.get('/tenants', adminAuth, adminController.getTenants);
+router.get('/tenants', adminAuth, tenantController.getAllTenants);
 router.get('/patients/export/pdf', adminAuth, adminController.exportPatientsToPdf);
 
 // Doctor Verification

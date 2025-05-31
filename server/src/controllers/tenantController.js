@@ -39,35 +39,57 @@ const generateTenantId = async (Tenant) => {
  * Now counts all users regardless of isActive status
  */
 const getTenantStatistics = async (tenantId) => {
+  console.log(`🔍 [DEBUG] getTenantStatistics called with tenantId: ${tenantId}`);
+  
   try {
-    console.log(`📊 Fetching statistics for tenant: ${tenantId}`);
+    console.log(`📊 [DEBUG] Fetching statistics for tenant: ${tenantId}`);
     
     // Connect to the specific tenant database
+    console.log(`🔗 [DEBUG] Attempting to connect to tenant database...`);
     const tenantConnection = await dbManager.connectTenant(tenantId);
     
     if (!tenantConnection) {
-      console.error(`❌ Failed to connect to tenant database: ${tenantId}`);
+      console.error(`❌ [DEBUG] Failed to connect to tenant database: ${tenantId}`);
       return { doctorCount: 0, patientCount: 0 };
     }
     
+    console.log(`✅ [DEBUG] Successfully connected to tenant database`);
+    
     // Get the User model from the tenant connection
+    console.log(`📝 [DEBUG] Getting User model from tenant connection...`);
     const UserModel = tenantConnection.model('User');
+    console.log(`✅ [DEBUG] User model retrieved successfully`);
     
-    // Count doctors (removed isActive filter)
-    const doctorCount = await UserModel.countDocuments({ 
-      role: 'doctor'
-    });
+    // Count all users first to see if there are any
+    console.log(`🔢 [DEBUG] Counting all users...`);
+    const totalUsers = await UserModel.countDocuments({});
+    console.log(`👥 [DEBUG] Total users in database: ${totalUsers}`);
     
-    // Count patients (removed isActive filter)
-    const patientCount = await UserModel.countDocuments({ 
-      role: 'patient'
-    });
+    // Count by role without any filters
+    console.log(`🔢 [DEBUG] Counting doctors...`);
+    const doctorCount = await UserModel.countDocuments({ role: 'doctor' });
+    console.log(`👨‍⚕️ [DEBUG] Doctor count: ${doctorCount}`);
     
-    console.log(`✅ Statistics for tenant ${tenantId}: ${doctorCount} doctors, ${patientCount} patients`);
+    console.log(`🔢 [DEBUG] Counting patients...`);
+    const patientCount = await UserModel.countDocuments({ role: 'patient' });
+    console.log(`🤒 [DEBUG] Patient count: ${patientCount}`);
+    
+    // Count admins too for debugging
+    console.log(`🔢 [DEBUG] Counting admins...`);
+    const adminCount = await UserModel.countDocuments({ role: 'admin' });
+    console.log(`👔 [DEBUG] Admin count: ${adminCount}`);
+    
+    // List all distinct roles in the database
+    console.log(`📋 [DEBUG] Getting all distinct roles...`);
+    const distinctRoles = await UserModel.distinct('role');
+    console.log(`🏷️ [DEBUG] All roles in database:`, distinctRoles);
+    
+    console.log(`✅ [DEBUG] Final statistics for tenant ${tenantId}: ${doctorCount} doctors, ${patientCount} patients`);
     
     return { doctorCount, patientCount };
   } catch (error) {
-    console.error(`❌ Error getting tenant statistics for ${tenantId}:`, error);
+    console.error(`❌ [DEBUG] Error getting tenant statistics for ${tenantId}:`, error);
+    console.error(`❌ [DEBUG] Error stack:`, error.stack);
     return { doctorCount: 0, patientCount: 0 };
   }
 };
@@ -75,8 +97,18 @@ const getTenantStatistics = async (tenantId) => {
 /**
  * Get all tenants with pagination, filtering, and search - Enhanced for frontend
  */
+/**
+ * Get all tenants with pagination, filtering, and search - Enhanced for frontend
+ */
 exports.getAllTenants = async (req, res) => {
   try {
+    // Add cache-busting headers at the beginning
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+
     const {
       page = 1,
       limit = 10,
