@@ -605,7 +605,7 @@ const adminService = {
 
 
   // Get doctor details
-  getDoctorDetails: async (doctorId, tenantId = null) => {
+getDoctorDetails: async (doctorId, tenantId = null) => {
   try {
     console.log(`adminService.getDoctorDetails called for ID: ${doctorId}, Tenant ID: ${tenantId || 'not specified'}`);
     

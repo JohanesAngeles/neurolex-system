@@ -1,0 +1,376 @@
+// client/src/components/admin/DoctorDetailsModal.jsx
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { toast } from 'react-toastify';
+import '../../styles/components/admin/DoctorDetailsModal.css';
+
+const API_URL = process.env.REACT_APP_API_URL || '/api';
+
+const DoctorDetailsModal = ({ doctorId, isOpen, onClose, onApprove, onReject }) => {
+  const [doctor, setDoctor] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [processingAction, setProcessingAction] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && doctorId) {
+      fetchDoctorDetails();
+    }
+  }, [isOpen, doctorId]);
+
+  const fetchDoctorDetails = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const adminToken = localStorage.getItem('adminToken');
+      if (!adminToken) {
+        throw new Error('Admin authentication required');
+      }
+
+      const response = await axios.get(`${API_URL}/admin/doctors/${doctorId}`, {
+        headers: {
+          'Authorization': `Bearer ${adminToken}`
+        }
+      });
+
+      if (response.data.success) {
+        setDoctor(response.data.data);
+      } else {
+        throw new Error(response.data.message || 'Failed to fetch doctor details');
+      }
+    } catch (error) {
+      console.error('Error fetching doctor details:', error);
+      setError(error.response?.data?.message || error.message || 'Failed to load doctor details');
+      toast.error('Failed to load doctor details');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApprove = async () => {
+    try {
+      setProcessingAction(true);
+      
+      const adminToken = localStorage.getItem('adminToken');
+      await axios.post(`${API_URL}/admin/doctors/verify/${doctorId}`, {
+        verificationStatus: 'approved',
+        verificationNotes: 'Approved from doctor details modal'
+      }, {
+        headers: {
+          'Authorization': `Bearer ${adminToken}`
+        }
+      });
+
+      toast.success('Doctor approved successfully');
+      onApprove?.(doctorId);
+      onClose();
+    } catch (error) {
+      console.error('Error approving doctor:', error);
+      toast.error('Failed to approve doctor');
+    } finally {
+      setProcessingAction(false);
+    }
+  };
+
+  const handleReject = async () => {
+    try {
+      setProcessingAction(true);
+      
+      const adminToken = localStorage.getItem('adminToken');
+      await axios.post(`${API_URL}/admin/doctors/verify/${doctorId}`, {
+        verificationStatus: 'rejected',
+        rejectionReason: 'Application rejected after review'
+      }, {
+        headers: {
+          'Authorization': `Bearer ${adminToken}`
+        }
+      });
+
+      toast.success('Doctor application rejected');
+      onReject?.(doctorId);
+      onClose();
+    } catch (error) {
+      console.error('Error rejecting doctor:', error);
+      toast.error('Failed to reject doctor application');
+    } finally {
+      setProcessingAction(false);
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Not provided';
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch {
+      return 'Invalid date';
+    }
+  };
+
+  const formatAvailability = (availability) => {
+    if (!availability) return 'Not specified';
+    
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const availableDays = days.filter(day => availability[day]?.available);
+    
+    if (availableDays.length === 0) return 'No availability set';
+    
+    return availableDays.map(day => 
+      day.charAt(0).toUpperCase() + day.slice(1)
+    ).join(', ');
+  };
+
+  const renderDocumentLink = (url, label) => {
+    if (!url) return <span className="no-document">Not provided</span>;
+    
+    return (
+      <a 
+        href={url} 
+        target="_blank" 
+        rel="noopener noreferrer" 
+        className="document-link"
+      >
+        View {label}
+      </a>
+    );
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="doctor-modal" onClick={(e) => e.stopPropagation()}>
+        {/* Modal Header */}
+        <div className="modal-header">
+          <h2 className="modal-title">Doctor Application Review</h2>
+          <button className="modal-close" onClick={onClose}>
+            <span className="close-icon">×</span>
+          </button>
+        </div>
+
+        {/* Modal Content */}
+        <div className="modal-content">
+          {loading ? (
+            <div className="loading-container">
+              <div className="loading-spinner"></div>
+              <p>Loading doctor details...</p>
+            </div>
+          ) : error ? (
+            <div className="error-container">
+              <p className="error-message">{error}</p>
+              <button className="retry-button" onClick={fetchDoctorDetails}>
+                Retry
+              </button>
+            </div>
+          ) : doctor ? (
+            <div className="doctor-details">
+              {/* Personal Information Section */}
+              <div className="details-section">
+                <h3 className="section-title">Personal Information</h3>
+                <div className="details-grid">
+                  <div className="detail-item">
+                    <label>First Name:</label>
+                    <span>{doctor.firstName || 'Not provided'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Last Name:</label>
+                    <span>{doctor.lastName || 'Not provided'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Email Address:</label>
+                    <span>{doctor.email || 'Not provided'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Personal Contact Number:</label>
+                    <span>{doctor.personalContactNumber || 'Not provided'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Clinic Location:</label>
+                    <span>{doctor.clinicLocation || doctor.clinicAddress || 'Not provided'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Clinic Contact Number:</label>
+                    <span>{doctor.clinicContactNumber || 'Not provided'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Professional Information Section */}
+              <div className="details-section">
+                <h3 className="section-title">Professional Information</h3>
+                <div className="details-grid">
+                  <div className="detail-item">
+                    <label>Specialty:</label>
+                    <span>{doctor.specialty || doctor.specialization || 'Not provided'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Professional Title:</label>
+                    <span>{doctor.title || 'Not provided'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Areas of Expertise:</label>
+                    <span>{doctor.areasOfExpertise || 'Not provided'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Experience:</label>
+                    <span>{doctor.experience || doctor.yearsOfPractice ? `${doctor.yearsOfPractice} years` : 'Not provided'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Availability Section */}
+              <div className="details-section">
+                <h3 className="section-title">Availability</h3>
+                <div className="details-grid">
+                  <div className="detail-item full-width">
+                    <label>Available Days:</label>
+                    <span>{formatAvailability(doctor.availability)}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>In-Person Appointments:</label>
+                    <span className={`status-badge ${doctor.inPerson || doctor.appointmentTypes?.inPerson ? 'available' : 'unavailable'}`}>
+                      {doctor.inPerson || doctor.appointmentTypes?.inPerson ? 'Available' : 'Not Available'}
+                    </span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Telehealth Appointments:</label>
+                    <span className={`status-badge ${doctor.telehealth || doctor.appointmentTypes?.telehealth ? 'available' : 'unavailable'}`}>
+                      {doctor.telehealth || doctor.appointmentTypes?.telehealth ? 'Available' : 'Not Available'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Credentials Section */}
+              <div className="details-section">
+                <h3 className="section-title">Credentials</h3>
+                
+                {/* Education */}
+                <div className="credentials-subsection">
+                  <h4 className="subsection-title">Education</h4>
+                  {doctor.education && doctor.education.length > 0 ? (
+                    <div className="credentials-list">
+                      {doctor.education.map((edu, index) => (
+                        <div key={index} className="credential-item">
+                          <span className="credential-degree">{edu.degree || 'Degree not specified'}</span>
+                          <span className="credential-institution">{edu.institution || 'Institution not specified'}</span>
+                          <span className="credential-year">{edu.year || 'Year not specified'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="no-data">No education information provided</p>
+                  )}
+                </div>
+
+                {/* Licenses */}
+                <div className="credentials-subsection">
+                  <h4 className="subsection-title">Licenses</h4>
+                  {doctor.licenses && doctor.licenses.length > 0 ? (
+                    <div className="credentials-list">
+                      {doctor.licenses.map((license, index) => (
+                        <div key={index} className="credential-item">
+                          <span className="credential-degree">{license.degree || 'License type not specified'}</span>
+                          <span className="credential-number">#{license.licenseNumber || 'Number not specified'}</span>
+                          <span className="credential-expiry">Expires: {license.expirationDate || 'Date not specified'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : doctor.licenseNumber ? (
+                    <div className="credentials-list">
+                      <div className="credential-item">
+                        <span className="credential-number">#{doctor.licenseNumber}</span>
+                        <span className="credential-institution">{doctor.licenseIssuingAuthority || 'Authority not specified'}</span>
+                        <span className="credential-expiry">Expires: {formatDate(doctor.licenseExpiryDate)}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="no-data">No license information provided</p>
+                  )}
+                </div>
+
+                {/* Certifications */}
+                <div className="credentials-subsection">
+                  <h4 className="subsection-title">Certifications</h4>
+                  {doctor.certifications && doctor.certifications.length > 0 ? (
+                    <div className="credentials-list">
+                      {doctor.certifications.map((cert, index) => (
+                        <div key={index} className="credential-item">
+                          <span className="credential-degree">{cert.degree || 'Certification not specified'}</span>
+                          <span className="credential-institution">{cert.issuingAuthority || 'Authority not specified'}</span>
+                          <span className="credential-year">{cert.year || 'Year not specified'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="no-data">No certification information provided</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Document Verification Section */}
+              <div className="details-section">
+                <h3 className="section-title">Document Verification</h3>
+                <div className="documents-grid">
+                  <div className="document-item">
+                    <label>License Document:</label>
+                    {renderDocumentLink(doctor.licenseDocumentUrl, 'License')}
+                  </div>
+                  <div className="document-item">
+                    <label>Education Certificate:</label>
+                    {renderDocumentLink(doctor.educationCertificateUrl, 'Education Certificate')}
+                  </div>
+                  {doctor.additionalDocumentUrls && doctor.additionalDocumentUrls.length > 0 && (
+                    <div className="document-item full-width">
+                      <label>Additional Documents:</label>
+                      <div className="additional-docs">
+                        {doctor.additionalDocumentUrls.map((url, index) => (
+                          <div key={index}>
+                            {renderDocumentLink(url, `Document ${index + 1}`)}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        {/* Modal Footer */}
+        <div className="modal-footer">
+          <button 
+            className="modal-button secondary" 
+            onClick={onClose}
+            disabled={processingAction}
+          >
+            Close
+          </button>
+          <div className="action-buttons">
+            <button 
+              className="modal-button reject" 
+              onClick={handleReject}
+              disabled={processingAction}
+            >
+              {processingAction ? 'Processing...' : 'Reject'}
+            </button>
+            <button 
+              className="modal-button approve" 
+              onClick={handleApprove}
+              disabled={processingAction}
+            >
+              {processingAction ? 'Processing...' : 'Accept'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default DoctorDetailsModal;

@@ -1,8 +1,9 @@
-// client/src/components/admin/AdminDashboard.jsx - FIXED VERSION
+// client/src/components/admin/AdminDashboard.jsx - UPDATED WITH MODAL
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import DoctorDetailsModal from './DoctorDetailsModal';
 import '../../styles/components/admin/AdminDashboard.css';
 
 // FIXED: Use correct API URL
@@ -23,6 +24,10 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 10;
+  
+  // Modal state
+  const [selectedDoctorId, setSelectedDoctorId] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   
   // FIXED: Setup axios with admin token
   useEffect(() => {
@@ -127,9 +132,37 @@ const AdminDashboard = () => {
     navigate('/admin/login');
   };
   
-  // Action handlers
+  // Modal handlers
   const handleViewDoctor = (id) => {
-    navigate(`/admin/professionals?doctorId=${id}`);
+    setSelectedDoctorId(id);
+    setIsModalOpen(true);
+  };
+  
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedDoctorId(null);
+  };
+  
+  const handleModalApprove = (doctorId) => {
+    // Remove the doctor from the pending list
+    setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== doctorId));
+    
+    // Update dashboard count
+    setDashboardData(prev => ({
+      ...prev,
+      pendingVerifications: Math.max(0, prev.pendingVerifications - 1)
+    }));
+  };
+  
+  const handleModalReject = (doctorId) => {
+    // Remove the doctor from the pending list
+    setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== doctorId));
+    
+    // Update dashboard count
+    setDashboardData(prev => ({
+      ...prev,
+      pendingVerifications: Math.max(0, prev.pendingVerifications - 1)
+    }));
   };
   
   const handleApproveDoctor = async (id) => {
@@ -390,6 +423,15 @@ const AdminDashboard = () => {
           </div>
         )}
       </div>
+
+      {/* Doctor Details Modal */}
+      <DoctorDetailsModal
+        doctorId={selectedDoctorId}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onApprove={handleModalApprove}
+        onReject={handleModalReject}
+      />
     </div>
   );
 };
