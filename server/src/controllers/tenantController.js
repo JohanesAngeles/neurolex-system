@@ -34,6 +34,10 @@ const generateTenantId = async (Tenant) => {
  * Get tenant statistics (doctor count, patient count) - FIXED VERSION
  * Now actually queries the tenant database instead of returning mock data
  */
+/**
+ * Get tenant statistics (doctor count, patient count) - FIXED VERSION
+ * Now counts all users regardless of isActive status
+ */
 const getTenantStatistics = async (tenantId) => {
   try {
     console.log(`📊 Fetching statistics for tenant: ${tenantId}`);
@@ -49,16 +53,14 @@ const getTenantStatistics = async (tenantId) => {
     // Get the User model from the tenant connection
     const UserModel = tenantConnection.model('User');
     
-    // Count active doctors
+    // Count doctors (removed isActive filter)
     const doctorCount = await UserModel.countDocuments({ 
-      role: 'doctor',
-      isActive: true 
+      role: 'doctor'
     });
     
-    // Count active patients  
+    // Count patients (removed isActive filter)
     const patientCount = await UserModel.countDocuments({ 
-      role: 'patient',
-      isActive: true 
+      role: 'patient'
     });
     
     console.log(`✅ Statistics for tenant ${tenantId}: ${doctorCount} doctors, ${patientCount} patients`);
