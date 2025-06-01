@@ -17,73 +17,73 @@ const DoctorDetailsModal = ({ doctorId, isOpen, onClose, onApprove, onReject }) 
   }, [isOpen, doctorId]);
 
   const fetchDoctorDetails = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // ✅ FIXED: Use adminService instead of direct axios
-      const response = await adminService.getDoctorDetails(doctorId);
-      
-      // Handle response structure properly
-      if (response.success) {
-        setDoctor(response.data);
-      } else if (response.data) {
-        setDoctor(response.data);
-      } else {
-        throw new Error(response.message || 'Failed to fetch doctor details');
-      }
-    } catch (error) {
-      console.error('Error fetching doctor details:', error);
-      setError(error.response?.data?.message || error.message || 'Failed to load doctor details');
-      toast.error('Failed to load doctor details');
-    } finally {
-      setLoading(false);
+  try {
+    setLoading(true);
+    setError(null);
+    
+    // ✅ FIXED: Use adminService instead of direct axios (like the working page)
+    const response = await adminService.getDoctorDetails(doctorId);
+    
+    // Handle response structure properly
+    if (response.success) {
+      setDoctor(response.data);
+    } else if (response.data) {
+      setDoctor(response.data);
+    } else {
+      throw new Error(response.message || 'Failed to fetch doctor details');
     }
-  };
+  } catch (error) {
+    console.error('Error fetching doctor details:', error);
+    setError(error.response?.data?.message || error.message || 'Failed to load doctor details');
+    toast.error('Failed to load doctor details');
+  } finally {
+    setLoading(false);
+  }
+};
 
-  const handleApprove = async () => {
-    try {
-      setProcessingAction(true);
-      
-      // ✅ FIXED: Use adminService.verifyDoctor() with correct data structure
-      await adminService.verifyDoctor(doctorId, {
-        verificationStatus: 'approved',
-        verificationNotes: 'Approved from doctor details modal'
-      });
+const handleApprove = async () => {
+  try {
+    setProcessingAction(true);
+    
+    // ✅ FIXED: Use adminService.verifyDoctor() (like the working page)
+    await adminService.verifyDoctor(doctorId, {
+      verificationStatus: 'approved',
+      verificationNotes: 'Approved from doctor details modal'
+    });
 
-      toast.success('Doctor approved successfully');
-      onApprove?.(doctorId);
-      onClose();
-    } catch (error) {
-      console.error('Error approving doctor:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to approve doctor';
-      toast.error(errorMessage);
-    } finally {
-      setProcessingAction(false);
-    }
-  };
+    toast.success('Doctor approved successfully');
+    onApprove?.(doctorId);
+    onClose();
+  } catch (error) {
+    console.error('Error approving doctor:', error);
+    const errorMessage = error.response?.data?.message || error.message || 'Failed to approve doctor';
+    toast.error(errorMessage);
+  } finally {
+    setProcessingAction(false);
+  }
+};
 
-  const handleReject = async () => {
-    try {
-      setProcessingAction(true);
-      
-      // ✅ FIXED: Use adminService.verifyDoctor() with correct data structure
-      await adminService.verifyDoctor(doctorId, {
-        verificationStatus: 'rejected',
-        rejectionReason: 'Application rejected after review'
-      });
+const handleReject = async () => {
+  try {
+    setProcessingAction(true);
+    
+    // ✅ FIXED: Use adminService.verifyDoctor() (like the working page)
+    await adminService.verifyDoctor(doctorId, {
+      verificationStatus: 'rejected',
+      rejectionReason: 'Application rejected after review'
+    });
 
-      toast.success('Doctor application rejected');
-      onReject?.(doctorId);
-      onClose();
-    } catch (error) {
-      console.error('Error rejecting doctor:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to reject doctor application';
-      toast.error(errorMessage);
-    } finally {
-      setProcessingAction(false);
-    }
-  };
+    toast.success('Doctor application rejected');
+    onReject?.(doctorId);
+    onClose();
+  } catch (error) {
+    console.error('Error rejecting doctor:', error);
+    const errorMessage = error.response?.data?.message || error.message || 'Failed to reject doctor application';
+    toast.error(errorMessage);
+  } finally {
+    setProcessingAction(false);
+  }
+};
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Not provided';

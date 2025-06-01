@@ -168,7 +168,7 @@ const AdminDashboard = () => {
   
   const handleApproveDoctor = async (id) => {
   try {
-    // ✅ FIXED: Use adminService instead of direct axios
+    // ✅ FIXED: Use adminService instead of direct axios (like the working page)
     await adminService.verifyDoctor(id, { 
       verificationStatus: 'approved',
       verificationNotes: 'Approved from dashboard'
@@ -188,10 +188,10 @@ const AdminDashboard = () => {
     toast.error(errorMessage);
   }
 };
-  
-  const handleRejectDoctor = async (id) => {
+
+const handleRejectDoctor = async (id) => {
   try {
-    // ✅ FIXED: Use adminService instead of direct axios
+    // ✅ FIXED: Use adminService instead of direct axios (like the working page)
     await adminService.verifyDoctor(id, { 
       verificationStatus: 'rejected',
       rejectionReason: 'Application rejected by admin'
@@ -211,6 +211,7 @@ const AdminDashboard = () => {
     toast.error(errorMessage);
   }
 };
+
   
   // Helper functions
   const formatDate = (dateString) => {
