@@ -1,4 +1,4 @@
-// client/src/components/admin/AdminDashboard.jsx - COMPLETE FIXED VERSION
+// client/src/components/admin/AdminDashboard.jsx - SIMPLE VERSION LIKE WORKING PAGE
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -25,7 +25,7 @@ const AdminDashboard = () => {
   const [selectedDoctorId, setSelectedDoctorId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
-  // ✅ FIXED: Fetch dashboard data using adminService
+  // ✅ EXACTLY like the working DoctorVerification page
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
@@ -35,7 +35,6 @@ const AdminDashboard = () => {
           return;
         }
         
-        // ✅ FIXED: Use adminService instead of direct axios
         const response = await adminService.getDashboardData();
         
         if (response.success) {
@@ -51,14 +50,13 @@ const AdminDashboard = () => {
         if (error.response?.status === 401) {
           navigate('/admin/login');
         }
-        // Don't show error toast for dashboard stats, just use defaults
       }
     };
     
     fetchDashboardData();
   }, [navigate]);
   
-  // ✅ FIXED: Fetch pending doctors using adminService
+  // ✅ EXACTLY like the working DoctorVerification page
   useEffect(() => {
     const fetchPendingDoctors = async () => {
       try {
@@ -69,12 +67,10 @@ const AdminDashboard = () => {
           return;
         }
         
-        // ✅ FIXED: Use adminService instead of direct axios
         const response = await adminService.getPendingDoctors();
         
         if (response.success && response.data) {
           setPendingDoctors(response.data);
-          // Update pending count in dashboard
           setDashboardData(prev => ({
             ...prev,
             pendingVerifications: response.data.length
@@ -99,41 +95,28 @@ const AdminDashboard = () => {
     fetchPendingDoctors();
   }, [navigate]);
   
-  // Handle admin logout
   const handleAdminLogout = () => {
-    // Clear all admin tokens
     localStorage.removeItem('adminToken');
     localStorage.removeItem('adminUser');
     localStorage.removeItem('adminTokenExpiry');
-    
-    // Show success message
     toast.success('Logged out successfully');
-    
-    // Navigate to admin login
     navigate('/admin/login');
   };
   
   // Modal handlers
   const handleViewDoctor = (id) => {
-    console.log('Opening modal for doctor:', id);
     setSelectedDoctorId(id);
     setIsModalOpen(true);
   };
   
   const handleCloseModal = () => {
-    console.log('Closing modal');
     setIsModalOpen(false);
     setSelectedDoctorId(null);
   };
   
-  // ✅ FIXED: These functions should ONLY update the UI, not make API calls
-  // The API calls are handled by the modal itself
+  // ✅ These functions ONLY update UI - no API calls (modal handles that)
   const handleModalApprove = (doctorId) => {
-    console.log('Modal approve callback - updating UI only for doctor:', doctorId);
-    // Remove the doctor from the pending list
     setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== doctorId));
-    
-    // Update dashboard count
     setDashboardData(prev => ({
       ...prev,
       pendingVerifications: Math.max(0, prev.pendingVerifications - 1)
@@ -141,65 +124,56 @@ const AdminDashboard = () => {
   };
   
   const handleModalReject = (doctorId) => {
-    console.log('Modal reject callback - updating UI only for doctor:', doctorId);
-    // Remove the doctor from the pending list
     setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== doctorId));
-    
-    // Update dashboard count
     setDashboardData(prev => ({
       ...prev,
       pendingVerifications: Math.max(0, prev.pendingVerifications - 1)
     }));
   };
   
-  // ✅ FIXED: Direct approve/reject buttons in the table
+  // ✅ EXACTLY like the working DoctorVerification page - simple direct calls
   const handleApproveDoctor = async (id) => {
     try {
-      console.log('Direct approve from dashboard for doctor:', id);
-      await adminService.verifyDoctor(id, { 
+      // ✅ EXACTLY like the working page
+      await adminService.verifyDoctor(id, {
         verificationStatus: 'approved',
         verificationNotes: 'Approved from dashboard'
       });
       
-      toast.success('Doctor approved successfully');
+      toast.success('Doctor approved successfully!');
       setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== id));
-      
-      // Update dashboard count
       setDashboardData(prev => ({
         ...prev,
         pendingVerifications: Math.max(0, prev.pendingVerifications - 1)
       }));
-    } catch (error) {
-      console.error('Error approving doctor:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to approve doctor';
+    } catch (err) {
+      console.error('Verification error:', err);
+      const errorMessage = err.response?.data?.message || 'Verification process failed. Please try again.';
       toast.error(errorMessage);
     }
   };
 
   const handleRejectDoctor = async (id) => {
     try {
-      console.log('Direct reject from dashboard for doctor:', id);
-      await adminService.verifyDoctor(id, { 
+      // ✅ EXACTLY like the working page
+      await adminService.verifyDoctor(id, {
         verificationStatus: 'rejected',
         rejectionReason: 'Application rejected by admin'
       });
       
-      toast.success('Doctor rejected successfully');
+      toast.success('Doctor rejected successfully!');
       setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== id));
-      
-      // Update dashboard count
       setDashboardData(prev => ({
         ...prev,
         pendingVerifications: Math.max(0, prev.pendingVerifications - 1)
       }));
-    } catch (error) {
-      console.error('Error rejecting doctor:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to reject doctor';
+    } catch (err) {
+      console.error('Verification error:', err);
+      const errorMessage = err.response?.data?.message || 'Verification process failed. Please try again.';
       toast.error(errorMessage);
     }
   };
   
-  // Helper functions
   const formatDate = (dateString) => {
     try {
       return new Date(dateString).toLocaleDateString('en-US', {
