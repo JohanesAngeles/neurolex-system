@@ -1,19 +1,14 @@
-// client/src/components/admin/AdminDashboard.jsx - UPDATED WITH MODAL
+// client/src/components/admin/AdminDashboard.jsx - COMPLETE FIXED VERSION
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { toast } from 'react-toastify';
 import DoctorDetailsModal from './DoctorDetailsModal';
 import adminService from '../../services/adminService';
 import '../../styles/components/admin/AdminDashboard.css';
 
-// FIXED: Use correct API URL
-const API_URL = process.env.REACT_APP_API_URL || '/api';
-
 const AdminDashboard = () => {
   const navigate = useNavigate();
   
-  // FIXED: Remove admin context dependency and use direct state
   const [dashboardData, setDashboardData] = useState({
     totalUsers: 0,
     totalProfessionals: 0,
@@ -30,15 +25,7 @@ const AdminDashboard = () => {
   const [selectedDoctorId, setSelectedDoctorId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
-  // FIXED: Setup axios with admin token
-  useEffect(() => {
-    const adminToken = localStorage.getItem('adminToken');
-    if (adminToken) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${adminToken}`;
-    }
-  }, []);
-  
-  // Fetch dashboard data
+  // ✅ FIXED: Fetch dashboard data using adminService
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
@@ -48,23 +35,22 @@ const AdminDashboard = () => {
           return;
         }
         
-        // Fetch dashboard statistics
-        const response = await axios.get(`${API_URL}/admin/dashboard`, {
-          headers: {
-            'Authorization': `Bearer ${adminToken}`
-          }
-        });
+        // ✅ FIXED: Use adminService instead of direct axios
+        const response = await adminService.getDashboardData();
         
-        if (response.data.success) {
+        if (response.success) {
           setDashboardData({
-            totalUsers: response.data.totalUsers || 0,
-            totalProfessionals: response.data.totalProfessionals || 0,
-            pendingVerifications: response.data.pendingVerifications || 0,
-            journalEntries: response.data.journalEntries || 0,
+            totalUsers: response.totalUsers || 0,
+            totalProfessionals: response.totalProfessionals || 0,
+            pendingVerifications: response.pendingVerifications || 0,
+            journalEntries: response.totalJournalEntries || response.journalEntries || 0,
           });
         }
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
+        if (error.response?.status === 401) {
+          navigate('/admin/login');
+        }
         // Don't show error toast for dashboard stats, just use defaults
       }
     };
@@ -72,7 +58,7 @@ const AdminDashboard = () => {
     fetchDashboardData();
   }, [navigate]);
   
-  // Fetch pending doctors
+  // ✅ FIXED: Fetch pending doctors using adminService
   useEffect(() => {
     const fetchPendingDoctors = async () => {
       try {
@@ -83,18 +69,15 @@ const AdminDashboard = () => {
           return;
         }
         
-        const response = await axios.get(`${API_URL}/admin/doctors/pending`, {
-          headers: {
-            'Authorization': `Bearer ${adminToken}`
-          }
-        });
+        // ✅ FIXED: Use adminService instead of direct axios
+        const response = await adminService.getPendingDoctors();
         
-        if (response.data.success && response.data.data) {
-          setPendingDoctors(response.data.data);
+        if (response.success && response.data) {
+          setPendingDoctors(response.data);
           // Update pending count in dashboard
           setDashboardData(prev => ({
             ...prev,
-            pendingVerifications: response.data.data.length
+            pendingVerifications: response.data.length
           }));
         } else if (response.data && Array.isArray(response.data)) {
           setPendingDoctors(response.data);
@@ -123,9 +106,6 @@ const AdminDashboard = () => {
     localStorage.removeItem('adminUser');
     localStorage.removeItem('adminTokenExpiry');
     
-    // Also clear axios default header
-    delete axios.defaults.headers.common['Authorization'];
-    
     // Show success message
     toast.success('Logged out successfully');
     
@@ -135,16 +115,21 @@ const AdminDashboard = () => {
   
   // Modal handlers
   const handleViewDoctor = (id) => {
+    console.log('Opening modal for doctor:', id);
     setSelectedDoctorId(id);
     setIsModalOpen(true);
   };
   
   const handleCloseModal = () => {
+    console.log('Closing modal');
     setIsModalOpen(false);
     setSelectedDoctorId(null);
   };
   
+  // ✅ FIXED: These functions should ONLY update the UI, not make API calls
+  // The API calls are handled by the modal itself
   const handleModalApprove = (doctorId) => {
+    console.log('Modal approve callback - updating UI only for doctor:', doctorId);
     // Remove the doctor from the pending list
     setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== doctorId));
     
@@ -156,6 +141,7 @@ const AdminDashboard = () => {
   };
   
   const handleModalReject = (doctorId) => {
+    console.log('Modal reject callback - updating UI only for doctor:', doctorId);
     // Remove the doctor from the pending list
     setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== doctorId));
     
@@ -166,52 +152,52 @@ const AdminDashboard = () => {
     }));
   };
   
+  // ✅ FIXED: Direct approve/reject buttons in the table
   const handleApproveDoctor = async (id) => {
-  try {
-    // ✅ FIXED: Use adminService instead of direct axios (like the working page)
-    await adminService.verifyDoctor(id, { 
-      verificationStatus: 'approved',
-      verificationNotes: 'Approved from dashboard'
-    });
-    
-    toast.success('Doctor approved successfully');
-    setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== id));
-    
-    // Update dashboard count
-    setDashboardData(prev => ({
-      ...prev,
-      pendingVerifications: Math.max(0, prev.pendingVerifications - 1)
-    }));
-  } catch (error) {
-    console.error('Error approving doctor:', error);
-    const errorMessage = error.response?.data?.message || error.message || 'Failed to approve doctor';
-    toast.error(errorMessage);
-  }
-};
+    try {
+      console.log('Direct approve from dashboard for doctor:', id);
+      await adminService.verifyDoctor(id, { 
+        verificationStatus: 'approved',
+        verificationNotes: 'Approved from dashboard'
+      });
+      
+      toast.success('Doctor approved successfully');
+      setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== id));
+      
+      // Update dashboard count
+      setDashboardData(prev => ({
+        ...prev,
+        pendingVerifications: Math.max(0, prev.pendingVerifications - 1)
+      }));
+    } catch (error) {
+      console.error('Error approving doctor:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to approve doctor';
+      toast.error(errorMessage);
+    }
+  };
 
-const handleRejectDoctor = async (id) => {
-  try {
-    // ✅ FIXED: Use adminService instead of direct axios (like the working page)
-    await adminService.verifyDoctor(id, { 
-      verificationStatus: 'rejected',
-      rejectionReason: 'Application rejected by admin'
-    });
-    
-    toast.success('Doctor rejected successfully');
-    setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== id));
-    
-    // Update dashboard count
-    setDashboardData(prev => ({
-      ...prev,
-      pendingVerifications: Math.max(0, prev.pendingVerifications - 1)
-    }));
-  } catch (error) {
-    console.error('Error rejecting doctor:', error);
-    const errorMessage = error.response?.data?.message || error.message || 'Failed to reject doctor';
-    toast.error(errorMessage);
-  }
-};
-
+  const handleRejectDoctor = async (id) => {
+    try {
+      console.log('Direct reject from dashboard for doctor:', id);
+      await adminService.verifyDoctor(id, { 
+        verificationStatus: 'rejected',
+        rejectionReason: 'Application rejected by admin'
+      });
+      
+      toast.success('Doctor rejected successfully');
+      setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== id));
+      
+      // Update dashboard count
+      setDashboardData(prev => ({
+        ...prev,
+        pendingVerifications: Math.max(0, prev.pendingVerifications - 1)
+      }));
+    } catch (error) {
+      console.error('Error rejecting doctor:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to reject doctor';
+      toast.error(errorMessage);
+    }
+  };
   
   // Helper functions
   const formatDate = (dateString) => {
