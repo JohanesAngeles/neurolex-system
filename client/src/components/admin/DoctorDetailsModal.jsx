@@ -1,14 +1,18 @@
-// client/src/components/admin/DoctorDetailsModal.jsx - SIMPLE VERSION LIKE WORKING PAGE
+// client/src/components/admin/DoctorDetailsModal.jsx
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { toast } from 'react-toastify';
-import adminService from '../../services/adminService';
 import '../../styles/components/admin/DoctorDetailsModal.css';
+import adminService from '../../services/adminService';
+
+
+const API_URL = process.env.REACT_APP_API_URL || '/api';
 
 const DoctorDetailsModal = ({ doctorId, isOpen, onClose, onApprove, onReject }) => {
   const [doctor, setDoctor] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [processingAction, setProcessingAction] = useState(false);
 
   useEffect(() => {
     if (isOpen && doctorId) {
@@ -17,71 +21,64 @@ const DoctorDetailsModal = ({ doctorId, isOpen, onClose, onApprove, onReject }) 
   }, [isOpen, doctorId]);
 
   const fetchDoctorDetails = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // ✅ EXACTLY like the working DoctorVerification page
-      const response = await adminService.getDoctorDetails(doctorId);
-      setDoctor(response.data);
-    } catch (err) {
-      setError('Failed to load doctor details. Please try again.');
-      console.error('Error fetching doctor:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    setLoading(true);
+    setError(null);
+    
+    // ✅ EXACTLY like DoctorVerification.jsx
+    const response = await adminService.getDoctorDetails(doctorId);
+    setDoctor(response.data);
+  } catch (err) {
+    setError('Failed to load doctor details. Please try again.');
+    console.error('Error fetching doctor:', err);
+  } finally {
+    setLoading(false);
+  }
+};
 
-  // ✅ EXACTLY like the working DoctorVerification page - simple approve
   const handleApprove = async () => {
-    try {
-      setSubmitting(true);
-      
-      // ✅ EXACTLY like the working page
-      await adminService.verifyDoctor(doctorId, {
-        verificationStatus: 'approved',
-        verificationNotes: 'Approved from doctor details modal'
-      });
-      
-      toast.success('Doctor approved successfully!');
-      
-      // Call parent callback and close modal
-      onApprove?.(doctorId);
-      onClose();
-    } catch (err) {
-      console.error('Verification error:', err);
-      const errorMessage = err.response?.data?.message || 'Verification process failed. Please try again.';
-      toast.error(errorMessage);
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  try {
+    setProcessingAction(true);
+    
+    // ✅ EXACTLY like DoctorVerification.jsx
+    await adminService.verifyDoctor(doctorId, {
+      verificationStatus: 'approved',
+      verificationNotes: 'Approved from doctor details modal'
+    });
 
-  // ✅ EXACTLY like the working DoctorVerification page - simple reject
+    toast.success('Doctor approved successfully!');
+    onApprove?.(doctorId);
+    onClose();
+  } catch (err) {
+    console.error('Verification error:', err);
+    const errorMessage = err.response?.data?.message || 'Verification process failed. Please try again.';
+    toast.error(errorMessage);
+  } finally {
+    setProcessingAction(false);
+  }
+};
+
   const handleReject = async () => {
-    try {
-      setSubmitting(true);
-      
-      // ✅ EXACTLY like the working page
-      await adminService.verifyDoctor(doctorId, {
-        verificationStatus: 'rejected',
-        rejectionReason: 'Application rejected after review'
-      });
-      
-      toast.success('Doctor rejected successfully!');
-      
-      // Call parent callback and close modal
-      onReject?.(doctorId);
-      onClose();
-    } catch (err) {
-      console.error('Verification error:', err);
-      const errorMessage = err.response?.data?.message || 'Verification process failed. Please try again.';
-      toast.error(errorMessage);
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  try {
+    setProcessingAction(true);
+    
+    // ✅ EXACTLY like DoctorVerification.jsx
+    await adminService.verifyDoctor(doctorId, {
+      verificationStatus: 'rejected',
+      rejectionReason: 'Application rejected after review'
+    });
 
+    toast.success('Doctor rejected successfully!');
+    onReject?.(doctorId);
+    onClose();
+  } catch (err) {
+    console.error('Verification error:', err);
+    const errorMessage = err.response?.data?.message || 'Verification process failed. Please try again.';
+    toast.error(errorMessage);
+  } finally {
+    setProcessingAction(false);
+  }
+};
   const formatDate = (dateString) => {
     if (!dateString) return 'Not provided';
     try {
@@ -93,6 +90,62 @@ const DoctorDetailsModal = ({ doctorId, isOpen, onClose, onApprove, onReject }) 
     } catch {
       return 'Invalid date';
     }
+  };
+
+  const formatAvailability = (availability) => {
+    if (!availability) return 'Not specified';
+    
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const availableDays = days.filter(day => availability[day]?.available);
+    
+    if (availableDays.length === 0) return 'No availability set';
+    
+    return availableDays.map(day => 
+      day.charAt(0).toUpperCase() + day.slice(1)
+    ).join(', ');
+  };
+
+  const renderAvailabilitySchedule = (availability) => {
+    if (!availability) return <p className="no-data">No availability information provided</p>;
+    
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const dayLabels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    
+    const availableDays = days.filter(day => availability[day]?.available);
+    
+    if (availableDays.length === 0) {
+      return <p className="no-data">No available days set</p>;
+    }
+    
+    return (
+      <div className="availability-schedule">
+        {days.map((day, index) => {
+          const dayData = availability[day];
+          if (!dayData?.available) return null;
+          
+          return (
+            <div key={day} className="availability-day">
+              <div className="day-name">{dayLabels[index]}</div>
+              <div className="time-slots">
+                {dayData.slots && dayData.slots.length > 0 ? (
+                  dayData.slots.map((slot, slotIndex) => (
+                    <div key={slotIndex} className="time-slot">
+                      <span className="start-time">{slot.startTime || 'Not set'}</span>
+                      <span className="time-separator">-</span>
+                      <span className="end-time">{slot.endTime || 'Not set'}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="time-slot">
+                    <span className="no-times">No specific times set</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
   };
 
   const renderDocumentLink = (url, label) => {
@@ -139,115 +192,194 @@ const DoctorDetailsModal = ({ doctorId, isOpen, onClose, onApprove, onReject }) 
             </div>
           ) : doctor ? (
             <div className="doctor-details">
-              {/* ✅ EXACTLY like the working DoctorVerification page */}
+              {/* Personal Information Section */}
+              <div className="details-section">
+                <h3 className="section-title">Personal Information</h3>
+                <div className="details-grid">
+                  <div className="detail-item">
+                    <label>First Name:</label>
+                    <span>{doctor.firstName || 'Not provided'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Last Name:</label>
+                    <span>{doctor.lastName || 'Not provided'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Email Address:</label>
+                    <span>{doctor.email || 'Not provided'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Personal Contact Number:</label>
+                    <span>{doctor.personalContactNumber || 'Not provided'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Clinic Location:</label>
+                    <span>{doctor.clinicLocation || doctor.clinicAddress || 'Not provided'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Clinic Contact Number:</label>
+                    <span>{doctor.clinicContactNumber || 'Not provided'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Professional Information Section */}
               <div className="details-section">
                 <h3 className="section-title">Professional Information</h3>
+                <div className="details-grid">
+                  <div className="detail-item">
+                    <label>Specialty:</label>
+                    <span>{doctor.specialty || doctor.specialization || 'Not provided'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Professional Title:</label>
+                    <span>{doctor.title || 'Not provided'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Areas of Expertise:</label>
+                    <span>{doctor.areasOfExpertise || 'Not provided'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Experience:</label>
+                    <span>{doctor.experience || doctor.yearsOfPractice ? `${doctor.yearsOfPractice} years` : 'Not provided'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Availability Section */}
+              <div className="details-section">
+                <h3 className="section-title">Availability</h3>
+                <div className="availability-content">
+                  <div className="availability-summary">
+                    <label>Summary:</label>
+                    <span>{formatAvailability(doctor.availability)}</span>
+                  </div>
+                  
+                  <div className="availability-details">
+                    <label>Schedule Details:</label>
+                    {renderAvailabilitySchedule(doctor.availability)}
+                  </div>
+                  
+                  <div className="details-grid">
+                    <div className="detail-item">
+                      <label>In-Person Appointments:</label>
+                      <span className={`status-badge ${doctor.inPerson || doctor.appointmentTypes?.inPerson ? 'available' : 'unavailable'}`}>
+                        {doctor.inPerson || doctor.appointmentTypes?.inPerson ? 'Available' : 'Not Available'}
+                      </span>
+                    </div>
+                    <div className="detail-item">
+                      <label>Telehealth Appointments:</label>
+                      <span className={`status-badge ${doctor.telehealth || doctor.appointmentTypes?.telehealth ? 'available' : 'unavailable'}`}>
+                        {doctor.telehealth || doctor.appointmentTypes?.telehealth ? 'Available' : 'Not Available'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Credentials Section */}
+              <div className="details-section">
+                <h3 className="section-title">Credentials</h3>
                 
-                <div className="profile-image">
-                  {doctor.profilePhotoUrl ? (
-                    <img src={doctor.profilePhotoUrl} alt={`${doctor.firstName} ${doctor.lastName}`} />
+                {/* Education */}
+                <div className="credentials-subsection">
+                  <h4 className="subsection-title">Education</h4>
+                  {doctor.education && doctor.education.length > 0 ? (
+                    <div className="credentials-list">
+                      {doctor.education.map((edu, index) => (
+                        <div key={index} className="credential-item">
+                          <span className="credential-degree">{edu.degree || 'Degree not specified'}</span>
+                          <span className="credential-institution">{edu.institution || 'Institution not specified'}</span>
+                          <span className="credential-year">{edu.year || 'Year not specified'}</span>
+                        </div>
+                      ))}
+                    </div>
                   ) : (
-                    <div className="no-profile-image">No profile image</div>
+                    <p className="no-data">No education information provided</p>
                   )}
                 </div>
-                
-                <div className="professional-details">
-                  <div className="detail-item">
-                    <span className="label">Full Name:</span>
-                    <span className="value">{doctor.title} {doctor.firstName} {doctor.lastName}</span>
-                  </div>
-                  
-                  <div className="detail-item">
-                    <span className="label">Email:</span>
-                    <span className="value">{doctor.email}</span>
-                  </div>
-                  
-                  <div className="detail-item">
-                    <span className="label">Specialization:</span>
-                    <span className="value">{doctor.specialization || doctor.specialty || 'Not specified'}</span>
-                  </div>
-                  
-                  <div className="detail-item">
-                    <span className="label">Years of Experience:</span>
-                    <span className="value">{doctor.yearsOfExperience || 'Not specified'}</span>
-                  </div>
-                  
-                  <div className="detail-item">
-                    <span className="label">Practice Address:</span>
-                    <span className="value">{doctor.practiceAddress || doctor.clinicLocation || 'Not provided'}</span>
-                  </div>
-                  
-                  <div className="detail-item">
-                    <span className="label">Languages:</span>
-                    <span className="value">{doctor.languages && doctor.languages.length > 0 ? doctor.languages.join(', ') : 'Not specified'}</span>
-                  </div>
-                  
-                  <div className="detail-item">
-                    <span className="label">Consultation Fee:</span>
-                    <span className="value">{doctor.consultationFee ? `$${doctor.consultationFee}` : 'Not specified'}</span>
-                  </div>
-                  
-                  <div className="detail-item">
-                    <span className="label">Consultation Options:</span>
-                    <span className="value">
-                      {(doctor.telehealth || doctor.inPerson) ? (
-                        <>
-                          {doctor.telehealth && 'Telehealth'}
-                          {doctor.telehealth && doctor.inPerson && ' & '}
-                          {doctor.inPerson && 'In-Person'}
-                        </>
-                      ) : 'Not specified'}
-                    </span>
-                  </div>
-                </div>
-                
-                <div className="license-details">
-                  <h4>License Information</h4>
-                  
-                  <div className="detail-item">
-                    <span className="label">License Number:</span>
-                    <span className="value">{doctor.licenseNumber || 'Not provided'}</span>
-                  </div>
-                  
-                  <div className="detail-item">
-                    <span className="label">Issuing Authority:</span>
-                    <span className="value">{doctor.licenseIssuingAuthority || 'Not provided'}</span>
-                  </div>
-                  
-                  <div className="detail-item">
-                    <span className="label">Expiry Date:</span>
-                    <span className="value">{doctor.licenseExpiryDate ? formatDate(doctor.licenseExpiryDate) : 'Not provided'}</span>
-                  </div>
-                  
-                  <div className="license-document">
-                    <h5>License Document</h5>
-                    {doctor.licenseDocumentUrl ? (
-                      <div className="document-preview">
-                        <a href={doctor.licenseDocumentUrl} target="_blank" rel="noopener noreferrer" className="preview-button">
-                          View License Document
-                        </a>
+
+                {/* Licenses */}
+                <div className="credentials-subsection">
+                  <h4 className="subsection-title">Licenses</h4>
+                  {doctor.licenses && doctor.licenses.length > 0 ? (
+                    <div className="credentials-list">
+                      {doctor.licenses.map((license, index) => (
+                        <div key={index} className="credential-item">
+                          <span className="credential-degree">{license.degree || 'License type not specified'}</span>
+                          <span className="credential-number">#{license.licenseNumber || 'Number not specified'}</span>
+                          <span className="credential-expiry">Expires: {license.expirationDate || 'Date not specified'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : doctor.licenseNumber ? (
+                    <div className="credentials-list">
+                      <div className="credential-item">
+                        <span className="credential-number">#{doctor.licenseNumber}</span>
+                        <span className="credential-institution">{doctor.licenseIssuingAuthority || 'Authority not specified'}</span>
+                        <span className="credential-expiry">Expires: {formatDate(doctor.licenseExpiryDate)}</span>
                       </div>
-                    ) : (
-                      <div className="no-document">No license document provided</div>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <p className="no-data">No license information provided</p>
+                  )}
                 </div>
-                
-                <div className="professional-bio">
-                  <h4>Professional Bio</h4>
-                  <p>{doctor.bio || 'No bio provided'}</p>
+
+                {/* Certifications */}
+                <div className="credentials-subsection">
+                  <h4 className="subsection-title">Certifications</h4>
+                  {doctor.certifications && doctor.certifications.length > 0 ? (
+                    <div className="credentials-list">
+                      {doctor.certifications.map((cert, index) => (
+                        <div key={index} className="credential-item">
+                          <span className="credential-degree">{cert.degree || 'Certification not specified'}</span>
+                          <span className="credential-institution">{cert.issuingAuthority || 'Authority not specified'}</span>
+                          <span className="credential-year">{cert.year || 'Year not specified'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="no-data">No certification information provided</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Document Verification Section */}
+              <div className="details-section">
+                <h3 className="section-title">Document Verification</h3>
+                <div className="documents-grid">
+                  <div className="document-item">
+                    <label>License Document:</label>
+                    {renderDocumentLink(doctor.licenseDocumentUrl, 'License')}
+                  </div>
+                  <div className="document-item">
+                    <label>Education Certificate:</label>
+                    {renderDocumentLink(doctor.educationCertificateUrl, 'Education Certificate')}
+                  </div>
+                  {doctor.additionalDocumentUrls && doctor.additionalDocumentUrls.length > 0 && (
+                    <div className="document-item full-width">
+                      <label>Additional Documents:</label>
+                      <div className="additional-docs">
+                        {doctor.additionalDocumentUrls.map((url, index) => (
+                          <div key={index}>
+                            {renderDocumentLink(url, `Document ${index + 1}`)}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           ) : null}
         </div>
 
-        {/* Modal Footer - ✅ SIMPLE like the working page */}
+        {/* Modal Footer */}
         <div className="modal-footer">
           <button 
             className="modal-button secondary" 
             onClick={onClose}
-            disabled={submitting}
+            disabled={processingAction}
           >
             Close
           </button>
@@ -255,16 +387,16 @@ const DoctorDetailsModal = ({ doctorId, isOpen, onClose, onApprove, onReject }) 
             <button 
               className="modal-button reject" 
               onClick={handleReject}
-              disabled={submitting}
+              disabled={processingAction}
             >
-              {submitting ? 'Processing...' : 'Reject'}
+              {processingAction ? 'Processing...' : 'Reject'}
             </button>
             <button 
               className="modal-button approve" 
               onClick={handleApprove}
-              disabled={submitting}
+              disabled={processingAction}
             >
-              {submitting ? 'Processing...' : 'Accept'}
+              {processingAction ? 'Processing...' : 'Accept'}
             </button>
           </div>
         </div>

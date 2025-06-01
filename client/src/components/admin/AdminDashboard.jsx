@@ -1,14 +1,19 @@
-// client/src/components/admin/AdminDashboard.jsx - SIMPLE VERSION LIKE WORKING PAGE
+// client/src/components/admin/AdminDashboard.jsx - UPDATED WITH MODAL
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { toast } from 'react-toastify';
 import DoctorDetailsModal from './DoctorDetailsModal';
 import adminService from '../../services/adminService';
 import '../../styles/components/admin/AdminDashboard.css';
 
+// FIXED: Use correct API URL
+const API_URL = process.env.REACT_APP_API_URL || '/api';
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
   
+  // FIXED: Remove admin context dependency and use direct state
   const [dashboardData, setDashboardData] = useState({
     totalUsers: 0,
     totalProfessionals: 0,
@@ -25,7 +30,15 @@ const AdminDashboard = () => {
   const [selectedDoctorId, setSelectedDoctorId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
-  // ✅ EXACTLY like the working DoctorVerification page
+  // FIXED: Setup axios with admin token
+  useEffect(() => {
+    const adminToken = localStorage.getItem('adminToken');
+    if (adminToken) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${adminToken}`;
+    }
+  }, []);
+  
+  // Fetch dashboard data
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
@@ -35,28 +48,31 @@ const AdminDashboard = () => {
           return;
         }
         
-        const response = await adminService.getDashboardData();
+        // Fetch dashboard statistics
+        const response = await axios.get(`${API_URL}/admin/dashboard`, {
+          headers: {
+            'Authorization': `Bearer ${adminToken}`
+          }
+        });
         
-        if (response.success) {
+        if (response.data.success) {
           setDashboardData({
-            totalUsers: response.totalUsers || 0,
-            totalProfessionals: response.totalProfessionals || 0,
-            pendingVerifications: response.pendingVerifications || 0,
-            journalEntries: response.totalJournalEntries || response.journalEntries || 0,
+            totalUsers: response.data.totalUsers || 0,
+            totalProfessionals: response.data.totalProfessionals || 0,
+            pendingVerifications: response.data.pendingVerifications || 0,
+            journalEntries: response.data.journalEntries || 0,
           });
         }
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
-        if (error.response?.status === 401) {
-          navigate('/admin/login');
-        }
+        // Don't show error toast for dashboard stats, just use defaults
       }
     };
     
     fetchDashboardData();
   }, [navigate]);
   
-  // ✅ EXACTLY like the working DoctorVerification page
+  // Fetch pending doctors
   useEffect(() => {
     const fetchPendingDoctors = async () => {
       try {
@@ -67,13 +83,18 @@ const AdminDashboard = () => {
           return;
         }
         
-        const response = await adminService.getPendingDoctors();
+        const response = await axios.get(`${API_URL}/admin/doctors/pending`, {
+          headers: {
+            'Authorization': `Bearer ${adminToken}`
+          }
+        });
         
-        if (response.success && response.data) {
-          setPendingDoctors(response.data);
+        if (response.data.success && response.data.data) {
+          setPendingDoctors(response.data.data);
+          // Update pending count in dashboard
           setDashboardData(prev => ({
             ...prev,
-            pendingVerifications: response.data.length
+            pendingVerifications: response.data.data.length
           }));
         } else if (response.data && Array.isArray(response.data)) {
           setPendingDoctors(response.data);
@@ -95,11 +116,20 @@ const AdminDashboard = () => {
     fetchPendingDoctors();
   }, [navigate]);
   
+  // Handle admin logout
   const handleAdminLogout = () => {
+    // Clear all admin tokens
     localStorage.removeItem('adminToken');
     localStorage.removeItem('adminUser');
     localStorage.removeItem('adminTokenExpiry');
+    
+    // Also clear axios default header
+    delete axios.defaults.headers.common['Authorization'];
+    
+    // Show success message
     toast.success('Logged out successfully');
+    
+    // Navigate to admin login
     navigate('/admin/login');
   };
   
@@ -114,9 +144,11 @@ const AdminDashboard = () => {
     setSelectedDoctorId(null);
   };
   
-  // ✅ These functions ONLY update UI - no API calls (modal handles that)
   const handleModalApprove = (doctorId) => {
+    // Remove the doctor from the pending list
     setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== doctorId));
+    
+    // Update dashboard count
     setDashboardData(prev => ({
       ...prev,
       pendingVerifications: Math.max(0, prev.pendingVerifications - 1)
@@ -124,56 +156,63 @@ const AdminDashboard = () => {
   };
   
   const handleModalReject = (doctorId) => {
+    // Remove the doctor from the pending list
     setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== doctorId));
+    
+    // Update dashboard count
     setDashboardData(prev => ({
       ...prev,
       pendingVerifications: Math.max(0, prev.pendingVerifications - 1)
     }));
   };
   
-  // ✅ EXACTLY like the working DoctorVerification page - simple direct calls
   const handleApproveDoctor = async (id) => {
-    try {
-      // ✅ EXACTLY like the working page
-      await adminService.verifyDoctor(id, {
-        verificationStatus: 'approved',
-        verificationNotes: 'Approved from dashboard'
-      });
-      
-      toast.success('Doctor approved successfully!');
-      setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== id));
-      setDashboardData(prev => ({
-        ...prev,
-        pendingVerifications: Math.max(0, prev.pendingVerifications - 1)
-      }));
-    } catch (err) {
-      console.error('Verification error:', err);
-      const errorMessage = err.response?.data?.message || 'Verification process failed. Please try again.';
-      toast.error(errorMessage);
-    }
-  };
-
+  try {
+    // ✅ EXACTLY like DoctorVerification.jsx
+    await adminService.verifyDoctor(id, {
+      verificationStatus: 'approved',
+      verificationNotes: 'Approved from dashboard'
+    });
+    
+    toast.success('Doctor approved successfully!');
+    setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== id));
+    
+    // Update dashboard count
+    setDashboardData(prev => ({
+      ...prev,
+      pendingVerifications: Math.max(0, prev.pendingVerifications - 1)
+    }));
+  } catch (err) {
+    console.error('Verification error:', err);
+    const errorMessage = err.response?.data?.message || 'Verification process failed. Please try again.';
+    toast.error(errorMessage);
+  }
+};
+  
   const handleRejectDoctor = async (id) => {
-    try {
-      // ✅ EXACTLY like the working page
-      await adminService.verifyDoctor(id, {
-        verificationStatus: 'rejected',
-        rejectionReason: 'Application rejected by admin'
-      });
-      
-      toast.success('Doctor rejected successfully!');
-      setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== id));
-      setDashboardData(prev => ({
-        ...prev,
-        pendingVerifications: Math.max(0, prev.pendingVerifications - 1)
-      }));
-    } catch (err) {
-      console.error('Verification error:', err);
-      const errorMessage = err.response?.data?.message || 'Verification process failed. Please try again.';
-      toast.error(errorMessage);
-    }
+  try {
+    // ✅ EXACTLY like DoctorVerification.jsx
+    await adminService.verifyDoctor(id, {
+      verificationStatus: 'rejected',
+      rejectionReason: 'Application rejected by admin'
+    });
+    
+    toast.success('Doctor rejected successfully!');
+    setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== id));
+    
+    // Update dashboard count
+    setDashboardData(prev => ({
+      ...prev,
+      pendingVerifications: Math.max(0, prev.pendingVerifications - 1)
+    }));
+  } catch (err) {
+    console.error('Verification error:', err);
+    const errorMessage = err.response?.data?.message || 'Verification process failed. Please try again.';
+    toast.error(errorMessage);
+  }
   };
   
+  // Helper functions
   const formatDate = (dateString) => {
     try {
       return new Date(dateString).toLocaleDateString('en-US', {
