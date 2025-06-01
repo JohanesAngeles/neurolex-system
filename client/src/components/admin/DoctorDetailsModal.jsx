@@ -46,88 +46,26 @@ const DoctorDetailsModal = ({ doctorId, isOpen, onClose, onApprove, onReject }) 
   };
 
   const handleApprove = async () => {
-    // Prevent duplicate calls
-    if (processingAction) {
-      console.log('Already processing approve, ignoring duplicate call');
-      return;
-    }
-
-    try {
-      console.log('🔍 Modal handleApprove started for doctor:', doctorId);
-      
-      setProcessingAction(true);
-      
-      const verificationData = {
-        verificationStatus: 'approved',
-        verificationNotes: 'Approved from doctor details modal'
-      };
-      
-      console.log('Calling adminService.verifyDoctor with:', verificationData);
-      
-      const result = await adminService.verifyDoctor(doctorId, verificationData);
-      
-      console.log('✅ AdminService response:', result);
-
-      toast.success('Doctor approved successfully');
-      
-      // Call the callback to update the parent component
-      if (onApprove) {
-        onApprove(doctorId);
-      }
-      
-      // Close the modal
-      onClose();
-    } catch (error) {
-      console.error('❌ Error in modal handleApprove:', error);
-      
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to approve doctor';
-      toast.error(errorMessage);
-    } finally {
-      setProcessingAction(false);
-    }
-  };
+  console.log('🚨 BUTTON CLICKED - handleApprove called');
+  console.log('Current processingAction state:', processingAction);
+  
+  // Just show an alert for now, don't make any API calls
+  alert(`Approve button clicked for doctor: ${doctorId}`);
+  
+  // Don't make any API calls yet - just test the button
+  return;
+};
 
   const handleReject = async () => {
-    // Prevent duplicate calls
-    if (processingAction) {
-      console.log('Already processing reject, ignoring duplicate call');
-      return;
-    }
-
-    try {
-      console.log('🔍 Modal handleReject started for doctor:', doctorId);
-      
-      setProcessingAction(true);
-      
-      const verificationData = {
-        verificationStatus: 'rejected',
-        rejectionReason: 'Application rejected after review'
-      };
-      
-      console.log('Calling adminService.verifyDoctor with:', verificationData);
-      
-      const result = await adminService.verifyDoctor(doctorId, verificationData);
-      
-      console.log('✅ AdminService response:', result);
-
-      toast.success('Doctor application rejected');
-      
-      // Call the callback to update the parent component
-      if (onReject) {
-        onReject(doctorId);
-      }
-      
-      // Close the modal
-      onClose();
-    } catch (error) {
-      console.error('❌ Error in modal handleReject:', error);
-      
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to reject doctor application';
-      toast.error(errorMessage);
-    } finally {
-      setProcessingAction(false);
-    }
-  };
+  console.log('🚨 BUTTON CLICKED - handleReject called');
+  console.log('Current processingAction state:', processingAction);
+  
+  // Just show an alert for now, don't make any API calls
+  alert(`Reject button clicked for doctor: ${doctorId}`);
+  
+  // Don't make any API calls yet - just test the button
+  return;
+};
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Not provided';
