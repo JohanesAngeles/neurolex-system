@@ -1,6 +1,5 @@
 // client/src/components/admin/DoctorDetailsModal.jsx
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { toast } from 'react-toastify';
 import '../../styles/components/admin/DoctorDetailsModal.css';
 import adminService from '../../services/adminService';
@@ -21,14 +20,20 @@ const DoctorDetailsModal = ({ doctorId, isOpen, onClose, onApprove, onReject }) 
   }, [isOpen, doctorId]);
 
   const fetchDoctorDetails = async () => {
+  console.log('🔍 Modal fetching details for Doctor ID:', doctorId);
+  console.log('🔍 Doctor ID type:', typeof doctorId);
+  console.log('🔍 Is doctorId valid?', doctorId && doctorId.length === 24);
+  
   try {
     setLoading(true);
     setError(null);
     
     // ✅ EXACTLY like DoctorVerification.jsx
     const response = await adminService.getDoctorDetails(doctorId);
+    console.log('✅ Modal getDoctorDetails response:', response);
     setDoctor(response.data);
   } catch (err) {
+    console.error('❌ Modal getDoctorDetails error:', err);
     setError('Failed to load doctor details. Please try again.');
     console.error('Error fetching doctor:', err);
   } finally {
@@ -37,6 +42,10 @@ const DoctorDetailsModal = ({ doctorId, isOpen, onClose, onApprove, onReject }) 
 };
 
   const handleApprove = async () => {
+  console.log('🔍 Modal handleApprove - Doctor ID:', doctorId);
+  console.log('🔍 Doctor ID type:', typeof doctorId);
+  console.log('🔍 Is doctorId valid?', doctorId && doctorId.length === 24);
+  
   try {
     setProcessingAction(true);
     
