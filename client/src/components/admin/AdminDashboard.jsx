@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import DoctorDetailsModal from './DoctorDetailsModal';
+import adminService from '../../services/adminService';
 import '../../styles/components/admin/AdminDashboard.css';
 
 // FIXED: Use correct API URL
@@ -166,74 +167,50 @@ const AdminDashboard = () => {
   };
   
   const handleApproveDoctor = async (id) => {
-    try {
-      const adminToken = localStorage.getItem('adminToken');
-      if (!adminToken) {
-        navigate('/admin/login');
-        return;
-      }
-      
-      await axios.post(`${API_URL}/admin/doctors/verify/${id}`, { 
-        verificationStatus: 'approved',
-        verificationNotes: 'Approved from dashboard'
-      }, {
-        headers: {
-          'Authorization': `Bearer ${adminToken}`
-        }
-      });
-      
-      toast.success('Doctor approved successfully');
-      setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== id));
-      
-      // Update dashboard count
-      setDashboardData(prev => ({
-        ...prev,
-        pendingVerifications: Math.max(0, prev.pendingVerifications - 1)
-      }));
-    } catch (error) {
-      console.error('Error approving doctor:', error);
-      if (error.response?.status === 401) {
-        navigate('/admin/login');
-      } else {
-        toast.error('Failed to approve doctor');
-      }
-    }
-  };
+  try {
+    // ✅ FIXED: Use adminService instead of direct axios
+    await adminService.verifyDoctor(id, { 
+      verificationStatus: 'approved',
+      verificationNotes: 'Approved from dashboard'
+    });
+    
+    toast.success('Doctor approved successfully');
+    setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== id));
+    
+    // Update dashboard count
+    setDashboardData(prev => ({
+      ...prev,
+      pendingVerifications: Math.max(0, prev.pendingVerifications - 1)
+    }));
+  } catch (error) {
+    console.error('Error approving doctor:', error);
+    const errorMessage = error.response?.data?.message || error.message || 'Failed to approve doctor';
+    toast.error(errorMessage);
+  }
+};
   
   const handleRejectDoctor = async (id) => {
-    try {
-      const adminToken = localStorage.getItem('adminToken');
-      if (!adminToken) {
-        navigate('/admin/login');
-        return;
-      }
-      
-      await axios.post(`${API_URL}/admin/doctors/verify/${id}`, { 
-        verificationStatus: 'rejected',
-        rejectionReason: 'Application rejected by admin'
-      }, {
-        headers: {
-          'Authorization': `Bearer ${adminToken}`
-        }
-      });
-      
-      toast.success('Doctor rejected successfully');
-      setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== id));
-      
-      // Update dashboard count
-      setDashboardData(prev => ({
-        ...prev,
-        pendingVerifications: Math.max(0, prev.pendingVerifications - 1)
-      }));
-    } catch (error) {
-      console.error('Error rejecting doctor:', error);
-      if (error.response?.status === 401) {
-        navigate('/admin/login');
-      } else {
-        toast.error('Failed to reject doctor');
-      }
-    }
-  };
+  try {
+    // ✅ FIXED: Use adminService instead of direct axios
+    await adminService.verifyDoctor(id, { 
+      verificationStatus: 'rejected',
+      rejectionReason: 'Application rejected by admin'
+    });
+    
+    toast.success('Doctor rejected successfully');
+    setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== id));
+    
+    // Update dashboard count
+    setDashboardData(prev => ({
+      ...prev,
+      pendingVerifications: Math.max(0, prev.pendingVerifications - 1)
+    }));
+  } catch (error) {
+    console.error('Error rejecting doctor:', error);
+    const errorMessage = error.response?.data?.message || error.message || 'Failed to reject doctor';
+    toast.error(errorMessage);
+  }
+};
   
   // Helper functions
   const formatDate = (dateString) => {

@@ -1,10 +1,8 @@
-// client/src/components/admin/DoctorDetailsModal.jsx
+// client/src/components/admin/DoctorDetailsModal.jsx - FIXED VERSION
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { toast } from 'react-toastify';
+import adminService from '../../services/adminService'; // Use adminService instead of direct axios
 import '../../styles/components/admin/DoctorDetailsModal.css';
-
-const API_URL = process.env.REACT_APP_API_URL || '/api';
 
 const DoctorDetailsModal = ({ doctorId, isOpen, onClose, onApprove, onReject }) => {
   const [doctor, setDoctor] = useState(null);
@@ -23,21 +21,16 @@ const DoctorDetailsModal = ({ doctorId, isOpen, onClose, onApprove, onReject }) 
       setLoading(true);
       setError(null);
       
-      const adminToken = localStorage.getItem('adminToken');
-      if (!adminToken) {
-        throw new Error('Admin authentication required');
-      }
-
-      const response = await axios.get(`${API_URL}/admin/doctors/${doctorId}`, {
-        headers: {
-          'Authorization': `Bearer ${adminToken}`
-        }
-      });
-
-      if (response.data.success) {
-        setDoctor(response.data.data);
+      // ✅ FIXED: Use adminService instead of direct axios
+      const response = await adminService.getDoctorDetails(doctorId);
+      
+      // Handle response structure properly
+      if (response.success) {
+        setDoctor(response.data);
+      } else if (response.data) {
+        setDoctor(response.data);
       } else {
-        throw new Error(response.data.message || 'Failed to fetch doctor details');
+        throw new Error(response.message || 'Failed to fetch doctor details');
       }
     } catch (error) {
       console.error('Error fetching doctor details:', error);
@@ -52,14 +45,10 @@ const DoctorDetailsModal = ({ doctorId, isOpen, onClose, onApprove, onReject }) 
     try {
       setProcessingAction(true);
       
-      const adminToken = localStorage.getItem('adminToken');
-      await axios.post(`${API_URL}/admin/doctors/verify/${doctorId}`, {
+      // ✅ FIXED: Use adminService.verifyDoctor() with correct data structure
+      await adminService.verifyDoctor(doctorId, {
         verificationStatus: 'approved',
         verificationNotes: 'Approved from doctor details modal'
-      }, {
-        headers: {
-          'Authorization': `Bearer ${adminToken}`
-        }
       });
 
       toast.success('Doctor approved successfully');
@@ -67,7 +56,8 @@ const DoctorDetailsModal = ({ doctorId, isOpen, onClose, onApprove, onReject }) 
       onClose();
     } catch (error) {
       console.error('Error approving doctor:', error);
-      toast.error('Failed to approve doctor');
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to approve doctor';
+      toast.error(errorMessage);
     } finally {
       setProcessingAction(false);
     }
@@ -77,14 +67,10 @@ const DoctorDetailsModal = ({ doctorId, isOpen, onClose, onApprove, onReject }) 
     try {
       setProcessingAction(true);
       
-      const adminToken = localStorage.getItem('adminToken');
-      await axios.post(`${API_URL}/admin/doctors/verify/${doctorId}`, {
+      // ✅ FIXED: Use adminService.verifyDoctor() with correct data structure
+      await adminService.verifyDoctor(doctorId, {
         verificationStatus: 'rejected',
         rejectionReason: 'Application rejected after review'
-      }, {
-        headers: {
-          'Authorization': `Bearer ${adminToken}`
-        }
       });
 
       toast.success('Doctor application rejected');
@@ -92,7 +78,8 @@ const DoctorDetailsModal = ({ doctorId, isOpen, onClose, onApprove, onReject }) 
       onClose();
     } catch (error) {
       console.error('Error rejecting doctor:', error);
-      toast.error('Failed to reject doctor application');
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to reject doctor application';
+      toast.error(errorMessage);
     } finally {
       setProcessingAction(false);
     }
