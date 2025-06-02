@@ -16,6 +16,12 @@ const DoctorVerification = () => {
   const [success, setSuccess] = useState(null);
 
   useEffect(() => {
+
+    console.log('🟢 WORKING PAGE - DoctorVerification:');
+    console.log('  doctorId from useParams:', doctorId);
+    console.log('  doctorId type:', typeof doctorId);
+    console.log('  URL path:', window.location.pathname);
+    
     const fetchDoctorDetails = async () => {
       try {
         setLoading(true);

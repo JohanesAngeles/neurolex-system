@@ -167,6 +167,13 @@ const AdminDashboard = () => {
   };
   
   const handleApproveDoctor = async (id) => {
+
+
+    console.log('🔴 DASHBOARD - NOT WORKING:');
+    console.log('  doctorId from parameter:', id);
+    console.log('  doctorId type:', typeof id);
+    console.log('  URL path:', window.location.pathname);
+
   try {
     console.log('🔍 Dashboard approving doctor:', id);
     

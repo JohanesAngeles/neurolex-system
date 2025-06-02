@@ -18,6 +18,12 @@ const DoctorDetailsModal = ({ doctorId, isOpen, onClose, onApprove, onReject }) 
 
   useEffect(() => {
     if (isOpen && doctorId) {
+
+      console.log('🔴 MODAL - NOT WORKING:');
+      console.log('  doctorId from props:', doctorId);
+      console.log('  doctorId type:', typeof doctorId);
+      console.log('  URL path:', window.location.pathname);
+      
       fetchDoctorDetails();
     }
   }, [isOpen, doctorId]);
