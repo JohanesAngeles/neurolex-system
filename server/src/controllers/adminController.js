@@ -863,9 +863,14 @@ exports.getRejectedDoctors = async (req, res) => {
 exports.getDoctorDetails = async (req, res) => {
   try {
     const { id } = req.params;
-    const { tenantId } = req.query; // Get tenant ID from query parameter
+    const { tenantId } = req.query;
     
-    console.log(`Getting doctor details for ID: ${id}, Tenant ID: ${tenantId || 'not specified'}`);
+    console.log('🔍 ===========================================');
+    console.log('🔍 DIAGNOSTIC: getDoctorDetails called');
+    console.log('🔍 Doctor ID:', id);
+    console.log('🔍 Tenant ID from query:', tenantId);
+    console.log('🔍 Multi-tenant enabled:', process.env.ENABLE_MULTI_TENANT);
+    console.log('🔍 ===========================================');
     
     if (!id) {
       return res.status(400).json({
@@ -873,25 +878,42 @@ exports.getDoctorDetails = async (req, res) => {
         message: 'Doctor ID is required'
       });
     }
+
+    // Validate doctor ID format
+    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+      console.log('❌ Invalid doctor ID format:', id);
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid doctor ID format',
+        providedId: id
+      });
+    }
     
     // If multi-tenant is enabled
     if (process.env.ENABLE_MULTI_TENANT === 'true') {
       // If a specific tenant ID is provided, search that tenant only
       if (tenantId) {
-        console.log(`Searching for doctor in specified tenant: ${tenantId}`);
+        console.log('🔍 DIAGNOSTIC: Using specific tenant:', tenantId);
         
         // Connect to tenant database
         const tenantConn = await dbManager.connectTenant(tenantId);
         if (!tenantConn) {
-          console.error(`Failed to connect to tenant database: ${tenantId}`);
+          console.error('❌ DIAGNOSTIC: Failed to connect to tenant database:', tenantId);
           return res.status(500).json({
             success: false,
-            message: 'Database connection error'
+            message: 'Database connection error',
+            details: `Failed to connect to tenant: ${tenantId}`
           });
         }
         
+        console.log('✅ DIAGNOSTIC: Connected to tenant database');
+        
         // Get User model from tenant connection
         const User = tenantConn.model('User');
+        
+        // Count total doctors first
+        const totalDoctors = await User.countDocuments({ role: 'doctor' });
+        console.log('🔍 DIAGNOSTIC: Total doctors in tenant:', totalDoctors);
         
         // Find doctor by ID
         const doctor = await User.findOne({
@@ -900,11 +922,19 @@ exports.getDoctorDetails = async (req, res) => {
         });
         
         if (!doctor) {
+          console.log('❌ DIAGNOSTIC: Doctor not found in specified tenant');
           return res.status(404).json({
             success: false,
-            message: 'Doctor not found'
+            message: 'Doctor not found',
+            details: {
+              searchedTenantId: tenantId,
+              searchedDoctorId: id,
+              totalDoctorsInTenant: totalDoctors
+            }
           });
         }
+        
+        console.log('✅ DIAGNOSTIC: Doctor found in specified tenant');
         
         // Get tenant info to include with doctor details
         const masterConn = getMasterConnection();
@@ -924,12 +954,12 @@ exports.getDoctorDetails = async (req, res) => {
       } 
       // If no tenant ID provided, search across all tenants
       else {
-        console.log('No tenant ID provided, searching across all tenants');
+        console.log('🔍 DIAGNOSTIC: No tenant ID provided, searching across all tenants');
         
         // Get master connection to access tenant information
         const masterConn = getMasterConnection();
         if (!masterConn) {
-          console.error('Failed to connect to master database');
+          console.error('❌ DIAGNOSTIC: Failed to connect to master database');
           return res.status(500).json({
             success: false,
             message: 'Database connection error'
@@ -941,20 +971,48 @@ exports.getDoctorDetails = async (req, res) => {
         
         // Get all active tenants
         const tenants = await Tenant.find({ active: true });
-        console.log(`Searching through ${tenants.length} active tenants for doctor ${id}`);
+        console.log(`🔍 DIAGNOSTIC: Found ${tenants.length} active tenants`);
+        
+        if (tenants.length === 0) {
+          console.log('❌ DIAGNOSTIC: No active tenants found');
+          return res.status(500).json({
+            success: false,
+            message: 'No active tenants found'
+          });
+        }
+        
+        // Log tenant details
+        tenants.forEach((tenant, index) => {
+          console.log(`🔍 DIAGNOSTIC: Tenant ${index + 1}: ${tenant.name} (${tenant._id}) - DB: ${tenant.dbName}`);
+        });
+        
+        let searchResults = [];
         
         // Search for doctor in each tenant
         for (const tenant of tenants) {
           try {
+            console.log(`🔍 DIAGNOSTIC: Searching in tenant: ${tenant.name}`);
+            
             // Connect to tenant database
             const tenantConn = await dbManager.connectTenant(tenant._id.toString());
             if (!tenantConn) {
-              console.warn(`Could not connect to tenant database: ${tenant.name}`);
+              console.warn(`❌ DIAGNOSTIC: Could not connect to tenant database: ${tenant.name}`);
+              searchResults.push({
+                tenantId: tenant._id,
+                tenantName: tenant.name,
+                status: 'connection_failed'
+              });
               continue; // Skip this tenant and proceed to the next
             }
             
+            console.log(`✅ DIAGNOSTIC: Connected to tenant: ${tenant.name}`);
+            
             // Get User model from tenant connection
             const User = tenantConn.model('User');
+            
+            // Count total doctors in this tenant
+            const totalDoctors = await User.countDocuments({ role: 'doctor' });
+            console.log(`🔍 DIAGNOSTIC: ${tenant.name} has ${totalDoctors} total doctors`);
             
             // Find doctor by ID
             const doctor = await User.findOne({
@@ -963,7 +1021,7 @@ exports.getDoctorDetails = async (req, res) => {
             });
             
             if (doctor) {
-              console.log(`Doctor found in tenant: ${tenant.name}`);
+              console.log(`✅ DIAGNOSTIC: Doctor found in tenant: ${tenant.name}`);
               
               // Add tenant information to doctor object
               const doctorObj = doctor.toObject();
@@ -973,30 +1031,78 @@ exports.getDoctorDetails = async (req, res) => {
               
               return res.status(200).json({
                 success: true,
-                data: doctorObj
+                data: doctorObj,
+                searchInfo: {
+                  searchedTenants: searchResults.length + 1,
+                  foundInTenant: tenant.name
+                }
+              });
+            } else {
+              console.log(`❌ DIAGNOSTIC: Doctor NOT found in tenant: ${tenant.name}`);
+              searchResults.push({
+                tenantId: tenant._id,
+                tenantName: tenant.name,
+                status: 'doctor_not_found',
+                totalDoctors: totalDoctors
               });
             }
           } catch (error) {
-            console.error(`Error searching in tenant ${tenant.name}:`, error);
-            // Continue with other tenants even if one fails
+            console.error(`❌ DIAGNOSTIC: Error searching in tenant ${tenant.name}:`, error);
+            searchResults.push({
+              tenantId: tenant._id,
+              tenantName: tenant.name,
+              status: 'search_error',
+              error: error.message
+            });
           }
         }
         
         // If we reach here, the doctor wasn't found in any tenant
-        console.log(`Doctor with ID ${id} not found in any tenant`);
+        console.log('❌ DIAGNOSTIC: Doctor not found in any tenant');
         return res.status(404).json({
           success: false,
-          message: 'Doctor not found in any tenant'
+          message: 'Doctor not found in any tenant',
+          searchResults: searchResults,
+          searchedDoctorId: id,
+          totalTenantsSearched: tenants.length
         });
       }
     } 
     // Fall back to single tenant mode
     else {
-      console.log('Using single tenant mode for doctor details');
-      return getSingleTenantDoctorDetails(req, res);
+      console.log('🔍 DIAGNOSTIC: Using single tenant mode');
+      
+      try {
+        const doctor = await User.findOne({
+          _id: id,
+          role: 'doctor'
+        });
+        
+        if (!doctor) {
+          console.log('❌ DIAGNOSTIC: Doctor not found in single tenant mode');
+          return res.status(404).json({
+            success: false,
+            message: 'Doctor not found'
+          });
+        }
+        
+        console.log('✅ DIAGNOSTIC: Doctor found in single tenant mode');
+        
+        return res.status(200).json({
+          success: true,
+          data: doctor
+        });
+      } catch (error) {
+        console.error('❌ DIAGNOSTIC: Error in single tenant mode:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Database error in single tenant mode',
+          error: error.message
+        });
+      }
     }
   } catch (error) {
-    console.error('Get doctor details error:', error);
+    console.error('❌ DIAGNOSTIC: Get doctor details error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch doctor details',
