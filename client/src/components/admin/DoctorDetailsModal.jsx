@@ -56,21 +56,20 @@ const DoctorDetailsModal = ({ doctorId, isOpen, onClose, onApprove, onReject }) 
   
   try {
     setSubmitting(true);
+    console.log('🔍 Modal verifying doctor:', doctorId);
     
-    // ✅ EXACT COPY from working DoctorVerification.jsx component
+    // ✅ EXACT COPY from working DoctorVerification page - WORD FOR WORD
     await adminService.verifyDoctor(doctorId, {
       verificationStatus: verificationAction,
       verificationNotes,
       rejectionReason: verificationAction === 'rejected' ? rejectionReason : ''
     });
     
-    // ✅ Success handling - same as working component
-    const successMessage = `Doctor ${verificationAction === 'approved' ? 'approved' : 'rejected'} successfully!`;
+    console.log('✅ Modal verification SUCCESS');
     
-    // You can use toast or set success state
-    // toast.success(successMessage); // If you have toast
-    // OR
-    console.log(successMessage);
+    // ✅ EXACT success message format from working page
+    const successMessage = `Doctor ${verificationAction === 'approved' ? 'approved' : 'rejected'} successfully!`;
+    toast.success(successMessage);
     
     // Call the appropriate callback
     if (verificationAction === 'approved') {
@@ -81,8 +80,8 @@ const DoctorDetailsModal = ({ doctorId, isOpen, onClose, onApprove, onReject }) 
     
     onClose();
   } catch (err) {
-    console.error('Verification error:', err);
-    // ✅ EXACT error handling from working component
+    console.error('❌ Modal verification ERROR:', err);
+    // ✅ EXACT error handling from working page
     const errorMessage = err.response?.data?.message || 'Verification process failed. Please try again.';
     setError(errorMessage);
   } finally {

@@ -168,13 +168,19 @@ const AdminDashboard = () => {
   
   const handleApproveDoctor = async (id) => {
   try {
-    // ✅ EXACTLY like DoctorVerification.jsx
+    console.log('🔍 Dashboard approving doctor:', id);
+    
+    // ✅ EXACT COPY from working DoctorVerification page
     await adminService.verifyDoctor(id, {
-      verificationStatus: 'approved',
-      verificationNotes: 'Approved from dashboard'
+      verificationStatus: 'approved',  // EXACT same field name
+      verificationNotes: 'Approved from dashboard',  // EXACT same field name
+      rejectionReason: ''  // EXACT same field name
     });
     
+    console.log('✅ Dashboard approval SUCCESS');
     toast.success('Doctor approved successfully!');
+    
+    // Remove from pending list
     setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== id));
     
     // Update dashboard count
@@ -183,21 +189,28 @@ const AdminDashboard = () => {
       pendingVerifications: Math.max(0, prev.pendingVerifications - 1)
     }));
   } catch (err) {
-    console.error('Verification error:', err);
+    console.error('❌ Dashboard approval ERROR:', err);
+    // EXACT same error handling as working page
     const errorMessage = err.response?.data?.message || 'Verification process failed. Please try again.';
     toast.error(errorMessage);
   }
 };
-  
-  const handleRejectDoctor = async (id) => {
+
+const handleRejectDoctor = async (id) => {
   try {
-    // ✅ EXACTLY like DoctorVerification.jsx
+    console.log('🔍 Dashboard rejecting doctor:', id);
+    
+    // ✅ EXACT COPY from working DoctorVerification page
     await adminService.verifyDoctor(id, {
-      verificationStatus: 'rejected',
-      rejectionReason: 'Application rejected by admin'
+      verificationStatus: 'rejected',  // EXACT same field name
+      verificationNotes: 'Rejected from dashboard',  // EXACT same field name
+      rejectionReason: 'Application rejected by admin'  // EXACT same field name
     });
     
+    console.log('✅ Dashboard rejection SUCCESS');
     toast.success('Doctor rejected successfully!');
+    
+    // Remove from pending list
     setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== id));
     
     // Update dashboard count
@@ -206,11 +219,12 @@ const AdminDashboard = () => {
       pendingVerifications: Math.max(0, prev.pendingVerifications - 1)
     }));
   } catch (err) {
-    console.error('Verification error:', err);
+    console.error('❌ Dashboard rejection ERROR:', err);
+    // EXACT same error handling as working page
     const errorMessage = err.response?.data?.message || 'Verification process failed. Please try again.';
     toast.error(errorMessage);
   }
-  };
+};
   
   // Helper functions
   const formatDate = (dateString) => {
