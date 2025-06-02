@@ -73,8 +73,9 @@ import UserManagement from '../src/components/admin/UserManagement';
 import UserForm from '../src/pages/admin/user_management/UserForm';
 import UserDetail from '../src/pages/admin/user_management/UserDetail';
 
-// 🆕 NEW: Admin Patient Management Component
+// 🆕 NEW: Admin Patient Management Components
 import AdminPatientDetails from '../src/components/admin/AdminPatientDetails';
+import AdminPatientEdit from '../src/components/admin/AdminPatientEdit';
 
 // Admin Login Component
 import AdminLogin from './pages/admin/AdminLogin';
@@ -440,8 +441,9 @@ const App = () => {
                     <Route path=":id" element={<UserDetail />} />
                     <Route path=":id/edit" element={<UserForm />} />
                   </Route>
-                  {/* 🆕 NEW: Admin Patient Details Route */}
+                  {/* 🆕 NEW: Admin Patient Management Routes */}
                   <Route path="patients/:id" element={<AdminPatientDetails />} />
+                  <Route path="patients/:id/edit" element={<AdminPatientEdit />} />
                   <Route path="professionals" element={<ProfessionalVerification />} />
                   {/* 🆕 NEW: Tenant Management Route */}
                   <Route path="tenants" element={<TenantManagement />} />

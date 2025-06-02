@@ -342,6 +342,28 @@ const adminService = {
   }
 },
 
+updatePatient: async (patientId, patientData, tenantId = null) => {
+  try {
+    console.log(`adminService.updatePatient called for ID: ${patientId}, Tenant ID: ${tenantId || 'not specified'}`);
+    
+    // Prepare query parameters
+    const params = {};
+    if (tenantId) {
+      params.tenantId = tenantId;
+    }
+    
+    const response = await api.put(`/admin/patients/${patientId}`, patientData, { 
+      params 
+    });
+    
+    console.log('updatePatient response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('adminService.updatePatient error:', error);
+    throw error;
+  }
+},
+
   // ===== 🆕 TENANT MANAGEMENT METHODS =====
   
   // Get all tenants with filtering, sorting, and pagination

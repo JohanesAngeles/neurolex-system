@@ -732,6 +732,182 @@ exports.getPatientById = async (req, res) => {
   }
 };
 
+// Add this method right after the getPatientById method in your adminController.js
+// Place it before the "MULTI-TENANT DOCTOR VERIFICATION FUNCTIONS" section
+
+// Update patient by ID for admin
+exports.updatePatient = async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    const { tenantId } = req.query;
+    const updateData = req.body;
+
+    console.log(`🔄 Admin updating patient: ${patientId}, Tenant: ${tenantId || 'not specified'}`);
+    console.log('Update data:', updateData);
+
+    // Validate patient ID
+    if (!patientId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Patient ID is required'
+      });
+    }
+
+    // Remove sensitive fields from update data
+    const allowedFields = [
+      'firstName', 'lastName', 'middleName', 'nickname', 'email',
+      'birthdate', 'age', 'gender', 'pronouns', 'location',
+      'diagnosis', 'treatmentHistory', 'symptomsFrequency',
+      'hasMentalHealthDoctor', 'primaryDoctor', 'doctorContact',
+      'therapistName', 'therapistContact', 'psychiatristName', 'psychiatristContact',
+      'clinicLocation', 'doctorContactNumber', 'doctorEmail', 'needDoctorHelp',
+      'preferredHospital', 'insuranceProvider', 'insuranceNumber',
+      'occupation', 'workStatus', 'livingArrangement', 'exerciseFrequency',
+      'dietaryPatterns', 'sleepPatterns', 'substanceUse', 'religiousBeliefs', 'hobbies',
+      'emergencyName', 'emergencyRelationship', 'emergencyPhone', 'emergencyEmail',
+      'emergencyAddress', 'emergencyAware', 'accountStatus'
+    ];
+
+    // Filter update data to only include allowed fields
+    const filteredUpdateData = {};
+    Object.keys(updateData).forEach(key => {
+      if (allowedFields.includes(key)) {
+        filteredUpdateData[key] = updateData[key];
+      }
+    });
+
+    // Add update timestamp
+    filteredUpdateData.updatedAt = new Date();
+
+    let patient = null;
+
+    if (tenantId) {
+      // Update in specific tenant
+      try {
+        const specificTenantDb = await dbManager.connectTenant(tenantId);
+        
+        if (!specificTenantDb) {
+          console.error(`Failed to connect to tenant database: ${tenantId}`);
+          return res.status(500).json({
+            success: false,
+            message: 'Database connection error for specified tenant'
+          });
+        }
+        
+        const User = specificTenantDb.model('User');
+        
+        // Find and update patient
+        patient = await User.findOneAndUpdate(
+          {
+            _id: patientId,
+            role: 'patient' // Ensure we only update patients
+          },
+          { $set: filteredUpdateData },
+          { 
+            new: true, // Return updated document
+            runValidators: false // Skip validation for flexibility
+          }
+        )
+        .select('-password -resetToken -resetTokenExpires')
+        .lean();
+          
+        if (patient) {
+          patient.tenantId = tenantId;
+          console.log(`✅ Updated patient in tenant ${tenantId}`);
+        }
+      } catch (tenantError) {
+        console.error(`❌ Error updating in tenant ${tenantId}:`, tenantError.message);
+        return res.status(500).json({
+          success: false,
+          message: 'Error updating patient in specified tenant'
+        });
+      }
+    } else {
+      // Search and update across all tenants
+      console.log('🔍 Searching across all tenants...');
+      
+      try {
+        // Get master connection to access tenants
+        const masterConn = getMasterConnection();
+        if (!masterConn) {
+          throw new Error('Failed to connect to master database');
+        }
+        
+        const Tenant = masterConn.model('Tenant');
+        const tenants = await Tenant.find({ active: true });
+        
+        for (const tenant of tenants) {
+          try {
+            const tenantDb = await dbManager.connectTenant(tenant._id.toString());
+            
+            if (!tenantDb) {
+              console.warn(`Could not connect to tenant database: ${tenant.name}`);
+              continue;
+            }
+            
+            const User = tenantDb.model('User');
+            
+            // Try to find and update patient in this tenant
+            const updatedPatient = await User.findOneAndUpdate(
+              {
+                _id: patientId,
+                role: 'patient' // Ensure we only update patients
+              },
+              { $set: filteredUpdateData },
+              { 
+                new: true, // Return updated document
+                runValidators: false // Skip validation for flexibility
+              }
+            )
+            .select('-password -resetToken -resetTokenExpires')
+            .lean();
+              
+            if (updatedPatient) {
+              patient = updatedPatient;
+              patient.tenantId = tenant._id.toString();
+              console.log(`✅ Updated patient in tenant: ${tenant.name}`);
+              break;
+            }
+          } catch (tenantError) {
+            console.error(`❌ Error updating in tenant ${tenant.name}:`, tenantError.message);
+            continue;
+          }
+        }
+      } catch (globalSearchError) {
+        console.error('❌ Error in global patient update:', globalSearchError);
+        return res.status(500).json({
+          success: false,
+          message: 'Error updating patient across tenants'
+        });
+      }
+    }
+
+    if (!patient) {
+      console.log(`❌ Patient ${patientId} not found or could not be updated`);
+      return res.status(404).json({
+        success: false,
+        message: 'Patient not found or could not be updated'
+      });
+    }
+
+    console.log(`✅ Patient updated successfully: ${patient.firstName} ${patient.lastName}`);
+
+    res.json({
+      success: true,
+      data: patient,
+      message: 'Patient updated successfully'
+    });
+
+  } catch (error) {
+    console.error('❌ Error in updatePatient:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while updating patient',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+};
+
 // ===== MULTI-TENANT DOCTOR VERIFICATION FUNCTIONS =====
 
 // Get all pending doctor verifications from all tenants

@@ -56,6 +56,7 @@ router.get('/dashboard', adminAuth, adminController.getDashboardData);
 // Patient Management
 router.get('/patients', adminAuth, adminController.getAllPatients);
 router.get('/patients/:patientId', adminAuth, adminController.getPatientById);
+router.put('/patients/:patientId', adminAuth, adminController.updatePatient);
 router.delete('/patients/:patientId', adminAuth, adminController.deletePatient);
 router.get('/tenants', adminAuth, tenantController.getAllTenants);
 router.get('/patients/export/pdf', adminAuth, adminController.exportPatientsToPdf);
@@ -122,7 +123,7 @@ router.post('/upload-tenant-asset',
 // Template Management
 router.get('/templates', adminAuth, adminController.getAllTemplates);
 router.put('/templates/:id', adminAuth, adminController.updateTemplate);
-router.delete('/templates/:id', adminAuth, adminController.deleteTemplate);
+router.delete('/templates/:id', adminController.deleteTemplate);
 
 // Feedback
 router.get('/feedback', adminAuth, adminController.getAllFeedback);

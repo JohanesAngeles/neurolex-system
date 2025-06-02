@@ -1,0 +1,468 @@
+/* client/src/styles/components/admin/AdminPatientEdit.css */
+
+/* IBM Plex Mono Font Imports (consistent with admin theme) */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('../../../assets/fonts/IBMPlexMono-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('../../../assets/fonts/IBMPlexMono-SemiBold.ttf') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('../../../assets/fonts/IBMPlexMono-Italic.ttf') format('truetype');
+  font-weight: normal;
+  font-style: italic;
+}
+
+/* Container */
+.admin-edit-container {
+  max-width: 1500px;
+  width: 100%;
+  margin: 0 auto;
+  margin-top: 50px;
+  padding: 20px;
+}
+
+/* Header Section */
+.admin-edit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 2px solid #A7D7C5;
+}
+
+.admin-edit-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.admin-edit-back-button {
+  width: 70px;
+  height: 70px;
+  border-radius: 12px;
+  border: 1px solid #A7D7C5;
+  background-color: rgba(167, 215, 197, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.admin-edit-back-button:hover {
+  background-color: rgba(167, 215, 197, 0.2);
+}
+
+.admin-edit-back-icon {
+  font-size: 18px;
+  color: #548170;
+  font-weight: bold;
+}
+
+.admin-edit-patient-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-edit-patient-name {
+  font-size: 36px;
+  font-weight: 600;
+  font-family: 'Poppins', sans-serif; 
+  color: #000000;
+  margin: 0 0 2px 0;
+}
+
+.admin-edit-patient-email {
+  font-size: 18px;
+  color: #548170;
+  font-family: 'IBM Plex Mono', monospace;
+  font-style: italic;
+  margin: 0 0 4px 0;
+}
+
+.admin-edit-patient-clinic {
+  font-size: 16px;
+  color: #666;
+  font-family: 'IBM Plex Mono', monospace;
+  margin: 0;
+}
+
+/* Tab Navigation */
+.admin-edit-tab-navigation {
+  display: flex;
+  gap: 0;
+  margin-bottom: 32px;
+  background-color: transparent;
+  border-radius: 0;
+  padding: 0;
+  border-bottom: 3px solid #A7D7C5;
+  border-top: 3px solid #A7D7C5;
+  overflow-x: auto;
+}
+
+.admin-edit-tab-button {
+  flex: 1;
+  min-width: 140px;
+  padding: 16px 20px;
+  border: none;
+  background-color: transparent;
+  color: #999;
+  font-size: 16px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 700;
+  border-radius: 0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  position: relative;
+  border-bottom: 4px solid transparent;
+  white-space: nowrap;
+}
+
+.admin-edit-tab-button:hover {
+  background-color: transparent;
+  color: #5B8C7E;
+}
+
+.admin-edit-tab-button.active {
+  background-color: transparent;
+  color: #5B8C7E;
+  border-bottom: 5px solid #5B8C7E;
+  font-weight: bolder;
+}
+
+/* Form Styling */
+.admin-edit-form {
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.admin-edit-tab-content {
+  min-height: 500px;
+}
+
+.admin-edit-tab-panel {
+  padding: 32px;
+}
+
+/* Section Cards */
+.admin-edit-section-card {
+  background-color: rgba(167, 215, 197, 0.1);
+  border-radius: 12px;
+  border: 1px solid #A7D7C5;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.admin-edit-section-title {
+  font-size: 20px;
+  font-weight: 600;
+  font-family: 'IBM Plex Mono', monospace;
+  color: #548170;
+  margin: 0 0 20px 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #A7D7C5;
+}
+
+/* Form Grid */
+.admin-edit-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+.admin-edit-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-edit-form-group.admin-edit-full-width {
+  grid-column: 1 / -1;
+}
+
+.admin-edit-form-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #548170;
+  font-family: 'IBM Plex Mono', monospace;
+  margin-bottom: 4px;
+}
+
+/* Form Inputs */
+.admin-edit-form-input,
+.admin-edit-form-select,
+.admin-edit-form-textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #A7D7C5;
+  border-radius: 8px;
+  font-size: 16px;
+  font-family: 'IBM Plex Mono', monospace;
+  color: #333;
+  background-color: #fff;
+  transition: all 0.2s ease;
+}
+
+.admin-edit-form-input:focus,
+.admin-edit-form-select:focus,
+.admin-edit-form-textarea:focus {
+  border-color: #5B8C7E;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(91, 140, 126, 0.1);
+}
+
+.admin-edit-form-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.admin-edit-form-select {
+  cursor: pointer;
+}
+
+/* Form Actions */
+.admin-edit-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  padding: 24px 32px;
+  background-color: rgba(167, 215, 197, 0.05);
+  border-top: 1px solid #A7D7C5;
+}
+
+.admin-edit-cancel-button,
+.admin-edit-save-button {
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  font-family: 'IBM Plex Mono', monospace;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 120px;
+}
+
+.admin-edit-cancel-button {
+  background-color: #fff;
+  color: #666;
+  border: 1px solid #A7D7C5;
+}
+
+.admin-edit-cancel-button:hover {
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+.admin-edit-save-button {
+  background-color: #5B8C7E;
+  color: white;
+  border: none;
+}
+
+.admin-edit-save-button:hover:not(:disabled) {
+  background-color: #4a7b6f;
+}
+
+.admin-edit-save-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Error and Loading States */
+.admin-edit-error-container,
+.admin-edit-loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 40px;
+}
+
+.admin-edit-loading-container {
+  justify-content: center;
+  min-height: 60vh;
+}
+
+.admin-edit-error-alert {
+  background-color: #ffebee;
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 500px;
+  border: 1px solid #f44336;
+}
+
+.admin-edit-error-icon {
+  font-size: 20px;
+}
+
+.admin-edit-error-message {
+  color: #d32f2f;
+  font-size: 15px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.admin-edit-primary-button {
+  background-color: #5B8C7E;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.admin-edit-primary-button:hover {
+  background-color: #4a7b6f;
+}
+
+/* Loading Spinner */
+.admin-edit-loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #5B8C7E;
+  border-radius: 50%;
+  animation: adminEditSpin 1s linear infinite;
+}
+
+@keyframes adminEditSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .admin-edit-container {
+    padding: 16px;
+    margin-top: 20px;
+  }
+  
+  .admin-edit-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .admin-edit-patient-name {
+    font-size: 28px;
+  }
+  
+  .admin-edit-patient-email {
+    font-size: 16px;
+  }
+  
+  .admin-edit-tab-navigation {
+    flex-direction: column;
+    gap: 4px;
+    border: 1px solid #A7D7C5;
+    border-radius: 8px;
+    padding: 4px;
+  }
+  
+  .admin-edit-tab-button {
+    min-width: auto;
+    padding: 12px 16px;
+    text-align: left;
+    border-radius: 6px;
+    border-bottom: none;
+  }
+  
+  .admin-edit-tab-button.active {
+    background-color: rgba(167, 215, 197, 0.2);
+    border-bottom: none;
+  }
+  
+  .admin-edit-tab-panel {
+    padding: 20px;
+  }
+  
+  .admin-edit-form-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .admin-edit-form-actions {
+    flex-direction: column;
+    padding: 20px;
+  }
+  
+  .admin-edit-cancel-button,
+  .admin-edit-save-button {
+    width: 100%;
+  }
+  
+  .admin-edit-section-card {
+    padding: 16px;
+  }
+  
+  .admin-edit-section-title {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-edit-patient-name {
+    font-size: 24px;
+  }
+  
+  .admin-edit-patient-email {
+    font-size: 14px;
+  }
+  
+  .admin-edit-tab-button {
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+  
+  .admin-edit-form-input,
+  .admin-edit-form-select,
+  .admin-edit-form-textarea {
+    font-size: 14px;
+    padding: 10px 12px;
+  }
+}
+
+/* Additional Utility Classes */
+.admin-edit-required {
+  color: #d32f2f;
+}
+
+.admin-edit-help-text {
+  font-size: 12px;
+  color: #666;
+  font-style: italic;
+  margin-top: 4px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.admin-edit-success-message {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  border: 1px solid #4caf50;
+}
