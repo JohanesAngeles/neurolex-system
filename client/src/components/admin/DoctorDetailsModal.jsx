@@ -57,26 +57,20 @@ const DoctorDetailsModal = ({ doctorId, isOpen, onClose, onApprove, onReject }) 
   try {
     setSubmitting(true);
     
-    // ✅ FIXED: Correct data structure to match MongoDB schema
-    const verificationData = {
+    // ✅ EXACT COPY from working DoctorVerification.jsx component
+    await adminService.verifyDoctor(doctorId, {
       verificationStatus: verificationAction,
+      verificationNotes,
       rejectionReason: verificationAction === 'rejected' ? rejectionReason : ''
-    };
+    });
     
-    // ✅ FIXED: Only add verificationNotes if there's actually a note to add
-    if (verificationNotes && verificationNotes.trim()) {
-      verificationData.verificationNotes = [{
-        note: verificationNotes.trim(),
-        createdAt: new Date(),
-        createdBy: 'System Administrator' // or get admin name from localStorage
-      }];
-    }
+    // ✅ Success handling - same as working component
+    const successMessage = `Doctor ${verificationAction === 'approved' ? 'approved' : 'rejected'} successfully!`;
     
-    console.log('🔍 Sending verification data:', verificationData);
-    
-    await adminService.verifyDoctor(doctorId, verificationData);
-    
-    toast.success(`Doctor ${verificationAction === 'approved' ? 'approved' : 'rejected'} successfully!`);
+    // You can use toast or set success state
+    // toast.success(successMessage); // If you have toast
+    // OR
+    console.log(successMessage);
     
     // Call the appropriate callback
     if (verificationAction === 'approved') {
@@ -88,6 +82,7 @@ const DoctorDetailsModal = ({ doctorId, isOpen, onClose, onApprove, onReject }) 
     onClose();
   } catch (err) {
     console.error('Verification error:', err);
+    // ✅ EXACT error handling from working component
     const errorMessage = err.response?.data?.message || 'Verification process failed. Please try again.';
     setError(errorMessage);
   } finally {
