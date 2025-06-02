@@ -62,6 +62,8 @@ import ProfessionalVerification from './components/admin/ProfessionalVerificatio
 // 🆕 NEW: Import DoctorVerificationDetails component
 import DoctorVerificationDetails from './components/admin/DoctorVerificationDetails';
 
+import DoctorEdit from './components/admin/DoctorEdit';
+
 // ✅ Import SystemSettings component
 import SystemSettings from './components/admin/SystemSettings';
 
@@ -453,6 +455,7 @@ const App = () => {
                   {/* 🆕 UPDATED: Doctor Management Routes with new verification details route */}
                   <Route path="professionals" element={<ProfessionalVerification />} />
                   <Route path="professionals/:doctorId" element={<DoctorVerificationDetails />} />
+                  <Route path="professionals/:doctorId/edit" element={<DoctorEdit />} />
                   
                   {/* 🆕 NEW: Tenant Management Route */}
                   <Route path="tenants" element={<TenantManagement />} />

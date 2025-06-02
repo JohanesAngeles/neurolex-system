@@ -159,6 +159,41 @@ const DoctorVerificationDetails = () => {
     );
   };
 
+  // 🆕 Helper function to determine if doctor needs verification
+  const isPendingVerification = () => {
+    if (!doctor) return false;
+    return !doctor.verificationStatus || doctor.verificationStatus === 'pending';
+  };
+
+  // 🆕 Helper function to get status badge style
+  const getStatusBadgeClass = (status) => {
+    switch(status) {
+      case 'approved':
+        return 'status-verified-approved';
+      case 'rejected':
+        return 'status-verified-rejected';
+      default:
+        return 'status-pending';
+    }
+  };
+
+  // 🆕 Update header text based on doctor status
+  const getHeaderText = () => {
+    if (!doctor) return { title: 'Doctor Details', subtitle: 'Loading...' };
+    
+    if (isPendingVerification()) {
+      return {
+        title: 'Doctor Verification Review',
+        subtitle: 'Review and verify the professional application details below'
+      };
+    } else {
+      return {
+        title: 'Doctor Profile Details',
+        subtitle: `Viewing profile for ${doctor.firstName} ${doctor.lastName}`
+      };
+    }
+  };
+
   if (loading) {
     return (
       <div className="admin-content">
@@ -179,7 +214,7 @@ const DoctorVerificationDetails = () => {
               className="back-button"
               onClick={() => navigate('/admin/professionals')}
             >
-              ← Back to Pending Doctors
+              ← Back to Professionals
             </button>
           </div>
           <div className="error-message">
@@ -194,6 +229,8 @@ const DoctorVerificationDetails = () => {
     );
   }
 
+  const headerText = getHeaderText();
+
   return (
     <div className="admin-content">
       {/* Header with back button */}
@@ -202,11 +239,11 @@ const DoctorVerificationDetails = () => {
           className="back-button"
           onClick={() => navigate('/admin/professionals')}
         >
-          ← Back to Pending Doctors
+          ← Back to Professionals
         </button>
         <div className="header-info">
-          <h1>Doctor Verification Review</h1>
-          <p>Review and verify the professional application details below</p>
+          <h1>{headerText.title}</h1>
+          <p>{headerText.subtitle}</p>
         </div>
       </div>
 
@@ -219,6 +256,38 @@ const DoctorVerificationDetails = () => {
 
       {doctor && (
         <div className="verification-content">
+          {/* 🆕 Show verification status for already-verified doctors */}
+          {!isPendingVerification() && (
+            <div className="verification-status-card">
+              <div className="status-header">
+                <h3>Verification Status</h3>
+                <span className={`status-badge ${getStatusBadgeClass(doctor.verificationStatus)}`}>
+                  {doctor.verificationStatus === 'approved' ? '✅ APPROVED' : '❌ REJECTED'}
+                </span>
+              </div>
+              
+              {doctor.verificationDate && (
+                <div className="verification-info">
+                  <p><strong>Verification Date:</strong> {formatDate(doctor.verificationDate)}</p>
+                </div>
+              )}
+              
+              {doctor.rejectionReason && doctor.verificationStatus === 'rejected' && (
+                <div className="rejection-reason">
+                  <p><strong>Rejection Reason:</strong></p>
+                  <p>{doctor.rejectionReason}</p>
+                </div>
+              )}
+              
+              {doctor.verificationNotes && (
+                <div className="verification-notes">
+                  <p><strong>Admin Notes:</strong></p>
+                  <p>{doctor.verificationNotes}</p>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="doctor-info-section">
             {/* Personal Information */}
             <div className="info-card">
@@ -395,95 +464,97 @@ const DoctorVerificationDetails = () => {
             </div>
           </div>
 
-          {/* Verification Form */}
-          <div className="verification-form-section">
-            <div className="form-card">
-              <h3 className="card-title">Verification Decision</h3>
-              
-              <form onSubmit={handleVerification} className="verification-form">
-                <div className="form-group radio-group">
-                  <label>Select Action:</label>
-                  <div className="radio-options">
-                    <div className="radio-option">
-                      <input
-                        type="radio"
-                        id="approve"
-                        name="verificationAction"
-                        value="approved"
-                        checked={verificationAction === 'approved'}
-                        onChange={(e) => setVerificationAction(e.target.value)}
-                      />
-                      <label htmlFor="approve">✅ Approve Application</label>
-                    </div>
-                    
-                    <div className="radio-option">
-                      <input
-                        type="radio"
-                        id="reject"
-                        name="verificationAction"
-                        value="rejected"
-                        checked={verificationAction === 'rejected'}
-                        onChange={(e) => setVerificationAction(e.target.value)}
-                      />
-                      <label htmlFor="reject">❌ Reject Application</label>
+          {/* 🆕 CONDITIONAL: Only show verification form for pending doctors */}
+          {isPendingVerification() && (
+            <div className="verification-form-section">
+              <div className="form-card">
+                <h3 className="card-title">Verification Decision</h3>
+                
+                <form onSubmit={handleVerification} className="verification-form">
+                  <div className="form-group radio-group">
+                    <label>Select Action:</label>
+                    <div className="radio-options">
+                      <div className="radio-option">
+                        <input
+                          type="radio"
+                          id="approve"
+                          name="verificationAction"
+                          value="approved"
+                          checked={verificationAction === 'approved'}
+                          onChange={(e) => setVerificationAction(e.target.value)}
+                        />
+                        <label htmlFor="approve">✅ Approve Application</label>
+                      </div>
+                      
+                      <div className="radio-option">
+                        <input
+                          type="radio"
+                          id="reject"
+                          name="verificationAction"
+                          value="rejected"
+                          checked={verificationAction === 'rejected'}
+                          onChange={(e) => setVerificationAction(e.target.value)}
+                        />
+                        <label htmlFor="reject">❌ Reject Application</label>
+                      </div>
                     </div>
                   </div>
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="verificationNotes">Internal Notes (Admin Only):</label>
-                  <textarea
-                    id="verificationNotes"
-                    name="verificationNotes"
-                    value={verificationNotes}
-                    onChange={(e) => setVerificationNotes(e.target.value)}
-                    placeholder="Add any internal notes for reference..."
-                    rows={3}
-                  />
-                </div>
-                
-                {verificationAction === 'rejected' && (
+                  
                   <div className="form-group">
-                    <label htmlFor="rejectionReason">Rejection Reason (Will be sent to applicant): *</label>
+                    <label htmlFor="verificationNotes">Internal Notes (Admin Only):</label>
                     <textarea
-                      id="rejectionReason"
-                      name="rejectionReason"
-                      value={rejectionReason}
-                      onChange={(e) => setRejectionReason(e.target.value)}
-                      placeholder="Provide a detailed reason for the rejection..."
-                      rows={4}
-                      required
+                      id="verificationNotes"
+                      name="verificationNotes"
+                      value={verificationNotes}
+                      onChange={(e) => setVerificationNotes(e.target.value)}
+                      placeholder="Add any internal notes for reference..."
+                      rows={3}
                     />
                   </div>
-                )}
-                
-                <div className="form-actions">
-                  <button 
-                    type="button" 
-                    className="btn-secondary" 
-                    onClick={() => navigate('/admin/professionals')}
-                    disabled={submitting}
-                  >
-                    Cancel
-                  </button>
                   
-                  <button 
-                    type="submit" 
-                    className={`btn-primary ${verificationAction === 'approved' ? 'btn-approve' : verificationAction === 'rejected' ? 'btn-reject' : ''}`}
-                    disabled={submitting || !verificationAction}
-                  >
-                    {submitting 
-                      ? 'Processing...' 
-                      : verificationAction === 'approved' 
-                        ? 'Approve Doctor' 
-                        : verificationAction === 'rejected' 
-                          ? 'Reject Application' 
-                          : 'Submit Decision'}
-                  </button>
-                </div>
-              </form>
+                  {verificationAction === 'rejected' && (
+                    <div className="form-group">
+                      <label htmlFor="rejectionReason">Rejection Reason (Will be sent to applicant): *</label>
+                      <textarea
+                        id="rejectionReason"
+                        name="rejectionReason"
+                        value={rejectionReason}
+                        onChange={(e) => setRejectionReason(e.target.value)}
+                        placeholder="Provide a detailed reason for the rejection..."
+                        rows={4}
+                        required
+                      />
+                    </div>
+                  )}
+                  
+                  <div className="form-actions">
+                    <button 
+                      type="button" 
+                      className="btn-secondary" 
+                      onClick={() => navigate('/admin/professionals')}
+                      disabled={submitting}
+                    >
+                      Cancel
+                    </button>
+                    
+                    <button 
+                      type="submit" 
+                      className={`btn-primary ${verificationAction === 'approved' ? 'btn-approve' : verificationAction === 'rejected' ? 'btn-reject' : ''}`}
+                      disabled={submitting || !verificationAction}
+                    >
+                      {submitting 
+                        ? 'Processing...' 
+                        : verificationAction === 'approved' 
+                          ? 'Approve Doctor' 
+                          : verificationAction === 'rejected' 
+                            ? 'Reject Application' 
+                            : 'Submit Decision'}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>

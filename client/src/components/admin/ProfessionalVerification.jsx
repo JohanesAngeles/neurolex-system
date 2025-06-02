@@ -182,6 +182,13 @@ const ProfessionalVerification = () => {
     console.log('🔍 Navigating to doctor details:', doctorId);
     navigate(`/admin/professionals/${doctorId}`);
   };
+
+
+
+  const handleEditDoctor = (doctorId, tenantId) => {
+  console.log('🔧 Navigating to edit doctor:', doctorId);
+  navigate(`/admin/professionals/${doctorId}/edit`);
+};
   
   const openVerifyModal = (doctor) => {
     setCurrentDoctor(doctor);
@@ -625,11 +632,13 @@ const ProfessionalVerification = () => {
                           alt="View"
                         />
                         <img 
-                          src={EditIcon} 
-                          className="action-icon edit" 
-                          title="Edit Doctor" 
-                          alt="Edit"
-                        />
+                            src={EditIcon} 
+                            className="action-icon edit" 
+                            onClick={() => handleEditDoctor(doctor._id, doctor.tenantId)}
+                            title="Edit Doctor" 
+                            alt="Edit"
+                            style={{ cursor: 'pointer' }}
+                          />
                         <img 
                           src={TrashIcon} 
                           className="action-icon delete" 
