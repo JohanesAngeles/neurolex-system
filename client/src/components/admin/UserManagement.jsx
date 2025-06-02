@@ -14,6 +14,48 @@ import DownloadIcon from '../../assets/icons/appointment_icon.svg';
 import CheckCircleIcon from '../../assets/icons/view_icon.svg';
 import XCircleIcon from '../../assets/icons/DoctorManagement_Icon.svg';
 
+// Delete Confirmation Modal Component
+const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, patientName, patientEmail }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-container">
+        <div className="modal-header">
+          <div className="modal-icon">
+            <svg viewBox="0 0 24 24" className="delete-icon">
+              <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 5V7H20L18.5 18C18.4 19.1 17.5 20 16.4 20H7.6C6.5 20 5.6 19.1 5.5 18L4 7H3V5H21M16.5 18L18 7H6L7.5 18H16.5Z" />
+            </svg>
+          </div>
+        </div>
+        
+        <div className="modal-content">
+          <h2 className="modal-title">DELETE PATIENT ACCOUNT?</h2>
+          
+          <div className="patient-info-card">
+            <div className="patient-name">{patientName}</div>
+            <div className="patient-email">{patientEmail}</div>
+          </div>
+          
+          <p className="modal-message">
+            Delete this patient account? This is permanent and can't be undone, 
+            but it's okay to let go if you're ready.
+          </p>
+          
+          <div className="modal-actions">
+            <button className="modal-cancel-btn" onClick={onClose}>
+              Cancel
+            </button>
+            <button className="modal-delete-btn" onClick={onConfirm}>
+              Yes, Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const PatientManagement = () => {
   // State variables
   const [patients, setPatients] = useState([]);
@@ -27,6 +69,15 @@ const PatientManagement = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
+  
+  // Modal state
+  const [deleteModal, setDeleteModal] = useState({
+    isOpen: false,
+    patientId: null,
+    tenantId: null,
+    patientName: '',
+    patientEmail: ''
+  });
   
   const navigate = useNavigate();
 
@@ -82,25 +133,45 @@ const PatientManagement = () => {
     fetchPatients();
   }, [fetchPatients]);
 
-  // Delete a patient
-  const handleDeletePatient = async (patientId, tenantId) => {
-    if (!window.confirm('Are you sure you want to delete this patient? This action cannot be undone.')) {
-      return;
-    }
-    
+  // Open delete confirmation modal
+  const handleDeletePatient = (patientId, tenantId, patientName, patientEmail) => {
+    setDeleteModal({
+      isOpen: true,
+      patientId,
+      tenantId,
+      patientName,
+      patientEmail
+    });
+  };
+
+  // Close delete confirmation modal
+  const closeDeleteModal = () => {
+    setDeleteModal({
+      isOpen: false,
+      patientId: null,
+      tenantId: null,
+      patientName: '',
+      patientEmail: ''
+    });
+  };
+
+  // Confirm delete patient
+  const confirmDeletePatient = async () => {
     try {
-      const response = await adminService.deletePatient(patientId, tenantId);
+      const response = await adminService.deletePatient(deleteModal.patientId, deleteModal.tenantId);
       
       if (response.success) {
         // Remove patient from state
-        setPatients(prevPatients => prevPatients.filter(patient => patient._id !== patientId));
+        setPatients(prevPatients => prevPatients.filter(patient => patient._id !== deleteModal.patientId));
         alert('Patient deleted successfully');
+        closeDeleteModal();
       } else {
         throw new Error(response.message || 'Failed to delete patient');
       }
     } catch (err) {
       console.error('Error deleting patient:', err);
       alert(`Error: ${err.message || 'An error occurred while deleting the patient'}`);
+      closeDeleteModal();
     }
   };
 
@@ -340,7 +411,12 @@ const PatientManagement = () => {
                       <img 
                         src={TrashIcon} 
                         className="action-icon delete" 
-                        onClick={() => handleDeletePatient(patient._id, patient.tenantId)} 
+                        onClick={() => handleDeletePatient(
+                          patient._id, 
+                          patient.tenantId, 
+                          `${patient.firstName} ${patient.lastName}`,
+                          patient.email
+                        )} 
                         title="Delete Patient" 
                         alt="Delete"
                       />
@@ -377,6 +453,15 @@ const PatientManagement = () => {
           </button>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={deleteModal.isOpen}
+        onClose={closeDeleteModal}
+        onConfirm={confirmDeletePatient}
+        patientName={deleteModal.patientName}
+        patientEmail={deleteModal.patientEmail}
+      />
     </div>
   );
 };
