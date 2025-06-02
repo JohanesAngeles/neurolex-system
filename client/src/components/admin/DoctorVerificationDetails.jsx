@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import adminService from '../../services/adminService';
-import '../../styles/components/admin/DoctorVerificationDetails.css';
+//import '../../styles/components/admin/DoctorVerificationDetails.css';
 
 const DoctorVerificationDetails = () => {
   const { doctorId } = useParams();
