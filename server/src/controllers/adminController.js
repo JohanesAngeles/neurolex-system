@@ -1184,27 +1184,32 @@ exports.verifyDoctor = async (req, res) => {
             isVerified: verificationStatus === 'approved',
             accountStatus: verificationStatus === 'approved' ? 'active' : 'pending'
           };
-          
-          // Only set these fields if they are provided and not empty
+
+          // ✅ CRITICAL FIX: Handle verificationNotes as array matching the schema
           if (verificationNotes && verificationNotes.trim() !== '') {
-            updateFields.verificationNotes = verificationNotes;
+            // Schema expects: { content, author, timestamp }
+            updateFields.verificationNotes = [{
+              content: verificationNotes.trim(),  // ✅ Changed from "note" to "content"
+              author: (req.user?.id || req.user?._id !== 'admin_default') ? (req.user?.id || req.user?._id) : null,
+              timestamp: new Date()
+            }];
+          } else {
+            // If no notes provided, set a default array entry
+            updateFields.verificationNotes = [{
+              content: `${verificationStatus === 'approved' ? 'Approved' : 'Rejected'} by System Administrator`,
+              author: (req.user?.id || req.user?._id !== 'admin_default') ? (req.user?.id || req.user?._id) : null,
+              timestamp: new Date()
+            }];
           }
-          
+
+          // Handle rejection reason separately (this is likely a simple string field)
           if (rejectionReason && rejectionReason.trim() !== '') {
-            updateFields.rejectionReason = rejectionReason;
+            updateFields.rejectionReason = rejectionReason.trim();
           }
-          
+
           // ✅ FIXED: Handle verifiedBy field properly for all admin types
           if (req.user && (req.user._id || req.user.id)) {
-            // For any admin (default or database), just use a string value or skip this field
-            // Don't try to set non-existent fields like 'verifiedByAdmin'
-            
-            // Option 1: Use verificationNotes to record who verified (if the field exists)
-            if (!updateFields.verificationNotes) {
-              updateFields.verificationNotes = `${verificationStatus === 'approved' ? 'Approved' : 'Rejected'} by System Administrator`;
-            }
-            
-            // Option 2: Only set verifiedBy if it's a valid ObjectId (skip for default admin)
+            // Only set verifiedBy if it's a valid ObjectId (skip for default admin)
             if (req.user._id !== 'admin_default' && req.user.id !== 'admin_default') {
               updateFields.verifiedBy = req.user._id || req.user.id;
             }
