@@ -1,5 +1,5 @@
 import React from 'react';
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { AdminProvider } from '../../../context/AdminContext';
 import '../../../styles/components/admin/AdminLayout.css';
 
@@ -15,13 +15,30 @@ import tenantIcon from '../../../assets/icons/clinic_icon.svg';
 import settingsIcon from '../../../assets/icons/Settings_icon.svg';
 
 const AdminLayout = () => {
-  // Menu items with proper icon imports - 🆕 FIXED: Journal Management path
+  const location = useLocation();
+
+  // Custom active check function for nested routes
+  const isActiveRoute = (path, menuId) => {
+    if (path === '/admin') {
+      return location.pathname === '/admin';
+    }
+    
+    // Special case for User Management - include both users and patients routes
+    if (menuId === 'users') {
+      return location.pathname.startsWith('/admin/users') || 
+             location.pathname.startsWith('/admin/patients');
+    }
+    
+    return location.pathname.startsWith(path);
+  };
+
+  // Menu items
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', path: '/admin', icon: dashboardIcon },
-    { id: 'users', label: 'User Management', path: '/admin/users', icon: usersIcon },
+    { id: 'users', label: 'User Management', path: '/admin/users', icon: usersIcon }, // This handles both users and patients
     { id: 'professionals', label: 'Doctor Management', path: '/admin/professionals', icon: doctorIcon },
     { id: 'tenants', label: 'Tenant Management', path: '/admin/tenants', icon: tenantIcon },
-    { id: 'templates', label: 'Journal Management', path: '/admin/templates', icon: journalIcon }, // 🔧 FIXED: Changed from /admin/journal to /admin/templates
+    { id: 'templates', label: 'Journal Management', path: '/admin/templates', icon: journalIcon },
     { id: 'settings', label: 'System Settings', path: '/admin/settings', icon: settingsIcon }
   ];
 
@@ -40,7 +57,11 @@ const AdminLayout = () => {
                 <li key={item.id} className="nav-item">
                   <NavLink 
                     to={item.path}
-                    className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}
+                    className={() => {
+                      // Use custom logic for determining active state
+                      const shouldBeActive = isActiveRoute(item.path, item.id);
+                      return shouldBeActive ? "nav-link active" : "nav-link";
+                    }}
                     end={item.path === '/admin'}
                   >
                     <img src={item.icon} alt={item.label} className="nav-icon" />
