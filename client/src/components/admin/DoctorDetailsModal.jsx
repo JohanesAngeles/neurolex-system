@@ -1,17 +1,20 @@
-// client/src/components/admin/DoctorDetailsModal.jsx
+// Updated DoctorDetailsModal.jsx with verification form like the working page
+
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import '../../styles/components/admin/DoctorDetailsModal.css';
 import adminService from '../../services/adminService';
 
-
-const API_URL = process.env.REACT_APP_API_URL || '/api';
-
 const DoctorDetailsModal = ({ doctorId, isOpen, onClose, onApprove, onReject }) => {
   const [doctor, setDoctor] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [processingAction, setProcessingAction] = useState(false);
+  
+  // ✅ ADD: Verification form states (same as working DoctorVerification page)
+  const [verificationAction, setVerificationAction] = useState('');
+  const [verificationNotes, setVerificationNotes] = useState('');
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (isOpen && doctorId) {
@@ -20,74 +23,66 @@ const DoctorDetailsModal = ({ doctorId, isOpen, onClose, onApprove, onReject }) 
   }, [isOpen, doctorId]);
 
   const fetchDoctorDetails = async () => {
-  console.log('🔍 Modal fetching details for Doctor ID:', doctorId);
-  console.log('🔍 Doctor ID type:', typeof doctorId);
-  console.log('🔍 Is doctorId valid?', doctorId && doctorId.length === 24);
-  
-  try {
-    setLoading(true);
-    setError(null);
+    console.log('🔍 Modal fetching details for Doctor ID:', doctorId);
     
-    // ✅ EXACTLY like DoctorVerification.jsx
-    const response = await adminService.getDoctorDetails(doctorId);
-    console.log('✅ Modal getDoctorDetails response:', response);
-    setDoctor(response.data);
-  } catch (err) {
-    console.error('❌ Modal getDoctorDetails error:', err);
-    setError('Failed to load doctor details. Please try again.');
-    console.error('Error fetching doctor:', err);
-  } finally {
-    setLoading(false);
-  }
-};
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await adminService.getDoctorDetails(doctorId);
+      console.log('✅ Modal getDoctorDetails response:', response);
+      setDoctor(response.data);
+    } catch (err) {
+      console.error('❌ Modal getDoctorDetails error:', err);
+      setError('Failed to load doctor details. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const handleApprove = async () => {
-  console.log('🔍 Modal handleApprove - Doctor ID:', doctorId);
-  console.log('🔍 Doctor ID type:', typeof doctorId);
-  console.log('🔍 Is doctorId valid?', doctorId && doctorId.length === 24);
-  
-  try {
-    setProcessingAction(true);
+  // ✅ ADD: Verification handler (same as working DoctorVerification page)
+  const handleVerification = async (e) => {
+    e.preventDefault();
     
-    // ✅ EXACTLY like DoctorVerification.jsx
-    await adminService.verifyDoctor(doctorId, {
-      verificationStatus: 'approved',
-      verificationNotes: 'Approved from doctor details modal'
-    });
-
-    toast.success('Doctor approved successfully!');
-    onApprove?.(doctorId);
-    onClose();
-  } catch (err) {
-    console.error('Verification error:', err);
-    const errorMessage = err.response?.data?.message || 'Verification process failed. Please try again.';
-    toast.error(errorMessage);
-  } finally {
-    setProcessingAction(false);
-  }
-};
-
-  const handleReject = async () => {
-  try {
-    setProcessingAction(true);
+    if (!verificationAction) {
+      setError('Please select an action (Approve or Reject)');
+      return;
+    }
     
-    // ✅ EXACTLY like DoctorVerification.jsx
-    await adminService.verifyDoctor(doctorId, {
-      verificationStatus: 'rejected',
-      rejectionReason: 'Application rejected after review'
-    });
+    if (verificationAction === 'rejected' && !rejectionReason) {
+      setError('Please provide a reason for rejection');
+      return;
+    }
+    
+    try {
+      setSubmitting(true);
+      
+      // ✅ EXACTLY like the working DoctorVerification page
+      await adminService.verifyDoctor(doctorId, {
+        verificationStatus: verificationAction,
+        verificationNotes,
+        rejectionReason: verificationAction === 'rejected' ? rejectionReason : ''
+      });
+      
+      toast.success(`Doctor ${verificationAction === 'approved' ? 'approved' : 'rejected'} successfully!`);
+      
+      // Call the appropriate callback
+      if (verificationAction === 'approved') {
+        onApprove?.(doctorId);
+      } else {
+        onReject?.(doctorId);
+      }
+      
+      onClose();
+    } catch (err) {
+      console.error('Verification error:', err);
+      const errorMessage = err.response?.data?.message || 'Verification process failed. Please try again.';
+      setError(errorMessage);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-    toast.success('Doctor rejected successfully!');
-    onReject?.(doctorId);
-    onClose();
-  } catch (err) {
-    console.error('Verification error:', err);
-    const errorMessage = err.response?.data?.message || 'Verification process failed. Please try again.';
-    toast.error(errorMessage);
-  } finally {
-    setProcessingAction(false);
-  }
-};
   const formatDate = (dateString) => {
     if (!dateString) return 'Not provided';
     try {
@@ -379,35 +374,96 @@ const DoctorDetailsModal = ({ doctorId, isOpen, onClose, onApprove, onReject }) 
                   )}
                 </div>
               </div>
+
+              {/* ✅ ADD: Verification Form Section (same as working DoctorVerification page) */}
+              <div className="details-section">
+                <h3 className="section-title">Verification Decision</h3>
+                
+                <form onSubmit={handleVerification} className="verification-form">
+                  <div className="form-group radio-group">
+                    <label>Verification Action:</label>
+                    <div className="radio-options">
+                      <div className="radio-option">
+                        <input
+                          type="radio"
+                          id="approve"
+                          name="verificationAction"
+                          value="approved"
+                          checked={verificationAction === 'approved'}
+                          onChange={(e) => setVerificationAction(e.target.value)}
+                        />
+                        <label htmlFor="approve">Approve</label>
+                      </div>
+                      
+                      <div className="radio-option">
+                        <input
+                          type="radio"
+                          id="reject"
+                          name="verificationAction"
+                          value="rejected"
+                          checked={verificationAction === 'rejected'}
+                          onChange={(e) => setVerificationAction(e.target.value)}
+                        />
+                        <label htmlFor="reject">Reject</label>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="verificationNotes">Internal Notes (visible to administrators only):</label>
+                    <textarea
+                      id="verificationNotes"
+                      name="verificationNotes"
+                      value={verificationNotes}
+                      onChange={(e) => setVerificationNotes(e.target.value)}
+                      placeholder="Add any internal notes for reference"
+                      rows={3}
+                    />
+                  </div>
+                  
+                  {verificationAction === 'rejected' && (
+                    <div className="form-group">
+                      <label htmlFor="rejectionReason">Rejection Reason (will be sent to the applicant):</label>
+                      <textarea
+                        id="rejectionReason"
+                        name="rejectionReason"
+                        value={rejectionReason}
+                        onChange={(e) => setRejectionReason(e.target.value)}
+                        placeholder="Provide a detailed reason for the rejection"
+                        rows={4}
+                        required
+                      />
+                    </div>
+                  )}
+                  
+                  <div className="verification-actions">
+                    <button 
+                      type="button" 
+                      className="btn-secondary" 
+                      onClick={onClose}
+                      disabled={submitting}
+                    >
+                      Cancel
+                    </button>
+                    
+                    <button 
+                      type="submit" 
+                      className={`btn-primary ${verificationAction === 'approved' ? 'btn-approve' : ''} ${verificationAction === 'rejected' ? 'btn-reject' : ''}`}
+                      disabled={submitting || !verificationAction}
+                    >
+                      {submitting 
+                        ? 'Processing...' 
+                        : verificationAction === 'approved' 
+                          ? 'Approve Professional' 
+                          : verificationAction === 'rejected' 
+                            ? 'Reject Professional' 
+                            : 'Submit Decision'}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           ) : null}
-        </div>
-
-        {/* Modal Footer */}
-        <div className="modal-footer">
-          <button 
-            className="modal-button secondary" 
-            onClick={onClose}
-            disabled={processingAction}
-          >
-            Close
-          </button>
-          <div className="action-buttons">
-            <button 
-              className="modal-button reject" 
-              onClick={handleReject}
-              disabled={processingAction}
-            >
-              {processingAction ? 'Processing...' : 'Reject'}
-            </button>
-            <button 
-              className="modal-button approve" 
-              onClick={handleApprove}
-              disabled={processingAction}
-            >
-              {processingAction ? 'Processing...' : 'Accept'}
-            </button>
-          </div>
         </div>
       </div>
     </div>
