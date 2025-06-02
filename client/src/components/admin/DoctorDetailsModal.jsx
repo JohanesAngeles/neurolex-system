@@ -42,46 +42,58 @@ const DoctorDetailsModal = ({ doctorId, isOpen, onClose, onApprove, onReject }) 
 
   // ✅ ADD: Verification handler (same as working DoctorVerification page)
   const handleVerification = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
+  
+  if (!verificationAction) {
+    setError('Please select an action (Approve or Reject)');
+    return;
+  }
+  
+  if (verificationAction === 'rejected' && !rejectionReason) {
+    setError('Please provide a reason for rejection');
+    return;
+  }
+  
+  try {
+    setSubmitting(true);
     
-    if (!verificationAction) {
-      setError('Please select an action (Approve or Reject)');
-      return;
+    // ✅ FIXED: Correct data structure to match MongoDB schema
+    const verificationData = {
+      verificationStatus: verificationAction,
+      rejectionReason: verificationAction === 'rejected' ? rejectionReason : ''
+    };
+    
+    // ✅ FIXED: Only add verificationNotes if there's actually a note to add
+    if (verificationNotes && verificationNotes.trim()) {
+      verificationData.verificationNotes = [{
+        note: verificationNotes.trim(),
+        createdAt: new Date(),
+        createdBy: 'System Administrator' // or get admin name from localStorage
+      }];
     }
     
-    if (verificationAction === 'rejected' && !rejectionReason) {
-      setError('Please provide a reason for rejection');
-      return;
+    console.log('🔍 Sending verification data:', verificationData);
+    
+    await adminService.verifyDoctor(doctorId, verificationData);
+    
+    toast.success(`Doctor ${verificationAction === 'approved' ? 'approved' : 'rejected'} successfully!`);
+    
+    // Call the appropriate callback
+    if (verificationAction === 'approved') {
+      onApprove?.(doctorId);
+    } else {
+      onReject?.(doctorId);
     }
     
-    try {
-      setSubmitting(true);
-      
-      // ✅ EXACTLY like the working DoctorVerification page
-      await adminService.verifyDoctor(doctorId, {
-        verificationStatus: verificationAction,
-        verificationNotes,
-        rejectionReason: verificationAction === 'rejected' ? rejectionReason : ''
-      });
-      
-      toast.success(`Doctor ${verificationAction === 'approved' ? 'approved' : 'rejected'} successfully!`);
-      
-      // Call the appropriate callback
-      if (verificationAction === 'approved') {
-        onApprove?.(doctorId);
-      } else {
-        onReject?.(doctorId);
-      }
-      
-      onClose();
-    } catch (err) {
-      console.error('Verification error:', err);
-      const errorMessage = err.response?.data?.message || 'Verification process failed. Please try again.';
-      setError(errorMessage);
-    } finally {
-      setSubmitting(false);
-    }
-  };
+    onClose();
+  } catch (err) {
+    console.error('Verification error:', err);
+    const errorMessage = err.response?.data?.message || 'Verification process failed. Please try again.';
+    setError(errorMessage);
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Not provided';
