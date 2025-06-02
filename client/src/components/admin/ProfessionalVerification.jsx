@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom'; // 🆕 ADDED
 import { 
   Tab, Tabs, Box, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField,
   Select, MenuItem, FormControl, InputLabel, FormHelperText, CircularProgress,
@@ -52,6 +53,8 @@ function a11yProps(index) {
 }
 
 const ProfessionalVerification = () => {
+  const navigate = useNavigate(); // 🆕 ADDED
+  
   // State variables
   const [pendingDoctors, setPendingDoctors] = useState([]);
   const [approvedDoctors, setApprovedDoctors] = useState([]);
@@ -174,41 +177,10 @@ const ProfessionalVerification = () => {
     setCurrentTabPage(1); // Reset to first page when changing tabs
   };
   
-  const viewDoctorDetails = async (doctorId, tenantId) => {
-    try {
-      setShowDetailsModal(false); // Close any existing modal first
-      
-      // Show loading indicator
-      setLoading(true);
-      
-      console.log(`Getting details for doctor: ${doctorId}, Tenant: ${tenantId || 'not specified'}`);
-      
-      // If tenantId is provided, use it; otherwise, it will use localStorage or search all tenants
-      const res = await adminService.getDoctorDetails(doctorId, tenantId);
-      
-      if (res.success && res.data) {
-        setCurrentDoctor(res.data);
-        setShowDetailsModal(true);
-      } else {
-        toast.error('Failed to load doctor details: ' + (res.message || 'Unknown error'));
-      }
-    } catch (error) {
-      console.error('Error loading doctor details:', error);
-      
-      // Show more specific error message
-      if (error.response) {
-        const status = error.response.status;
-        if (status === 404) {
-          toast.error('Doctor not found. They may have been deleted or moved to a different tenant.');
-        } else {
-          toast.error(`Error loading doctor details: ${error.response.data?.message || 'Server error'}`);
-        }
-      } else {
-        toast.error('Network error. Please check your connection and try again.');
-      }
-    } finally {
-      setLoading(false);
-    }
+  // 🆕 UPDATED: Now navigates to the new route instead of opening modal
+  const viewDoctorDetails = (doctorId, tenantId) => {
+    console.log('🔍 Navigating to doctor details:', doctorId);
+    navigate(`/admin/professionals/${doctorId}`);
   };
   
   const openVerifyModal = (doctor) => {

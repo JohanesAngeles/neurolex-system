@@ -16,11 +16,6 @@ const DoctorVerification = () => {
   const [success, setSuccess] = useState(null);
 
   useEffect(() => {
-    console.log('🟢 WORKING PAGE - DoctorVerification:');
-    console.log('  doctorId from useParams:', doctorId);
-    console.log('  doctorId type:', typeof doctorId);
-    console.log('  URL path:', window.location.pathname);
-    
     const fetchDoctorDetails = async () => {
       try {
         setLoading(true);
@@ -63,9 +58,9 @@ const DoctorVerification = () => {
       
       setSuccess(`Doctor ${verificationAction === 'approved' ? 'approved' : 'rejected'} successfully!`);
       
-      // Redirect after a delay - UPDATED PATH to match your current routing
+      // Redirect after a delay
       setTimeout(() => {
-        navigate('/admin/professionals');
+        navigate('/admin/doctors/pending');
       }, 2000);
     } catch (err) {
       console.error('Verification error:', err);
@@ -256,7 +251,7 @@ const DoctorVerification = () => {
               <button 
                 type="button" 
                 className="btn-secondary" 
-                onClick={() => navigate('/admin/professionals')}
+                onClick={() => navigate('/admin/doctors/pending')}
                 disabled={submitting}
               >
                 Cancel
