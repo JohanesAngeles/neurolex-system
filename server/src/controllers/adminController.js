@@ -1067,11 +1067,11 @@ exports.verifyDoctor = async (req, res) => {
           id: doctor._id,
           name: `${doctor.firstName} ${doctor.lastName}`,
           currentStatus: doctor.verificationStatus,
-          specialization: doctor.specialization || doctor.specialty, // Check both fields
+          specialization: doctor.specialization || doctor.specialty,
         });
         
         try {
-          // Set only the necessary fields and respect the schema
+          // ✅ FIXED: Set only the necessary fields and respect the schema
           const updateFields = {
             verificationStatus: verificationStatus,
             verificationDate: new Date(),
@@ -1087,17 +1087,22 @@ exports.verifyDoctor = async (req, res) => {
           if (rejectionReason && rejectionReason.trim() !== '') {
             updateFields.rejectionReason = rejectionReason;
           }
-          // Set verifiedBy if user is available
-          // Set verifiedBy if user is available - Handle default admin case  
-if (req.user && req.user._id) {
-  if (req.user._id === 'admin_default' || req.user.id === 'admin_default') {
-    // For default admin, use a special identifier or skip this field
-    updateFields.verifiedByAdmin = 'System Administrator';
-  } else {
-    // For database admins, use the actual ObjectId
-    updateFields.verifiedBy = req.user._id;
-  }
-}
+          
+          // ✅ FIXED: Handle verifiedBy field properly for all admin types
+          if (req.user && (req.user._id || req.user.id)) {
+            // For any admin (default or database), just use a string value or skip this field
+            // Don't try to set non-existent fields like 'verifiedByAdmin'
+            
+            // Option 1: Use verificationNotes to record who verified (if the field exists)
+            if (!updateFields.verificationNotes) {
+              updateFields.verificationNotes = `${verificationStatus === 'approved' ? 'Approved' : 'Rejected'} by System Administrator`;
+            }
+            
+            // Option 2: Only set verifiedBy if it's a valid ObjectId (skip for default admin)
+            if (req.user._id !== 'admin_default' && req.user.id !== 'admin_default') {
+              updateFields.verifiedBy = req.user._id || req.user.id;
+            }
+          }
           
           // Use findByIdAndUpdate with runValidators: false to avoid validation errors
           const updatedDoctor = await User.findByIdAndUpdate(
@@ -1208,11 +1213,12 @@ if (req.user && req.user._id) {
               console.log(`Found doctor in tenant: ${tenant.name}`);
               
               try {
-                // Set only the necessary fields and respect the schema
+                // ✅ FIXED: Set only the necessary fields and respect the schema
                 const updateFields = {
                   verificationStatus: verificationStatus,
                   verificationDate: new Date(),
-                  isVerified: verificationStatus === 'approved'
+                  isVerified: verificationStatus === 'approved',
+                  accountStatus: verificationStatus === 'approved' ? 'active' : 'pending'
                 };
                 
                 // Only set these fields if they are provided and not empty
@@ -1224,9 +1230,17 @@ if (req.user && req.user._id) {
                   updateFields.rejectionReason = rejectionReason;
                 }
                 
-                // Set verifiedBy if user is available
-                if (req.user && req.user._id) {
-                  updateFields.verifiedBy = req.user._id;
+                // ✅ FIXED: Handle verifiedBy field properly
+                if (req.user && (req.user._id || req.user.id)) {
+                  // Only set verifiedBy if it's a valid ObjectId (skip for default admin)
+                  if (req.user._id !== 'admin_default' && req.user.id !== 'admin_default') {
+                    updateFields.verifiedBy = req.user._id || req.user.id;
+                  }
+                  
+                  // Add admin info to verification notes if not already present
+                  if (!updateFields.verificationNotes) {
+                    updateFields.verificationNotes = `${verificationStatus === 'approved' ? 'Approved' : 'Rejected'} by System Administrator`;
+                  }
                 }
                 
                 // Use findByIdAndUpdate with runValidators: false to avoid validation errors
@@ -1315,11 +1329,12 @@ if (req.user && req.user._id) {
           });
         }
         
-        // Set only the necessary fields and respect the schema
+        // ✅ FIXED: Set only the necessary fields and respect the schema
         const updateFields = {
           verificationStatus: verificationStatus,
           verificationDate: new Date(),
-          isVerified: verificationStatus === 'approved'
+          isVerified: verificationStatus === 'approved',
+          accountStatus: verificationStatus === 'approved' ? 'active' : 'pending'
         };
         
         // Only set these fields if they are provided and not empty
@@ -1331,9 +1346,17 @@ if (req.user && req.user._id) {
           updateFields.rejectionReason = rejectionReason;
         }
         
-        // Set verifiedBy if user is available
-        if (req.user && req.user._id) {
-          updateFields.verifiedBy = req.user._id;
+        // ✅ FIXED: Handle verifiedBy field properly
+        if (req.user && (req.user._id || req.user.id)) {
+          // Only set verifiedBy if it's a valid ObjectId (skip for default admin)
+          if (req.user._id !== 'admin_default' && req.user.id !== 'admin_default') {
+            updateFields.verifiedBy = req.user._id || req.user.id;
+          }
+          
+          // Add admin info to verification notes if not already present
+          if (!updateFields.verificationNotes) {
+            updateFields.verificationNotes = `${verificationStatus === 'approved' ? 'Approved' : 'Rejected'} by System Administrator`;
+          }
         }
         
         // Use findByIdAndUpdate with runValidators: false to avoid validation errors
