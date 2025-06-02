@@ -59,6 +59,9 @@ import AdminLayout from './components/admin/layout/AdminLayout';
 import AdminDashboard from './components/admin/AdminDashboard';
 import ProfessionalVerification from './components/admin/ProfessionalVerification';
 
+// 🆕 NEW: Import DoctorVerificationDetails component
+import DoctorVerificationDetails from './components/admin/DoctorVerificationDetails';
+
 // ✅ Import SystemSettings component
 import SystemSettings from './components/admin/SystemSettings';
 
@@ -434,6 +437,7 @@ const App = () => {
                   }
                 >
                   <Route index element={<AdminDashboard />} />
+                  
                   {/* User Management Routes */}
                   <Route path="users">
                     <Route index element={<UserManagement />} />
@@ -441,16 +445,23 @@ const App = () => {
                     <Route path=":id" element={<UserDetail />} />
                     <Route path=":id/edit" element={<UserForm />} />
                   </Route>
+                  
                   {/* 🆕 NEW: Admin Patient Management Routes */}
                   <Route path="patients/:id" element={<AdminPatientDetails />} />
                   <Route path="patients/:id/edit" element={<AdminPatientEdit />} />
+                  
+                  {/* 🆕 UPDATED: Doctor Management Routes with new verification details route */}
                   <Route path="professionals" element={<ProfessionalVerification />} />
+                  <Route path="professionals/:doctorId" element={<DoctorVerificationDetails />} />
+                  
                   {/* 🆕 NEW: Tenant Management Route */}
                   <Route path="tenants" element={<TenantManagement />} />
                   <Route path="content" element={<PlaceholderComponent name="Content Moderation" />} />
                   <Route path="reports" element={<PlaceholderComponent name="Reports" />} />
+                  
                   {/* ✅ System Settings now uses the actual SystemSettings component */}
                   <Route path="settings" element={<SystemSettings />} />
+                  
                   {/* 🆕 NEW: Admin Template Management Route - CHANGED FROM PLACEHOLDER */}
                   <Route path="templates" element={<AdminFormTemplates />} />
                   <Route path="feedback" element={<PlaceholderComponent name="Feedback Tracking" />} />
