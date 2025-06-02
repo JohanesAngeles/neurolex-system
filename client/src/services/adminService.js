@@ -550,7 +550,7 @@ const adminService = {
   getDoctorVerificationStats: async () => {
   try {
     console.log('adminService.getDoctorVerificationStats called');
-    // ✅ FIXED: Use correct endpoint from adminController.js
+    // ✅ FIXED: Use /admin (will become /api/admin with base URL)
     const response = await api.get('/admin/doctor-verification-stats');
     console.log('getDoctorVerificationStats response:', response.data);
     return response.data;
@@ -560,11 +560,11 @@ const adminService = {
   }
 },
 
-  // Get pending doctors
-  getPendingDoctors: async (params = {}) => {
+// Get pending doctors
+getPendingDoctors: async (params = {}) => {
   try {
     console.log('adminService.getPendingDoctors called with params:', params);
-    // ✅ FIXED: Use correct endpoint from adminController.js
+    // ✅ FIXED: Use /admin (will become /api/admin with base URL)
     const response = await api.get('/admin/doctors/pending', { params });
     console.log('getPendingDoctors response:', response.data);
     return response.data;
@@ -574,11 +574,11 @@ const adminService = {
   }
 },
 
-  // Get approved doctors
-  getApprovedDoctors: async (params = {}) => {
+// Get approved doctors
+getApprovedDoctors: async (params = {}) => {
   try {
     console.log('adminService.getApprovedDoctors called with params:', params);
-    // ✅ FIXED: Use correct endpoint from adminController.js
+    // ✅ FIXED: Use /admin (will become /api/admin with base URL)
     const response = await api.get('/admin/doctors/approved', { params });
     console.log('getApprovedDoctors response:', response.data);
     return response.data;
@@ -588,12 +588,11 @@ const adminService = {
   }
 },
 
-
-  // Get rejected doctors
-  getRejectedDoctors: async (params = {}) => {
+// Get rejected doctors
+getRejectedDoctors: async (params = {}) => {
   try {
     console.log('adminService.getRejectedDoctors called with params:', params);
-    // ✅ FIXED: Use correct endpoint from adminController.js  
+    // ✅ FIXED: Use /admin (will become /api/admin with base URL)
     const response = await api.get('/admin/doctors/rejected', { params });
     console.log('getRejectedDoctors response:', response.data);
     return response.data;
@@ -603,8 +602,7 @@ const adminService = {
   }
 },
 
-
-  // Get doctor details
+// Get doctor details
 getDoctorDetails: async (doctorId, tenantId = null) => {
   try {
     console.log(`adminService.getDoctorDetails called for ID: ${doctorId}, Tenant ID: ${tenantId || 'not specified'}`);
@@ -620,7 +618,7 @@ getDoctorDetails: async (doctorId, tenantId = null) => {
       console.log('No tenant ID provided, will search across all tenants');
     }
     
-    // ✅ FIXED: Use correct endpoint from adminController.js
+    // ✅ FIXED: Use /admin (will become /api/admin with base URL)
     const response = await api.get(`/admin/doctors/${doctorId}`, { 
       params 
     });
@@ -633,8 +631,8 @@ getDoctorDetails: async (doctorId, tenantId = null) => {
   }
 },
 
-  // Verify doctor
-  verifyDoctor: async (doctorId, verificationData, tenantId = null) => {
+// Verify doctor
+verifyDoctor: async (doctorId, verificationData, tenantId = null) => {
   try {
     console.log(`adminService.verifyDoctor called for ID: ${doctorId}, Tenant ID: ${tenantId || 'not specified'}`);
     console.log('Verification data:', verificationData);
@@ -649,9 +647,9 @@ getDoctorDetails: async (doctorId, tenantId = null) => {
       console.log('No tenant ID provided, will search across all tenants');
     }
     
-    // ✅ FIXED: Correct URL structure to match adminRoutes.js
+    // ✅ FIXED: Use /admin (will become /api/admin with base URL)
     const response = await api.post(
-      `/admin/doctors/${doctorId}/verify`, // Changed from /verify/${doctorId}
+      `/admin/doctors/${doctorId}/verify`,
       verificationData,
       { params }
     );
