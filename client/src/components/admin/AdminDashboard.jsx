@@ -1,4 +1,4 @@
-// client/src/components/admin/AdminDashboard.jsx - HYBRID SOLUTION
+// client/src/components/admin/AdminDashboard.jsx - UPDATED WITH MODAL
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -133,9 +133,8 @@ const AdminDashboard = () => {
     navigate('/admin/login');
   };
   
-  // Modal handlers - KEEP VIEW MODAL
+  // Modal handlers
   const handleViewDoctor = (id) => {
-    console.log('📋 Opening view modal for doctor:', id);
     setSelectedDoctorId(id);
     setIsModalOpen(true);
   };
@@ -167,20 +166,72 @@ const AdminDashboard = () => {
     }));
   };
   
-  // 🚀 HYBRID SOLUTION: Redirect to working verification system
   const handleApproveDoctor = async (id) => {
-    console.log('🔄 Redirecting to working verification system for approval...');
-    // Redirect to the WORKING professionals page
-    toast.info('Redirecting to working verification system...');
-    window.location.href = '/admin/professionals';
-  };
 
-  const handleRejectDoctor = async (id) => {
-    console.log('🔄 Redirecting to working verification system for rejection...');
-    // Redirect to the WORKING professionals page
-    toast.info('Redirecting to working verification system...');
-    window.location.href = '/admin/professionals';
-  };
+
+    console.log('🔴 DASHBOARD - NOT WORKING:');
+    console.log('  doctorId from parameter:', id);
+    console.log('  doctorId type:', typeof id);
+    console.log('  URL path:', window.location.pathname);
+
+  try {
+    console.log('🔍 Dashboard approving doctor:', id);
+    
+    // ✅ EXACT COPY from working DoctorVerification page
+    await adminService.verifyDoctor(id, {
+      verificationStatus: 'approved',  // EXACT same field name
+      verificationNotes: 'Approved from dashboard',  // EXACT same field name
+      rejectionReason: ''  // EXACT same field name
+    });
+    
+    console.log('✅ Dashboard approval SUCCESS');
+    toast.success('Doctor approved successfully!');
+    
+    // Remove from pending list
+    setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== id));
+    
+    // Update dashboard count
+    setDashboardData(prev => ({
+      ...prev,
+      pendingVerifications: Math.max(0, prev.pendingVerifications - 1)
+    }));
+  } catch (err) {
+    console.error('❌ Dashboard approval ERROR:', err);
+    // EXACT same error handling as working page
+    const errorMessage = err.response?.data?.message || 'Verification process failed. Please try again.';
+    toast.error(errorMessage);
+  }
+};
+
+const handleRejectDoctor = async (id) => {
+  try {
+    console.log('🔍 Dashboard rejecting doctor:', id);
+    
+    // ✅ EXACT COPY from working DoctorVerification page
+    await adminService.verifyDoctor(id, {
+      verificationStatus: 'rejected',  // EXACT same field name
+      verificationNotes: 'Rejected from dashboard',  // EXACT same field name
+      rejectionReason: 'Application rejected by admin'  // EXACT same field name
+    });
+    
+    console.log('✅ Dashboard rejection SUCCESS');
+    toast.success('Doctor rejected successfully!');
+    
+    // Remove from pending list
+    setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== id));
+    
+    // Update dashboard count
+    setDashboardData(prev => ({
+      ...prev,
+      pendingVerifications: Math.max(0, prev.pendingVerifications - 1)
+    }));
+  } catch (err) {
+    console.error('❌ Dashboard rejection ERROR:', err);
+    // EXACT same error handling as working page
+    const errorMessage = err.response?.data?.message || 'Verification process failed. Please try again.';
+    toast.error(errorMessage);
+  }
+};
   
   // Helper functions
   const formatDate = (dateString) => {
@@ -245,34 +296,6 @@ const AdminDashboard = () => {
         </div>
       </div>
       
-      {/* 🚀 HYBRID SOLUTION: Info banner */}
-      <div style={{
-        background: '#e7f5e7', 
-        padding: '15px', 
-        margin: '20px 0', 
-        borderRadius: '8px',
-        border: '2px solid #4CAF50',
-        textAlign: 'center'
-      }}>
-        <h3 style={{color: '#4CAF50', marginBottom: '10px'}}>
-          ✅ Doctor Verification System
-        </h3>
-        <p style={{marginBottom: '10px', color: '#333'}}>
-          Use "View" to see doctor details here, then use "Approve/Reject" to go to the working verification system
-        </p>
-        <a 
-          href="/admin/professionals" 
-          style={{
-            color: '#4CAF50', 
-            fontSize: '16px', 
-            fontWeight: 'bold',
-            textDecoration: 'none'
-          }}
-        >
-          👉 Or click here to go directly to the working verification system
-        </a>
-      </div>
-      
       {/* Divider */}
       <div className="admin-dashboard-divider"></div>
       
@@ -329,21 +352,21 @@ const AdminDashboard = () => {
                     <button 
                       className="btn-action view"
                       onClick={() => handleViewDoctor(doctor._id)}
-                      title="View Details in Modal"
+                      title="View Details"
                     >
                       View
                     </button>
                     <button 
                       className="btn-action approve"
                       onClick={() => handleApproveDoctor(doctor._id)}
-                      title="Go to Working Verification System"
+                      title="Approve Application"
                     >
                       Approve
                     </button>
                     <button 
                       className="btn-action reject"
                       onClick={() => handleRejectDoctor(doctor._id)}
-                      title="Go to Working Verification System"
+                      title="Reject Application"
                     >
                       Reject
                     </button>
@@ -393,13 +416,13 @@ const AdminDashboard = () => {
               onClick={() => navigate('/admin/professionals')}
               className="view-all-link"
             >
-              🚀 Go to Working Verification System
+              View All Applications
             </button>
           </div>
         )}
       </div>
 
-      {/* Doctor Details Modal - KEEP THIS FOR VIEWING */}
+      {/* Doctor Details Modal */}
       <DoctorDetailsModal
         doctorId={selectedDoctorId}
         isOpen={isModalOpen}
