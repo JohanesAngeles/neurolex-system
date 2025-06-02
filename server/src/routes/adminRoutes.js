@@ -55,6 +55,7 @@ router.get('/dashboard', adminAuth, adminController.getDashboardData);
 
 // Patient Management
 router.get('/patients', adminAuth, adminController.getAllPatients);
+router.get('/patients/:patientId', adminAuth, adminController.getPatientById);
 router.delete('/patients/:patientId', adminAuth, adminController.deletePatient);
 router.get('/tenants', adminAuth, tenantController.getAllTenants);
 router.get('/patients/export/pdf', adminAuth, adminController.exportPatientsToPdf);

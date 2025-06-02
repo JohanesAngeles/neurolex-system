@@ -315,6 +315,33 @@ const adminService = {
     }
   },
 
+  getPatientById: async (patientId, tenantId = null) => {
+  try {
+    console.log(`adminService.getPatientById called for ID: ${patientId}, Tenant ID: ${tenantId || 'not specified'}`);
+    
+    // Prepare query parameters
+    const params = {};
+    
+    // Only add tenantId if it's provided and not null/undefined/empty
+    if (tenantId) {
+      params.tenantId = tenantId;
+      console.log(`Using specific tenant ID: ${tenantId}`);
+    } else {
+      console.log('No tenant ID provided, will search across all tenants');
+    }
+    
+    const response = await api.get(`/admin/patients/${patientId}`, { 
+      params 
+    });
+    
+    console.log('getPatientById response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('adminService.getPatientById error:', error);
+    throw error;
+  }
+},
+
   // ===== 🆕 TENANT MANAGEMENT METHODS =====
   
   // Get all tenants with filtering, sorting, and pagination
