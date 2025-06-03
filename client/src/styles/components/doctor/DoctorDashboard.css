@@ -94,8 +94,8 @@
 
 
 .user-avatar {
- width: 57.54px;
-  height: 57.54px;
+ width:65px;
+  height: 65px;
   border-radius: 50%;
   overflow: hidden;
   border: 2px solid #A7D7C5;
@@ -139,21 +139,41 @@
   margin: 0;
   text-decoration: none;
   border-bottom: none;
+  box-shadow: none;
+  outline: none;
 }
 
+
 .timeframe-selector select {
-  padding: 8px 16px;
-  border-radius: 20px;
-  border: 1px solid #e0e0e0;
-  background-color: #f8f8f8;
-  font-size: 14px;
+  box-sizing: border-box;
+  width: 245px;
+  height: 54px;
+  background: rgba(167, 215, 197, 0.1);
+  border: 1.19518px solid #A7D7C5;
+  border-radius: 11.9518px;
+  padding: 8px 20px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-style: normal;
+  font-weight: 400;
+  font-size: 15px;
+  line-height: 20px;
+  color: #548170;
   cursor: pointer;
   appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M6 9l6 6 6-6'/%3e%3c/svg%3e");
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23548170' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M6 9l6 6 6-6'/%3e%3c/svg%3e");
   background-repeat: no-repeat;
-  background-position: right 10px center;
-  background-size: 16px;
-  padding-right: 30px;
+  background-position: right 20px center;
+  background-size: 24px;
+  padding-right: 50px;
+}
+
+.timeframe-selector select:hover {
+  background-color: rgba(167, 215, 197, 0.2);
+}
+
+.timeframe-selector select:focus {
+  outline: none;
+  border-color: #548170;
 }
 
 /* Stats Container Styles */
