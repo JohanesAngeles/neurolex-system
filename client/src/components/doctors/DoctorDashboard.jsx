@@ -686,6 +686,10 @@ const DoctorDashboard = () => {
       </div>
       
       {/* ✅ ENHANCED: Overview section with feature-based stats */}
+      {/* Divider above Patient and Appointment Overview */}
+      <div className="section-divider overview-divider"></div>
+
+{/* ✅ ENHANCED: Overview section with feature-based stats */}
       <div className="overview-section">
         <div className="section-header">
           <h2 className="section-title">
@@ -737,7 +741,11 @@ const DoctorDashboard = () => {
       </div>
       
       {/* ✅ ENHANCED: Main content with feature wrappers */}
-      <div className="main-content">
+      {/* Divider above calendar and appointments */}
+<div className="section-divider calendar-divider"></div>
+
+{/* ✅ ENHANCED: Main content with feature wrappers */}
+<div className="main-content">
         <div className="calendar-section">
           {renderCalendar()}
         </div>
