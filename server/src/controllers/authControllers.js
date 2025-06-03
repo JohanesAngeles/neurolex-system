@@ -1855,5 +1855,5 @@ module.exports = {
   getMe: exports.getMe,
   getAllUsers: exports.getAllUsers,
   adminLogin: exports.adminLogin,
-  generateChatToken,
+  generateChatToken: exports.generateChatToken,
 };
