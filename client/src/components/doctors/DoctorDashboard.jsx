@@ -672,10 +672,10 @@ const DoctorDashboard = () => {
         </div>
         <div className="header-actions">
           <FeatureWrapper feature="Config">
-            <button className="search-button">🔍</button>
+            <button className="search-button"></button>
           </FeatureWrapper>
           <FeatureWrapper feature="Notifications">
-            <button className="notification-button">🔔</button>
+           <button className="notification-button"></button>
           </FeatureWrapper>
           <div className="user-avatar">
             <div className="avatar-placeholder">
@@ -686,7 +686,8 @@ const DoctorDashboard = () => {
       </div>
       
       {/* ✅ ENHANCED: Overview section with feature-based stats */}
-      
+      {/* Divider above Patient and Appointment Overview */}
+      <div className="section-divider overview-divider"></div>
 
 {/* ✅ ENHANCED: Overview section with feature-based stats */}
       <div className="overview-section">
