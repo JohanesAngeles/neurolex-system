@@ -111,6 +111,9 @@ router.post('/reset-password', authController.resetPassword);
 
 router.post('/admin-login', authController.adminLogin);
 
+// ✅ Stream Chat token generation endpoint
+router.post('/chat/token', authController.generateChatToken);
+
 // Get user profile - with tenant middleware
 router.get(
   '/me',

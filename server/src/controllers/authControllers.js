@@ -9,6 +9,20 @@ const { getMasterConnection } = require('../config/dbMaster');
 const dbManager = require('../utils/dbManager');
 const bcryptjs = require('bcryptjs');
 
+const StreamChat = require('stream-chat').StreamChat;
+
+// Initialize Stream Chat with environment variables
+const streamClient = StreamChat.getInstance(
+  process.env.STREAM_CHAT_API_KEY, // From .env file
+  process.env.STREAM_CHAT_SECRET   // From .env file
+);
+
+// Validate Stream Chat configuration
+if (!process.env.STREAM_CHAT_API_KEY || !process.env.STREAM_CHAT_SECRET) {
+  console.warn('⚠️ Stream Chat credentials not found in environment variables');
+  console.warn('Please add STREAM_CHAT_API_KEY and STREAM_CHAT_SECRET to your .env file');
+}
+
 // Create a new Google OAuth client
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -497,6 +511,61 @@ exports.register = async (req, res, next) => {
     return res.status(500).json({
       success: false,
       message: 'Error registering user',
+      error: error.message
+    });
+  }
+};
+
+// ✅ ADD: Generate Stream Chat token for authenticated users
+const generateChatToken = async (req, res) => {
+  try {
+    console.log('🔄 Generating Stream Chat token...');
+    
+    // Check if Stream Chat is properly configured
+    if (!process.env.STREAM_CHAT_API_KEY || !process.env.STREAM_CHAT_SECRET) {
+      return res.status(500).json({
+        success: false,
+        message: 'Stream Chat is not properly configured on the server'
+      });
+    }
+    
+    // Get user ID from request body or authenticated user
+    const userId = req.body.userId || (req.user && req.user.id);
+    
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required to generate chat token'
+      });
+    }
+    
+    console.log(`🔄 Generating token for user: ${userId}`);
+    
+    // Generate token using Stream Chat SDK
+    const token = streamClient.createToken(userId);
+    
+    if (!token) {
+      throw new Error('Failed to generate token');
+    }
+    
+    console.log('✅ Stream Chat token generated successfully');
+    
+    res.json({
+      success: true,
+      message: 'Stream Chat token generated successfully',
+      data: {
+        token: token,
+        userId: userId,
+        apiKey: process.env.STREAM_CHAT_API_KEY, // Use environment variable
+        expires: 'never' // Your tokens don't expire
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error generating Stream Chat token:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate chat token',
       error: error.message
     });
   }
@@ -1773,5 +1842,18 @@ exports.adminLogin = async (req, res) => {
   }
 };
 
-// Export the controller functions
-module.exports = exports;
+module.exports = {
+  getTenants: exports.getTenants,
+  register: exports.register,
+  login: exports.login,
+  googleAuth: exports.googleAuth,
+  verifyEmail: exports.verifyEmail,
+  resendVerificationCode: exports.resendVerificationCode,
+  forgotPassword: exports.forgotPassword,
+  verifyResetCode: exports.verifyResetCode,
+  resetPassword: exports.resetPassword,
+  getMe: exports.getMe,
+  getAllUsers: exports.getAllUsers,
+  adminLogin: exports.adminLogin,
+  generateChatToken,
+};
