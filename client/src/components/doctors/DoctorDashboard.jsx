@@ -686,8 +686,7 @@ const DoctorDashboard = () => {
       </div>
       
       {/* ✅ ENHANCED: Overview section with feature-based stats */}
-      {/* Divider above Patient and Appointment Overview */}
-      <div className="section-divider overview-divider"></div>
+      
 
 {/* ✅ ENHANCED: Overview section with feature-based stats */}
       <div className="overview-section">

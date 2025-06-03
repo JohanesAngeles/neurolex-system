@@ -517,7 +517,7 @@ exports.register = async (req, res, next) => {
 };
 
 // ✅ ADD: Generate Stream Chat token for authenticated users
-const generateChatToken = async (req, res) => {
+exports.generateChatToken = async (req, res) => {
   try {
     console.log('🔄 Generating Stream Chat token...');
     
