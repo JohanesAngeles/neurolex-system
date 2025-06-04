@@ -657,6 +657,10 @@ exports.login = async (req, res) => {
             console.log('Generating token...');
             const token = generateToken(tenantUser._id, tenantUser.role, tenant._id);
             
+console.log('🔍 DEBUG: About to check Stream Chat creation');
+console.log('🔍 DEBUG: tenantUser.role =', tenantUser.role);
+console.log('🔍 DEBUG: STREAM_CHAT_SECRET exists =', !!process.env.STREAM_CHAT_SECRET);
+
             if (tenantUser.role === 'doctor' && process.env.STREAM_CHAT_SECRET) {
   try {
     console.log(`🔄 Auto-creating Stream Chat user for Dr. ${tenantUser.firstName} ${tenantUser.lastName}`);
