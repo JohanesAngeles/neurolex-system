@@ -135,7 +135,7 @@ try {
 
 // ============= ROUTE IMPORTS WITH MEMORY SAFETY =============
 // 🔧 UPDATED: Added tenantSettingsRoutes variable
-let apiRoutes, authRoutes, userRoutes, doctorRoutes, appointmentRoutes, adminRoutes, journalRoutes, moodRoutes, tenantRoutes, billingRoutes, tenantSettingsRoutes;
+let apiRoutes, authRoutes, userRoutes, doctorRoutes, appointmentRoutes, adminRoutes, journalRoutes, moodRoutes, tenantRoutes, billingRoutes, tenantSettingsRoutes, chatRoutes;
 
 console.log('🔄 Loading route files...');
 
@@ -165,6 +165,14 @@ try {
  
   tenantRoutes = require('./src/routes/tenantRoutes');
   console.log('✅ Tenant routes loaded');
+
+// Import chat routes for messaging
+  try {
+    chatRoutes = require('./src/routes/chatRoutes');
+    console.log('✅ Chat routes loaded');
+  } catch (error) {
+    console.warn('⚠️ Chat routes failed to load:', error.message);
+  }
 
   // 🔄 NEW: Import tenant settings routes
   try {
@@ -394,6 +402,15 @@ if (userRoutes) {
   console.log('   - PUT /api/users/profile/password (Password Change)');
   console.log('   - GET /api/users/me (Current User)');
   console.log('   - POST /api/users/onboarding (Onboarding)');
+}
+
+// Mount chat routes for messaging
+if (chatRoutes) {
+  app.use('/api/chat', chatRoutes);
+  console.log('✅ Chat routes mounted at /api/chat');
+  console.log('   - POST /api/chat/token (Generate Stream Chat Token)');
+  console.log('   - GET /api/chat/doctors (Get Associated Doctors)');
+  console.log('   - GET /api/chat/appointments (Get Messaging Context)');
 }
 
 // Patient-facing endpoints
@@ -846,7 +863,8 @@ app.get('/api/routes/test', (req, res) => {
       auth: authRoutes ? 'MOUNTED' : 'NOT AVAILABLE',
       users: userRoutes ? 'MOUNTED' : 'NOT AVAILABLE',
       tenants: tenantRoutes ? 'MOUNTED' : 'NOT AVAILABLE',
-      tenantSettings: tenantSettingsRoutes ? 'MOUNTED' : 'NOT AVAILABLE', // 🔄 NEW
+      tenantSettings: tenantSettingsRoutes ? 'MOUNTED' : 'NOT AVAILABLE', 
+      chat: chatRoutes ? 'MOUNTED' : 'NOT AVAILABLE', 
       doctor: doctorRoutes ? 'MOUNTED' : 'NOT AVAILABLE',
       admin: adminRoutes ? 'MOUNTED' : 'NOT AVAILABLE',
       appointments: appointmentRoutes ? 'MOUNTED' : 'NOT AVAILABLE',
