@@ -657,6 +657,33 @@ exports.login = async (req, res) => {
             console.log('Generating token...');
             const token = generateToken(tenantUser._id, tenantUser.role, tenant._id);
             
+            if (tenantUser.role === 'doctor' && process.env.STREAM_CHAT_SECRET) {
+  try {
+    console.log(`🔄 Auto-creating Stream Chat user for Dr. ${tenantUser.firstName} ${tenantUser.lastName}`);
+    
+    const doctorStreamUser = {
+      id: tenantUser._id.toString(),
+      name: `Dr. ${tenantUser.firstName} ${tenantUser.lastName}`,
+      role: 'doctor',
+      specialty: tenantUser.specialty || tenantUser.specialization || 'General',
+      firstName: tenantUser.firstName,
+      lastName: tenantUser.lastName,
+      title: tenantUser.title || 'Dr.',
+      profilePicture: tenantUser.profilePicture || null,
+      platform: 'neurolex',
+      accountStatus: tenantUser.accountStatus,
+      tenantId: tenant._id.toString(),
+      lastLogin: new Date().toISOString()
+    };
+    
+    await streamClient.upsertUser(doctorStreamUser);
+    
+    console.log(`✅ Successfully created/updated Stream Chat user for Dr. ${tenantUser.firstName} ${tenantUser.lastName}`);
+  } catch (streamError) {
+    console.warn('⚠️ Could not create Stream Chat user for doctor:', streamError.message);
+  }
+}
+
             // Remove password from response
             tenantUser.password = undefined;
             
@@ -757,6 +784,34 @@ exports.login = async (req, res) => {
       console.log('Generating token...');
       const token = generateToken(user._id, user.role, tenant ? tenant._id : null);
       
+        if (user.role === 'doctor' && process.env.STREAM_CHAT_SECRET) {
+  try {
+    console.log(`🔄 Auto-creating Stream Chat user for Dr. ${user.firstName} ${user.lastName}`);
+    
+    const doctorStreamUser = {
+      id: user._id.toString(),
+      name: `Dr. ${user.firstName} ${user.lastName}`,
+      role: 'doctor',
+      specialty: user.specialty || user.specialization || 'General',
+      firstName: user.firstName,
+      lastName: user.lastName,
+      title: user.title || 'Dr.',
+      profilePicture: user.profilePicture || null,
+      platform: 'neurolex',
+      accountStatus: user.accountStatus,
+      tenantId: tenant ? tenant._id.toString() : null,
+      lastLogin: new Date().toISOString()
+    };
+    
+    await streamClient.upsertUser(doctorStreamUser);
+    
+    console.log(`✅ Successfully created/updated Stream Chat user for Dr. ${user.firstName} ${user.lastName}`);
+  } catch (streamError) {
+    console.warn('⚠️ Could not create Stream Chat user for doctor:', streamError.message);
+  }
+}
+
+
       // Remove password from response
       user.password = undefined;
       
