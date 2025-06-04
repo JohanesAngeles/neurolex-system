@@ -29,55 +29,108 @@ const DoctorMessages = () => {
 
   // Initialize doctor info and Stream Chat
   useEffect(() => {
-    const initializeMessaging = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Get doctor profile
-        const profileResponse = await doctorService.getProfile();
-        const profile = profileResponse.data || profileResponse;
-        setDoctorInfo(profile);
-        
-        console.log('🔍 Initializing messaging for doctor:', profile.firstName, profile.lastName);
-        
-        // Initialize Stream Chat
-        const chatToken = await chatService.generateChatToken();
-        const client = await chatService.initializeStreamChat(
-          profile._id,
-          {
-            name: `Dr. ${profile.firstName} ${profile.lastName}`,
-            userType: 'doctor',
-            specialty: profile.specialty || profile.specialization || 'General',
-            title: profile.title || 'Dr.',
-            profilePicture: profile.profilePicture
-          },
-          chatToken
-        );
-        
-        setStreamClient(client);
-        console.log('✅ Stream Chat initialized for doctor');
-        
-        // Get patients with appointments
-        await loadPatients();
-        
-      } catch (error) {
-        console.error('❌ Error initializing messaging:', error);
-        setError('Failed to initialize messaging system. Please try refreshing the page.');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const initializeMessaging = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Get doctor profile FIRST
+      const profileResponse = await doctorService.getProfile();
+      const profile = profileResponse.data || profileResponse;
+      setDoctorInfo(profile); // Set doctor info
+      
+      console.log('🔍 Initializing messaging for doctor:', profile.firstName, profile.lastName);
+      
+      // Initialize Stream Chat
+      const chatToken = await chatService.generateChatToken();
+      const client = await chatService.initializeStreamChat(
+        profile._id,
+        {
+          name: `Dr. ${profile.firstName} ${profile.lastName}`,
+          userType: 'doctor',
+          specialty: profile.specialty || profile.specialization || 'General',
+          title: profile.title || 'Dr.',
+          profilePicture: profile.profilePicture
+        },
+        chatToken
+      );
+      
+      setStreamClient(client);
+      console.log('✅ Stream Chat initialized for doctor');
+      
+      // 🔧 FIX: Pass the profile directly to loadPatients instead of using state
+      await loadPatientsWithProfile(profile);
+      
+    } catch (error) {
+      console.error('❌ Error initializing messaging:', error);
+      setError('Failed to initialize messaging system. Please try refreshing the page.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    initializeMessaging();
+  initializeMessaging();
+  
+  // Cleanup on unmount
+  return () => {
+    if (streamClient) {
+      streamClient.disconnectUser();
+    }
+  };
+}, []);
+
+
+const loadPatientsWithProfile = async (profile) => {
+  try {
+    console.log('🔍 Loading patients for messaging...');
     
-    // Cleanup on unmount
-    return () => {
-      if (streamClient) {
-        streamClient.disconnectUser();
+    // Get appointments to find associated patients
+    const appointmentsResponse = await doctorService.getAppointments();
+    let appointments = [];
+    
+    if (appointmentsResponse.success && appointmentsResponse.data) {
+      appointments = appointmentsResponse.data;
+    } else if (Array.isArray(appointmentsResponse)) {
+      appointments = appointmentsResponse;
+    }
+    
+    console.log('📋 Found appointments:', appointments.length);
+    
+    // Extract unique patients from appointments
+    const uniquePatients = [];
+    const patientIds = new Set();
+    
+    appointments.forEach(appointment => {
+      // 🔧 FIX: Use profile._id instead of doctorInfo._id
+      if (appointment.patient && 
+          appointment.patient._id !== profile._id && // Use profile instead of doctorInfo
+          !patientIds.has(appointment.patient._id)) {
+        
+        patientIds.add(appointment.patient._id);
+        uniquePatients.push({
+          _id: appointment.patient._id,
+          firstName: appointment.patient.firstName,
+          lastName: appointment.patient.lastName,
+          profilePicture: appointment.patient.profilePicture,
+          email: appointment.patient.email,
+          lastAppointment: appointment.appointmentDate,
+          appointmentCount: appointments.filter(a => 
+            a.patient?._id === appointment.patient._id && 
+            a.patient._id !== profile._id // Use profile instead of doctorInfo
+          ).length
+        });
       }
-    };
-  }, []);
+    });
+    
+    console.log('👥 Unique patients found (excluding doctor):', uniquePatients.length);
+    console.log('🔍 Doctor ID to exclude:', profile._id);
+    setPatients(uniquePatients);
+    
+  } catch (error) {
+    console.error('❌ Error loading patients:', error);
+    setError('Failed to load patients. Please try again.');
+  }
+};
 
   // Load patients from appointments
   const loadPatients = async () => {
