@@ -405,12 +405,12 @@ if (userRoutes) {
 }
 
 // Mount chat routes for messaging
-if (chatRoutes) {
+if (chatRoutes && tenantMiddleware) {
+  app.use('/api/chat', protect, tenantMiddleware, chatRoutes);
+  console.log('✅ Chat routes mounted at /api/chat with tenant middleware');
+} else if (chatRoutes) {
   app.use('/api/chat', chatRoutes);
-  console.log('✅ Chat routes mounted at /api/chat');
-  console.log('   - POST /api/chat/token (Generate Stream Chat Token)');
-  console.log('   - GET /api/chat/doctors (Get Associated Doctors)');
-  console.log('   - GET /api/chat/appointments (Get Messaging Context)');
+  console.log('✅ Chat routes mounted at /api/chat (no tenant middleware)');
 }
 
 // Patient-facing endpoints
