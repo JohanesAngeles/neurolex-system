@@ -668,7 +668,6 @@ console.log('🔍 DEBUG: STREAM_CHAT_SECRET exists =', !!process.env.STREAM_CHAT
     const doctorStreamUser = {
       id: tenantUser._id.toString(),
       name: `Dr. ${tenantUser.firstName} ${tenantUser.lastName}`,
-      role: 'doctor',
       specialty: tenantUser.specialty || tenantUser.specialization || 'General',
       firstName: tenantUser.firstName,
       lastName: tenantUser.lastName,
@@ -677,7 +676,8 @@ console.log('🔍 DEBUG: STREAM_CHAT_SECRET exists =', !!process.env.STREAM_CHAT
       platform: 'neurolex',
       accountStatus: tenantUser.accountStatus,
       tenantId: tenant._id.toString(),
-      lastLogin: new Date().toISOString()
+      lastLogin: new Date().toISOString(),
+      userType: 'doctor'
     };
     
     await streamClient.upsertUser(doctorStreamUser);
