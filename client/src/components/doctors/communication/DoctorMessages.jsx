@@ -30,30 +30,40 @@ const DoctorMessages = () => {
   // Initialize doctor info and Stream Chat
   useEffect(() => {
   const initializeMessaging = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // Get doctor profile FIRST
-      const profileResponse = await doctorService.getProfile();
-      const profile = profileResponse.data || profileResponse;
-      setDoctorInfo(profile); // Set doctor info
-      
-      console.log('🔍 Initializing messaging for doctor:', profile.firstName, profile.lastName);
-      
-      // Initialize Stream Chat
-      const chatToken = await chatService.generateChatToken();
-      const client = await chatService.initializeStreamChat(
-        profile._id,
-        {
-          name: `Dr. ${profile.firstName} ${profile.lastName}`,
-          userType: 'doctor',
-          specialty: profile.specialty || profile.specialization || 'General',
-          title: profile.title || 'Dr.',
-          profilePicture: profile.profilePicture
-        },
-        chatToken
-      );
+  try {
+    console.log('🚀 [DEBUG] Starting initializeMessaging...');
+    setLoading(true);
+    setError(null);
+    
+    // Get doctor profile
+    console.log('🚀 [DEBUG] Getting doctor profile...');
+    const profileResponse = await doctorService.getProfile();
+    console.log('🚀 [DEBUG] Profile response:', profileResponse);
+    
+    const profile = profileResponse.data || profileResponse;
+    console.log('🚀 [DEBUG] Extracted profile:', profile);
+    setDoctorInfo(profile);
+    
+    console.log('🔍 Initializing messaging for doctor:', profile.firstName, profile.lastName);
+    
+    // Initialize Stream Chat
+    console.log('🚀 [DEBUG] About to generate chat token...');
+    const chatToken = await chatService.generateChatToken();
+    console.log('🚀 [DEBUG] Chat token generated:', chatToken ? 'SUCCESS' : 'FAILED');
+    
+    console.log('🚀 [DEBUG] About to initialize Stream Chat...');
+    const client = await chatService.initializeStreamChat(
+      profile._id,
+      {
+        name: `Dr. ${profile.firstName} ${profile.lastName}`,
+        userType: 'doctor',
+        specialty: profile.specialty || profile.specialization || 'General',
+        title: profile.title || 'Dr.',
+        profilePicture: profile.profilePicture
+      },
+      chatToken
+    );
+    console.log('🚀 [DEBUG] Stream Chat client result:', client ? 'SUCCESS' : 'FAILED');
       
       setStreamClient(client);
       console.log('✅ Stream Chat initialized for doctor');
