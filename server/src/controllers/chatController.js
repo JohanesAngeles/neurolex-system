@@ -1,4 +1,4 @@
-// server/src/controllers/chatController.js - STREAM CHAT INTEGRATION
+// server/src/controllers/chatController.js - STREAM CHAT INTEGRATION WITH DEBUG
 
 const jwt = require('jsonwebtoken');
 
@@ -140,6 +140,11 @@ exports.getAssociatedDoctors = async (req, res) => {
     const userId = req.user.id || req.user._id;
     
     console.log('🔍 Getting associated doctors for user:', userId);
+    console.log('🔍 DEBUG: Tenant info:', {
+      tenantId: req.tenantId || 'None',
+      tenantDbName: req.tenantDbName || 'None',
+      hasConnection: !!req.tenantConnection
+    });
     
     // Use tenant connection if available
     const PatientDoctorAssociation = req.tenantConnection ? 
@@ -154,11 +159,35 @@ exports.getAssociatedDoctors = async (req, res) => {
       req.tenantConnection.model('Appointment') :
       require('../models/Appointment');
     
+    console.log('🔍 DEBUG: Using models from:', req.tenantConnection ? 'tenant connection' : 'global require');
+    
+    // 🔍 DEBUG: Check all appointments for this user (any status)
+    const allAppointments = await Appointment.find({ patient: userId }).lean();
+    console.log('🔍 DEBUG: Total appointments for user:', allAppointments.length);
+    if (allAppointments.length > 0) {
+      console.log('🔍 DEBUG: Sample appointments:', allAppointments.slice(0, 3).map(apt => ({
+        id: apt._id,
+        doctor: apt.doctor,
+        status: apt.status,
+        date: apt.appointmentDate
+      })));
+    }
+    
     // Get doctors from appointments
     const appointments = await Appointment.find({
       patient: userId,
       status: { $in: ['Scheduled', 'Completed'] }
     }).populate('doctor', 'firstName lastName title credentials specialty specialization profilePicture description languages consultationFee').lean();
+    
+    // 🔍 DEBUG: Log what we found
+    console.log('🔍 DEBUG: Found appointments with Scheduled/Completed status:', appointments.length);
+    console.log('🔍 DEBUG: User ID being searched:', userId);
+    console.log('🔍 DEBUG: First few appointments:', appointments.slice(0, 3).map(apt => ({
+      id: apt._id,
+      doctorId: apt.doctor?._id,
+      doctorName: apt.doctor ? `${apt.doctor.firstName} ${apt.doctor.lastName}` : 'No doctor populated',
+      status: apt.status
+    })));
     
     // Extract unique doctors from appointments
     const doctorsFromAppointments = [];
@@ -171,11 +200,33 @@ exports.getAssociatedDoctors = async (req, res) => {
       }
     });
     
+    console.log('🔍 DEBUG: Unique doctors extracted from appointments:', doctorsFromAppointments.length);
+    
+    // 🔍 DEBUG: Check all associations for this user
+    const allAssociations = await PatientDoctorAssociation.find({ patient: userId }).lean();
+    console.log('🔍 DEBUG: Total associations for user:', allAssociations.length);
+    if (allAssociations.length > 0) {
+      console.log('🔍 DEBUG: Sample associations:', allAssociations.slice(0, 3).map(assoc => ({
+        id: assoc._id,
+        doctor: assoc.doctor,
+        status: assoc.status
+      })));
+    }
+    
     // Also get doctors from manual associations
     const associations = await PatientDoctorAssociation.find({
       patient: userId,
       status: 'active'
     }).populate('doctor', 'firstName lastName title credentials specialty specialization profilePicture description languages consultationFee').lean();
+    
+    // 🔍 DEBUG: Log associations
+    console.log('🔍 DEBUG: Found active associations:', associations.length);
+    console.log('🔍 DEBUG: First few associations:', associations.slice(0, 3).map(assoc => ({
+      id: assoc._id,
+      doctorId: assoc.doctor?._id,
+      doctorName: assoc.doctor ? `${assoc.doctor.firstName} ${assoc.doctor.lastName}` : 'No doctor populated',
+      status: assoc.status
+    })));
     
     // Add doctors from associations that aren't already included
     associations.forEach(association => {
@@ -185,17 +236,39 @@ exports.getAssociatedDoctors = async (req, res) => {
       }
     });
     
+    console.log('🔍 DEBUG: Final unique doctor count:', doctorsFromAppointments.length);
+    if (doctorsFromAppointments.length > 0) {
+      console.log('🔍 DEBUG: Final doctor list:', doctorsFromAppointments.map(doc => ({
+        id: doc._id,
+        name: `${doc.firstName} ${doc.lastName}`,
+        specialty: doc.specialty || doc.specialization
+      })));
+    }
+    
     console.log(`✅ Found ${doctorsFromAppointments.length} associated doctors for user ${userId}`);
     
     return res.status(200).json({
       success: true,
       data: doctorsFromAppointments,
       count: doctorsFromAppointments.length,
-      source: 'appointments_and_associations'
+      source: 'appointments_and_associations',
+      debug: {
+        userId: userId,
+        totalAppointments: allAppointments.length,
+        filteredAppointments: appointments.length,
+        totalAssociations: allAssociations.length,
+        activeAssociations: associations.length,
+        uniqueDoctors: doctorsFromAppointments.length,
+        tenantInfo: {
+          tenantId: req.tenantId || 'None',
+          tenantDbName: req.tenantDbName || 'None'
+        }
+      }
     });
     
   } catch (error) {
     console.error('❌ Error getting associated doctors:', error);
+    console.error('❌ Error stack:', error.stack);
     return res.status(500).json({
       success: false,
       message: 'Error getting associated doctors',
@@ -214,11 +287,22 @@ exports.getUserAppointmentsForMessaging = async (req, res) => {
     const userId = req.user.id || req.user._id;
     
     console.log('🔍 Getting user appointments for messaging context:', userId);
+    console.log('🔍 DEBUG: Tenant info for appointments:', {
+      tenantId: req.tenantId || 'None',
+      tenantDbName: req.tenantDbName || 'None',
+      hasConnection: !!req.tenantConnection
+    });
     
     // Use tenant connection if available
     const Appointment = req.tenantConnection ?
       req.tenantConnection.model('Appointment') :
       require('../models/Appointment');
+    
+    console.log('🔍 DEBUG: Using Appointment model from:', req.tenantConnection ? 'tenant connection' : 'global require');
+    
+    // 🔍 DEBUG: Check all appointments for this user first
+    const allUserAppointments = await Appointment.find({ patient: userId }).lean();
+    console.log('🔍 DEBUG: Total appointments for user in messaging context:', allUserAppointments.length);
     
     // Get user's appointments with doctors
     const appointments = await Appointment.find({
@@ -230,16 +314,35 @@ exports.getUserAppointmentsForMessaging = async (req, res) => {
     .limit(20)
     .lean();
     
+    console.log('🔍 DEBUG: Filtered appointments for messaging:', appointments.length);
+    console.log('🔍 DEBUG: Sample messaging appointments:', appointments.slice(0, 3).map(apt => ({
+      id: apt._id,
+      doctorId: apt.doctor?._id,
+      doctorName: apt.doctor ? `${apt.doctor.firstName} ${apt.doctor.lastName}` : 'No doctor',
+      status: apt.status,
+      date: apt.appointmentDate
+    })));
+    
     console.log(`✅ Found ${appointments.length} appointments for messaging context`);
     
     return res.status(200).json({
       success: true,
       data: appointments,
-      count: appointments.length
+      count: appointments.length,
+      debug: {
+        userId: userId,
+        totalUserAppointments: allUserAppointments.length,
+        filteredForMessaging: appointments.length,
+        tenantInfo: {
+          tenantId: req.tenantId || 'None',
+          tenantDbName: req.tenantDbName || 'None'
+        }
+      }
     });
     
   } catch (error) {
     console.error('❌ Error getting appointments for messaging:', error);
+    console.error('❌ Error stack:', error.stack);
     return res.status(500).json({
       success: false,
       message: 'Error getting appointments for messaging',
