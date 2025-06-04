@@ -81,48 +81,56 @@ const DoctorMessages = () => {
 
   // Load patients from appointments
   const loadPatients = async () => {
-    try {
-      console.log('🔍 Loading patients for messaging...');
-      
-      // Get appointments to find associated patients
-      const appointmentsResponse = await doctorService.getAppointments();
-      let appointments = [];
-      
-      if (appointmentsResponse.success && appointmentsResponse.data) {
-        appointments = appointmentsResponse.data;
-      } else if (Array.isArray(appointmentsResponse)) {
-        appointments = appointmentsResponse;
-      }
-      
-      console.log('📋 Found appointments:', appointments.length);
-      
-      // Extract unique patients from appointments
-      const uniquePatients = [];
-      const patientIds = new Set();
-      
-      appointments.forEach(appointment => {
-        if (appointment.patient && !patientIds.has(appointment.patient._id)) {
-          patientIds.add(appointment.patient._id);
-          uniquePatients.push({
-            _id: appointment.patient._id,
-            firstName: appointment.patient.firstName,
-            lastName: appointment.patient.lastName,
-            profilePicture: appointment.patient.profilePicture,
-            email: appointment.patient.email,
-            lastAppointment: appointment.appointmentDate,
-            appointmentCount: appointments.filter(a => a.patient?._id === appointment.patient._id).length
-          });
-        }
-      });
-      
-      console.log('👥 Unique patients found:', uniquePatients.length);
-      setPatients(uniquePatients);
-      
-    } catch (error) {
-      console.error('❌ Error loading patients:', error);
-      setError('Failed to load patients. Please try again.');
+  try {
+    console.log('🔍 Loading patients for messaging...');
+    
+    // Get appointments to find associated patients
+    const appointmentsResponse = await doctorService.getAppointments();
+    let appointments = [];
+    
+    if (appointmentsResponse.success && appointmentsResponse.data) {
+      appointments = appointmentsResponse.data;
+    } else if (Array.isArray(appointmentsResponse)) {
+      appointments = appointmentsResponse;
     }
-  };
+    
+    console.log('📋 Found appointments:', appointments.length);
+    
+    // Extract unique patients from appointments
+    const uniquePatients = [];
+    const patientIds = new Set();
+    
+    appointments.forEach(appointment => {
+      // 🔧 FIX: Make sure patient exists AND is not the same as the doctor
+      if (appointment.patient && 
+          appointment.patient._id !== doctorInfo._id && // 🚨 KEY FIX: Exclude doctor from patient list
+          !patientIds.has(appointment.patient._id)) {
+        
+        patientIds.add(appointment.patient._id);
+        uniquePatients.push({
+          _id: appointment.patient._id,
+          firstName: appointment.patient.firstName,
+          lastName: appointment.patient.lastName,
+          profilePicture: appointment.patient.profilePicture,
+          email: appointment.patient.email,
+          lastAppointment: appointment.appointmentDate,
+          appointmentCount: appointments.filter(a => 
+            a.patient?._id === appointment.patient._id && 
+            a.patient._id !== doctorInfo._id // 🚨 Also exclude doctor from count
+          ).length
+        });
+      }
+    });
+    
+    console.log('👥 Unique patients found (excluding doctor):', uniquePatients.length);
+    console.log('🔍 Doctor ID to exclude:', doctorInfo._id);
+    setPatients(uniquePatients);
+    
+  } catch (error) {
+    console.error('❌ Error loading patients:', error);
+    setError('Failed to load patients. Please try again.');
+  }
+};
 
   // Filter patients based on search
   const filteredPatients = patients.filter(patient => {
