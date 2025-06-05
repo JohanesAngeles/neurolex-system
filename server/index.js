@@ -413,6 +413,24 @@ if (chatRoutes && tenantMiddleware) {
   console.log('✅ Chat routes mounted at /api/chat (no tenant middleware)');
 }
 
+let notificationRoutes;
+try {
+  notificationRoutes = require('./src/routes/notificationRoutes');
+  console.log('✅ Notification routes loaded');
+} catch (error) {
+  console.warn('⚠️ Notification routes failed to load:', error.message);
+}
+
+if (notificationRoutes) {
+  app.use('/api/notifications', notificationRoutes);
+  console.log('✅ Notification routes mounted at /api/notifications');
+  console.log('   - POST /api/notifications/message (Message notifications)');
+  console.log('   - POST /api/notifications/assignment (Assignment notifications)');
+  console.log('   - POST /api/notifications/system (System notifications)');
+  console.log('   - POST /api/notifications/call (Call notifications)');
+  console.log('   - GET /api/notifications (Get all notifications)');
+}
+
 // Patient-facing endpoints
 app.get('/api/doctor/available', protect, doctorController.getAvailableDoctors);
 
