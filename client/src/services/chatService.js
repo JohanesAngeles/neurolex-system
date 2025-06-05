@@ -157,7 +157,7 @@ const chatService = {
       throw new Error('Stream Chat client not initialized');
     }
     
-    // 🚀 FIXED: Use consistent channel ID format (patient_doctor order)
+    // 🚀 FIXED: Use consistent channel ID format (patient first, then doctor)
     const channelId = `doctor_${patientId}_${doctorId}`;
     
     // Create channel
@@ -196,7 +196,7 @@ getPatientDoctorChannel: async (streamClient, patientId, doctorId, patientInfo, 
       throw new Error('Stream Chat client not initialized');
     }
     
-    // 🚀 FIXED: Use SAME format as Flutter (patient_doctor order)
+    // 🚀 FIXED: Use SAME format as Flutter (patient first, then doctor)
     const channelId = `doctor_${patientId}_${doctorId}`;
     
     // Create/get channel

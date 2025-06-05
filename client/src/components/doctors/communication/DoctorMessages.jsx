@@ -204,57 +204,59 @@ const loadPatientsWithProfile = async (profile) => {
 
   // Select patient and load chat
   const selectPatient = async (patient) => {
-    try {
-      if (!streamClient || !doctorInfo) {
-        console.error('❌ Stream client or doctor info not available');
-        return;
-      }
-      
-      console.log('💬 Selecting patient for chat:', patient.firstName, patient.lastName);
-      setSelectedPatient(patient);
-      setMessages([]);
-      setError(null);
-      
-      // Create or get channel for this doctor-patient conversation
-      const channelId = `doctor-patient-${doctorInfo._id}-${patient._id}`;
-      
-      const channel = streamClient.channel('messaging', channelId, {
-        name: `Dr. ${doctorInfo.firstName} ${doctorInfo.lastName} & ${patient.firstName} ${patient.lastName}`,
-        members: [doctorInfo._id, patient._id],
-        created_by_id: doctorInfo._id,
-        doctor_id: doctorInfo._id,
-        patient_id: patient._id,
-        channel_type: 'doctor_patient'
-      });
-      
-      // Watch the channel
-      await channel.watch();
-      setCurrentChannel(channel);
-      
-      // Load existing messages
-      const state = await channel.query({
-        messages: { limit: 50 }
-      });
-      
-      setMessages(state.messages || []);
-      console.log('💬 Loaded', state.messages?.length || 0, 'messages');
-      
-      // Listen for new messages
-      channel.on('message.new', (event) => {
-        console.log('📩 New message received:', event.message.text);
-        setMessages(prev => [...prev, event.message]);
-      });
-      
-      // Scroll to bottom
-      setTimeout(() => {
-        scrollToBottom();
-      }, 100);
-      
-    } catch (error) {
-      console.error('❌ Error selecting patient:', error);
-      setError('Failed to load chat. Please try again.');
+  try {
+    if (!streamClient || !doctorInfo) {
+      console.error('❌ Stream client or doctor info not available');
+      return;
     }
-  };
+    
+    console.log('💬 Selecting patient for chat:', patient.firstName, patient.lastName);
+    setSelectedPatient(patient);
+    setMessages([]);
+    setError(null);
+    
+    // 🚀 FIXED: Use the SAME channel ID format as Flutter
+    const channelId = `doctor_${patient._id}_${doctorInfo._id}`;
+    
+    console.log('🔍 Using channel ID:', channelId);
+    
+    const channel = streamClient.channel('messaging', channelId, {
+      name: `Dr. ${doctorInfo.firstName} ${doctorInfo.lastName} & ${patient.firstName} ${patient.lastName}`,
+      members: [doctorInfo._id, patient._id],
+      created_by_id: doctorInfo._id,
+      doctor_id: doctorInfo._id,
+      patient_id: patient._id,
+      channel_type: 'doctor_patient'
+    });
+    
+    // Watch the channel
+    await channel.watch();
+    setCurrentChannel(channel);
+    
+    // Load existing messages
+    const state = await channel.query({
+      messages: { limit: 50 }
+    });
+    
+    setMessages(state.messages || []);
+    console.log('💬 Loaded', state.messages?.length || 0, 'messages');
+    
+    // Listen for new messages
+    channel.on('message.new', (event) => {
+      console.log('📩 New message received:', event.message.text);
+      setMessages(prev => [...prev, event.message]);
+    });
+    
+    // Scroll to bottom
+    setTimeout(() => {
+      scrollToBottom();
+    }, 100);
+    
+  } catch (error) {
+    console.error('❌ Error selecting patient:', error);
+    setError('Failed to load chat. Please try again.');
+  }
+};
 
   // Send message
   const sendMessage = async () => {
