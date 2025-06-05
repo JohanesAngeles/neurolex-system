@@ -14,9 +14,6 @@ const PatientList = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage] = useState(10);
-  const [selectedPatient, setSelectedPatient] = useState(null);
-  const [showActionMenu, setShowActionMenu] = useState(false);
-  const [actionMenuPosition, setActionMenuPosition] = useState({ top: 0, left: 0 });
   
   // Fetch patients
   useEffect(() => {
@@ -107,31 +104,6 @@ const PatientList = () => {
     setCurrentPage(1);
   }, [searchQuery, patients]);
   
-  // Handle action menu
-  const handleShowActionMenu = (event, patient) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setSelectedPatient(patient);
-    
-    // Position the menu near the clicked button
-    const rect = event.currentTarget.getBoundingClientRect();
-    setActionMenuPosition({
-      top: rect.bottom + window.scrollY,
-      left: rect.left + window.scrollX - 100 // Offset to align the menu
-    });
-    
-    setShowActionMenu(true);
-    
-    // Add click event listener to close the menu when clicking outside
-    document.addEventListener('click', handleClickOutside);
-  };
-  
-  // Handle click outside of action menu
-  const handleClickOutside = () => {
-    setShowActionMenu(false);
-    document.removeEventListener('click', handleClickOutside);
-  };
-  
   // Pagination
   const indexOfLastPatient = currentPage * rowsPerPage;
   const indexOfFirstPatient = indexOfLastPatient - rowsPerPage;
@@ -145,12 +117,6 @@ const PatientList = () => {
   // Handle actions
   const handleViewPatient = (patientId) => {
     navigate(`/doctor/patients/${patientId}`);
-    setShowActionMenu(false);
-  };
-  
-  const handleViewJournals = (patientId) => {
-    navigate(`/doctor/patients/${patientId}/journals`);
-    setShowActionMenu(false);
   };
   
   const handleEditPatient = (patientId) => {
@@ -164,13 +130,6 @@ const PatientList = () => {
       console.log('Delete patient:', patientId);
       // You can add the actual delete API call here
     }
-  };
-  
-  const handleAssignTemplates = (patientId) => {
-    navigate(`/doctor/form-templates/assign`, { 
-      state: { selectedPatients: [patientId] } 
-    });
-    setShowActionMenu(false);
   };
   
   if (loading) {
@@ -256,7 +215,7 @@ const PatientList = () => {
                 <div className="table-cell">
                   <button 
                     className="view-journals-button"
-                    onClick={() => handleViewJournals(patient._id)}
+                    onClick={() => navigate(`/doctor/patients/${patient._id}/journals`)}
                   >
                     View Journals
                   </button>
@@ -299,19 +258,6 @@ const PatientList = () => {
                         <path d="M6 6l12 12"/>
                       </svg>
                     </button>
-                    
-                    {/* Action Menu Button */}
-                    <button
-                      className="btn-icon more"
-                      onClick={(e) => handleShowActionMenu(e, patient)}
-                      title="More actions"
-                    >
-                      <svg className="icon-more" viewBox="0 0 24 24">
-                        <circle cx="5" cy="12" r="2"/>
-                        <circle cx="12" cy="12" r="2"/>
-                        <circle cx="19" cy="12" r="2"/>
-                      </svg>
-                    </button>
                   </div>
                 </div>
               </div>
@@ -352,39 +298,6 @@ const PatientList = () => {
           </div>
         )}
       </div>
-      
-      {/* Action Menu */}
-      {showActionMenu && selectedPatient && (
-        <div 
-          className="action-menu"
-          style={{
-            top: `${actionMenuPosition.top}px`,
-            left: `${actionMenuPosition.left}px`
-          }}
-        >
-          <div className="menu-item" onClick={() => handleViewPatient(selectedPatient._id)}>
-            <span className="menu-icon">👁️</span>
-            <span>View Details</span>
-          </div>
-          <div className="menu-item" onClick={() => handleViewJournals(selectedPatient._id)}>
-            <span className="menu-icon">📖</span>
-            <span>View Journals</span>
-          </div>
-          <div className="menu-item" onClick={() => handleAssignTemplates(selectedPatient._id)}>
-            <span className="menu-icon">📝</span>
-            <span>Assign Templates</span>
-          </div>
-          <div className="menu-divider"></div>
-          <div className="menu-item">
-            <span className="menu-icon">💬</span>
-            <span>Send Message</span>
-          </div>
-          <div className="menu-item">
-            <span className="menu-icon">🎓</span>
-            <span>Educational Resources</span>
-          </div>
-        </div>
-      )}
     </>
   );
 };
