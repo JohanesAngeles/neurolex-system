@@ -235,9 +235,9 @@
 .actions-cell {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
-  padding: 12px 16px; 
+  padding: 12px 16px;
 }
 
 .view-journals-button {
@@ -250,18 +250,17 @@
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
-  flex-shrink: 0; 
+  flex-shrink: 0;
 }
 
 .view-journals-button:hover {
   background-color: #e0f0e5;
 }
 
-
 .action-buttons {
   display: flex;
   gap: 8px;
-  flex-shrink: 0; 
+  flex-shrink: 0;
 }
 .btn-icon {
   width: 40px;

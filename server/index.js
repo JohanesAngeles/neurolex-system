@@ -453,10 +453,6 @@ try {
   notificationRoutes = require('./src/routes/notificationRoutes');
   console.log('✅ Notification routes loaded');
 } catch (error) {
-  console.error('❌ DETAILED ERROR loading notification routes:');
-  console.error('Error name:', error.name);
-  console.error('Error message:', error.message);
-  console.error('Error stack:', error.stack);
   console.warn('⚠️ Notification routes failed to load:', error.message);
 }
 
