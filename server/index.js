@@ -24,6 +24,41 @@ console.log(`📊 Port: ${PORT}`);
 console.log(`🏢 Multi-tenant: ${process.env.ENABLE_MULTI_TENANT}`);
 console.log(`☁️ Cloudinary: ${process.env.CLOUDINARY_CLOUD_NAME ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
 
+
+// ============= FIREBASE ADMIN SDK INITIALIZATION =============
+console.log('🔥 Initializing Firebase Admin SDK...');
+
+let admin;
+try {
+  admin = require('firebase-admin');
+  
+  // Initialize Firebase Admin if credentials are available
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY && process.env.FIREBASE_PROJECT_ID) {
+    try {
+      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+      
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        projectId: process.env.FIREBASE_PROJECT_ID
+      });
+      
+      console.log('✅ Firebase Admin initialized successfully');
+      console.log(`✅ Firebase project: ${process.env.FIREBASE_PROJECT_ID}`);
+      console.log('🔔 Push notification service ready');
+      console.log('✅ Stream Chat webhook configured');
+    } catch (firebaseError) {
+      console.error('❌ Firebase Admin initialization failed:', firebaseError.message);
+      console.error('🔧 Check your FIREBASE_SERVICE_ACCOUNT_KEY format');
+    }
+  } else {
+    console.log('❌ Firebase not initialized - missing credentials');
+    console.log('🔧 Missing: FIREBASE_SERVICE_ACCOUNT_KEY or FIREBASE_PROJECT_ID');
+  }
+} catch (importError) {
+  console.warn('⚠️ Firebase Admin SDK not available:', importError.message);
+  console.log('💡 Install: npm install firebase-admin');
+}
+
 // CRITICAL: Disable memory-intensive AI training on Heroku
 if (isProduction) {
   console.log('🔧 Production mode: AI training disabled for Heroku memory optimization');
