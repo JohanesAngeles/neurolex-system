@@ -12,6 +12,8 @@ const PatientList = () => {
   const [filteredPatients, setFilteredPatients] = useState([]);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [appointmentFilter, setAppointmentFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage] = useState(10);
   
@@ -71,9 +73,9 @@ const PatientList = () => {
         if (process.env.NODE_ENV === 'development') {
           console.log('Using mock patient data for development');
           const mockPatients = [
-            { _id: '1', firstName: 'John', lastName: 'Doe', email: 'john@example.com', gender: 'Male', age: 42 },
-            { _id: '2', firstName: 'Jane', lastName: 'Smith', email: 'jane@example.com', gender: 'Female', age: 35 },
-            { _id: '3', firstName: 'Alex', lastName: 'Brown', email: 'alex@example.com', gender: 'Other', age: 28 },
+            { _id: '1', firstName: 'John', lastName: 'Doe', email: 'john@example.com', gender: 'Male', age: 42, status: 'Active' },
+            { _id: '2', firstName: 'Jane', lastName: 'Smith', email: 'jane@example.com', gender: 'Female', age: 35, status: 'Active' },
+            { _id: '3', firstName: 'Alex', lastName: 'Brown', email: 'alex@example.com', gender: 'Other', age: 28, status: 'Inactive' },
           ];
           setPatients(mockPatients);
           setFilteredPatients(mockPatients);
@@ -86,23 +88,36 @@ const PatientList = () => {
     fetchPatients();
   }, []);
   
-  // Handle search
+  // Handle search and filters
   useEffect(() => {
-    if (searchQuery.trim() === '') {
-      setFilteredPatients(patients);
-    } else {
+    let filtered = patients;
+    
+    // Apply search filter
+    if (searchQuery.trim() !== '') {
       const query = searchQuery.toLowerCase();
-      const filtered = patients.filter(patient => 
+      filtered = filtered.filter(patient => 
         patient.firstName?.toLowerCase().includes(query) || 
         patient.lastName?.toLowerCase().includes(query) || 
         patient.email?.toLowerCase().includes(query)
       );
-      setFilteredPatients(filtered);
     }
     
-    // Reset to first page when search changes
+    // Apply status filter
+    if (statusFilter !== 'All') {
+      filtered = filtered.filter(patient => patient.status === statusFilter);
+    }
+    
+    // Apply appointment filter (you can extend this based on your data structure)
+    if (appointmentFilter !== 'All') {
+      // This is a placeholder - you'll need to implement based on your appointment data
+      // filtered = filtered.filter(patient => /* your appointment filter logic */);
+    }
+    
+    setFilteredPatients(filtered);
+    
+    // Reset to first page when filters change
     setCurrentPage(1);
-  }, [searchQuery, patients]);
+  }, [searchQuery, statusFilter, appointmentFilter, patients]);
   
   // Pagination
   const indexOfLastPatient = currentPage * rowsPerPage;
@@ -132,6 +147,16 @@ const PatientList = () => {
     }
   };
   
+  const handleAddPatient = () => {
+    navigate('/doctor/patients/add');
+  };
+  
+  const handleExportPDF = () => {
+    // TODO: Implement PDF export functionality
+    console.log('Export PDF functionality');
+    alert('PDF export functionality coming soon!');
+  };
+  
   if (loading) {
     return (
       <div className="loading-container">
@@ -155,23 +180,77 @@ const PatientList = () => {
       )}
       
       <div className="list-controls">
-        <div className="search-container">
-          <input
-            type="text"
-            placeholder="Search"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="search-input"
-          />
-          <div className="search-icon"></div>
+        <div className="controls-left">
+          {/* Search Container */}
+          <div className="search-container">
+            <input
+              type="text"
+              placeholder="Search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="search-input"
+            />
+            <div className="search-icon"></div>
+          </div>
+          
+          {/* Filter Controls */}
+          <div className="filter-controls">
+            <div className="filter-group">
+              <label className="filter-label">Status</label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="filter-select"
+              >
+                <option value="All">All</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+                <option value="Pending">Pending</option>
+              </select>
+            </div>
+            
+            <div className="filter-group">
+              <label className="filter-label">Upcoming Appointments</label>
+              <select
+                value={appointmentFilter}
+                onChange={(e) => setAppointmentFilter(e.target.value)}
+                className="filter-select"
+              >
+                <option value="All">All</option>
+                <option value="Today">Today</option>
+                <option value="This Week">This Week</option>
+                <option value="This Month">This Month</option>
+                <option value="No Appointments">No Appointments</option>
+              </select>
+            </div>
+          </div>
         </div>
         
-        <button
-          className="primary-button"
-          onClick={() => navigate('/doctor/patient-management')}
-        >
-          Manage Patients
-        </button>
+        <div className="controls-right">
+          <button
+            className="primary-button"
+            onClick={handleAddPatient}
+          >
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Add a Patient
+          </button>
+          
+          <button
+            className="export-button"
+            onClick={handleExportPDF}
+          >
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="20" height="20">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <polyline points="14,2 14,8 20,8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <polyline points="10,9 9,9 8,9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Export PDF
+          </button>
+        </div>
       </div>
       
       <div className="dashboard-section">
