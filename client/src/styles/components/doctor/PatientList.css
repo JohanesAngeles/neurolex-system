@@ -133,7 +133,7 @@
   margin-bottom: 30px;
 }
 
-/* Updated Table Layout to Match Figma */
+/* Updated Table Layout - 5 columns now */
 .custom-table {
   width: 100%;
   display: flex;
@@ -144,7 +144,7 @@
 
 .table-row {
   display: grid;
-  grid-template-columns: 2fr 2.5fr 1fr 0.8fr 1.5fr 1fr; /* Patient, Email, Gender, Age, Recent Journals, Actions */
+  grid-template-columns: 2fr 2.5fr 1fr 0.8fr 2fr; /* Patient, Email, Gender, Age, Actions */
   grid-gap: 0;
   border-radius: 12px;
   overflow: hidden;
@@ -232,51 +232,34 @@
   color: #000000;
 }
 
-/* Status Badge */
-.status-badge {
+/* Actions Cell - Contains both View Journals button and action buttons */
+.actions-cell {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 14px;
-  font-weight: 500;
+  gap: 12px;
+  justify-content: flex-start;
 }
 
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+/* View Journals Button */
+.view-journals-button {
+  background-color: #f0f8f4;
+  border: none;
+  color: #5B8C7E;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
 }
 
-.status-badge.active .status-dot {
-  background-color: #4CAF50;
-}
-
-.status-badge.inactive .status-dot {
-  background-color: #FF5722;
-}
-
-/* Mood Display */
-.mood-display {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.mood-emoji {
-  font-size: 20px;
-}
-
-.mood-text {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 14px;
-  font-weight: 500;
+.view-journals-button:hover {
+  background-color: #e0f0e5;
 }
 
 /* Updated Action Buttons to Match Figma Exactly */
 .action-buttons {
   display: flex;
-  justify-content: center;
   gap: 8px;
 }
 
@@ -291,6 +274,7 @@
   justify-content: center;
   transition: all 0.2s;
   position: relative;
+  flex-shrink: 0; /* Prevent buttons from shrinking */
 }
 
 /* View Button - Light Green Background with Green Icon */
@@ -435,7 +419,7 @@
 /* Responsive Adjustments */
 @media (max-width: 1200px) {
   .table-row {
-    grid-template-columns: 1.5fr 2fr 1fr 0.8fr 1.2fr 1fr;
+    grid-template-columns: 1.5fr 2fr 1fr 0.8fr 1.8fr;
   }
 }
 
@@ -479,6 +463,12 @@
   
   .table-cell > * {
     margin-left: 120px;
+  }
+  
+  .actions-cell {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
   }
   
   .action-buttons {

@@ -182,7 +182,6 @@ const PatientList = () => {
             <div className="table-cell">Email</div>
             <div className="table-cell">Gender</div>
             <div className="table-cell">Age</div>
-            <div className="table-cell">Recent Journals</div>
             <div className="table-cell">Actions</div>
           </div>
           
@@ -212,16 +211,14 @@ const PatientList = () => {
                 <div className="table-cell">{patient.gender || 'Not specified'}</div>
                 <div className="table-cell">{patient.age || 'Unknown'}</div>
                 
-                <div className="table-cell">
+                <div className="table-cell actions-cell">
                   <button 
                     className="view-journals-button"
                     onClick={() => navigate(`/doctor/patients/${patient._id}/journals`)}
                   >
                     View Journals
                   </button>
-                </div>
-                
-                <div className="table-cell">
+                  
                   <div className="action-buttons">
                     {/* View Button */}
                     <button 
