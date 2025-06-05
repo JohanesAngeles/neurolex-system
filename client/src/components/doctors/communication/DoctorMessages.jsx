@@ -260,27 +260,55 @@ const loadPatientsWithProfile = async (profile) => {
 
   // Send message
   const sendMessage = async () => {
-    if (!newMessage.trim() || !currentChannel || sending) return;
+  if (!newMessage.trim() || !currentChannel || sending) return;
+  
+  try {
+    setSending(true);
     
+    // ✅ STEP 1: Send message via Stream Chat (existing code)
+    await currentChannel.sendMessage({
+      text: newMessage.trim(),
+      user_id: doctorInfo._id,
+      sender_type: 'doctor'
+    });
+    
+    // ✅ STEP 2: Trigger notification to mobile user (NEW CODE)
     try {
-      setSending(true);
+      console.log('🔔 Triggering mobile notification...');
       
-      await currentChannel.sendMessage({
-        text: newMessage.trim(),
-        user_id: doctorInfo._id,
-        sender_type: 'doctor'
+      const response = await fetch('/api/notifications/message', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}` // Add auth token
+        },
+        body: JSON.stringify({
+          recipientId: selectedPatient._id,
+          messageContent: newMessage.trim(),
+          conversationId: currentChannel.id
+        })
       });
       
-      setNewMessage('');
-      messageInputRef.current?.focus();
-      
-    } catch (error) {
-      console.error('❌ Error sending message:', error);
-      setError('Failed to send message. Please try again.');
-    } finally {
-      setSending(false);
+      if (response.ok) {
+        console.log('✅ Mobile notification triggered successfully!');
+      } else {
+        console.error('❌ Failed to trigger mobile notification:', response.status);
+      }
+    } catch (notificationError) {
+      console.error('❌ Error triggering notification:', notificationError);
+      // Don't block message sending if notification fails
     }
-  };
+    
+    setNewMessage('');
+    messageInputRef.current?.focus();
+    
+  } catch (error) {
+    console.error('❌ Error sending message:', error);
+    setError('Failed to send message. Please try again.');
+  } finally {
+    setSending(false);
+  }
+};
 
   // Handle Enter key
   const handleKeyPress = (e) => {

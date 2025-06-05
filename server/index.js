@@ -416,6 +416,39 @@ if (chatRoutes && tenantMiddleware) {
 // Patient-facing endpoints
 app.get('/api/doctor/available', protect, doctorController.getAvailableDoctors);
 
+
+// Mount chat routes for messaging
+if (chatRoutes && tenantMiddleware) {
+  app.use('/api/chat', protect, tenantMiddleware, chatRoutes);
+  console.log('✅ Chat routes mounted at /api/chat with tenant middleware');
+} else if (chatRoutes) {
+  app.use('/api/chat', chatRoutes);
+  console.log('✅ Chat routes mounted at /api/chat (no tenant middleware)');
+}
+
+// ✅ ADD THIS SECTION HERE:
+// Mount Stream Chat webhook routes for real-time notifications
+let streamWebhookRoutes;
+try {
+  streamWebhookRoutes = require('./src/routes/streamWebhookRoutes');
+  console.log('✅ Stream webhook routes loaded');
+} catch (error) {
+  console.warn('⚠️ Stream webhook routes failed to load:', error.message);
+}
+
+if (streamWebhookRoutes) {
+  app.use('/api/webhooks', streamWebhookRoutes);
+  console.log('✅ Stream webhook routes mounted at /api/webhooks');
+  console.log('   - POST /api/webhooks/stream (Main webhook endpoint)');
+  console.log('   - POST /api/webhooks/stream/test (Test endpoint)');
+  console.log('   - GET /api/webhooks/health (Health check)');
+}
+// ✅ END OF ADDITION
+
+// Patient-facing endpoints
+app.get('/api/doctor/available', protect, doctorController.getAvailableDoctors);
+
+
 // Connect with doctor endpoint - Direct implementation
 const connectWithDoctor = async (req, res) => {
   try {
