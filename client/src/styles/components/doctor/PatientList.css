@@ -233,34 +233,36 @@
 }
 
 .actions-cell {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 12px 16px;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 12px !important;
+  padding: 12px 16px !important;
 }
 
 .view-journals-button {
-  background-color: #f0f8f4;
-  border: none;
-  color: #5B8C7E;
-  border-radius: 6px;
-  padding: 6px 12px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-  flex-shrink: 0;
+  background-color: #f0f8f4 !important;
+  border: none !important;
+  color: #5B8C7E !important;
+  border-radius: 6px !important;
+  padding: 6px 12px !important;
+  font-size: 12px !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  margin-right: 0 !important;
+  margin-left: 0 !important;
 }
 
 .view-journals-button:hover {
-  background-color: #e0f0e5;
+  background-color: #e0f0e5 !important;
 }
 
 .action-buttons {
-  display: flex;
-  gap: 8px;
-  flex-shrink: 0;
+  display: flex !important;
+  gap: 8px !important;
+  flex-shrink: 0 !important;
 }
 .btn-icon {
   width: 40px;
