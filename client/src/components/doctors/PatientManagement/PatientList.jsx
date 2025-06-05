@@ -13,7 +13,7 @@ const PatientList = () => {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage] = useState(10);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [actionMenuPosition, setActionMenuPosition] = useState({ top: 0, left: 0 });
@@ -171,6 +171,9 @@ const PatientList = () => {
   return (
     <>
       <h1 className="dashboard-title">My Patients</h1>
+      <p className="dashboard-subtitle">Compassionate care begins here. View and manage the individuals you're supporting.</p>
+      
+      <div className="section-divider"></div>
       
       {error && (
         <div className="error-alert">
@@ -183,12 +186,12 @@ const PatientList = () => {
         <div className="search-container">
           <input
             type="text"
-            placeholder="Search patients..."
+            placeholder="Search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="search-input"
           />
-          <span className="search-icon">🔍</span>
+          <div className="search-icon"></div>
         </div>
         
         <button
@@ -253,21 +256,21 @@ const PatientList = () => {
                       onClick={() => handleViewPatient(patient._id)}
                       title="View patient details"
                     >
-                      <i className="icon-view"></i>
+                      <div className="icon-view"></div>
                     </button>
                     <button 
                       className="btn-icon approve"
                       onClick={() => handleAssignTemplates(patient._id)}
                       title="Assign forms"
                     >
-                      <i className="icon-assign"></i>
+                      <div className="icon-assign"></div>
                     </button>
                     <button
                       className="btn-icon more"
                       onClick={(e) => handleShowActionMenu(e, patient)}
                       title="More options"
                     >
-                      <i className="icon-more"></i>
+                      <div className="icon-more"></div>
                     </button>
                   </div>
                 </div>
