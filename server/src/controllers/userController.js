@@ -6,6 +6,7 @@
 // const Appointment = require('../models/Appointment');
 // const JournalEntry = require('../models/JournalEntry');
 
+const { uploadToCloudinary, deleteCloudinaryImage, extractPublicId } = require('../services/cloudinary');
 
 // Get current user's profile
 exports.getProfile = async (req, res, next) => {
@@ -1214,6 +1215,386 @@ exports.getCurrentUser = async (req, res) => {
       message: 'Error retrieving user data',
       error: error.message,
       timestamp: new Date().toISOString()
+    });
+  }
+};
+
+exports.uploadProfilePicture = async (req, res) => {
+  try {
+    console.log('=== UPLOAD PROFILE PICTURE ===');
+    console.log('User ID:', req.user?.id || req.user?._id);
+    console.log('File received:', !!req.file);
+    console.log('File details:', req.file ? {
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size
+    } : 'No file');
+
+    const userId = req.user?.id || req.user?._id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Not authenticated'
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No image file provided'
+      });
+    }
+
+    // Validate file type
+    const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedMimeTypes.includes(req.file.mimetype)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid file type. Only JPEG, PNG, and WebP images are allowed.'
+      });
+    }
+
+    // Validate file size (5MB limit)
+    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+    if (req.file.size > maxSize) {
+      return res.status(400).json({
+        success: false,
+        message: 'File size too large. Maximum size is 5MB.'
+      });
+    }
+
+    // Get current user to check for existing profile picture
+    let currentUser = null;
+
+    // Try to get user from tenant connection first
+    if (req.tenantConnection) {
+      try {
+        const User = req.tenantConnection.model('User');
+        currentUser = await User.findById(userId).select('profilePicture');
+      } catch (tenantError) {
+        console.error('Tenant user lookup failed:', tenantError.message);
+      }
+    }
+
+    // Fallback to default database
+    if (!currentUser) {
+      try {
+        const User = require('../models/User');
+        currentUser = await User.findById(userId).select('profilePicture');
+      } catch (defaultError) {
+        console.error('Default database user lookup failed:', defaultError.message);
+      }
+    }
+
+    if (!currentUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Upload new image to Cloudinary
+    console.log('📤 Uploading image to Cloudinary...');
+    const uploadOptions = {
+      folder: `${process.env.CLOUDINARY_FOLDER || 'neurolex'}/profile_pictures`,
+      public_id: `user_${userId}_${Date.now()}`,
+      overwrite: true,
+      transformation: [
+        { width: 400, height: 400, crop: 'fill', gravity: 'face' },
+        { quality: 'auto:good' },
+        { fetch_format: 'auto' }
+      ]
+    };
+
+    const uploadResult = await uploadToCloudinary(req.file.buffer, uploadOptions);
+    
+    if (!uploadResult || !uploadResult.secure_url) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to upload image to cloud storage'
+      });
+    }
+
+    console.log('✅ Image uploaded successfully:', uploadResult.secure_url);
+
+    // Update user profile picture in database
+    const updateData = {
+      profilePicture: uploadResult.secure_url,
+      updatedAt: new Date()
+    };
+
+    let updatedUser = null;
+
+    // Try tenant connection first
+    if (req.tenantConnection) {
+      try {
+        if (req.tenantConnection.db) {
+          // Direct collection update
+          const usersCollection = req.tenantConnection.db.collection('users');
+          const mongoose = require('mongoose');
+          
+          const userObjectId = mongoose.Types.ObjectId.isValid(userId)
+            ? new mongoose.Types.ObjectId(userId)
+            : userId;
+
+          const updateResult = await usersCollection.updateOne(
+            { _id: userObjectId },
+            { $set: updateData }
+          );
+
+          if (updateResult.modifiedCount > 0) {
+            updatedUser = await usersCollection.findOne(
+              { _id: userObjectId },
+              { projection: { password: 0 } }
+            );
+            console.log('✅ Profile picture updated via tenant connection');
+          }
+        }
+
+        if (!updatedUser) {
+          const User = req.tenantConnection.model('User');
+          updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { $set: updateData },
+            { new: true, runValidators: true }
+          ).select('-password').lean();
+        }
+      } catch (tenantError) {
+        console.error('Tenant update failed:', tenantError.message);
+      }
+    }
+
+    // Fallback to default database
+    if (!updatedUser) {
+      try {
+        const User = require('../models/User');
+        updatedUser = await User.findByIdAndUpdate(
+          userId,
+          { $set: updateData },
+          { new: true, runValidators: true }
+        ).select('-password').lean();
+        
+        if (updatedUser) {
+          console.log('✅ Profile picture updated via default database');
+        }
+      } catch (defaultError) {
+        console.error('Default database update failed:', defaultError.message);
+      }
+    }
+
+    if (!updatedUser) {
+      // If database update failed, try to clean up uploaded image
+      try {
+        await deleteCloudinaryImage(uploadResult.public_id);
+      } catch (cleanupError) {
+        console.error('Failed to cleanup uploaded image:', cleanupError.message);
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to update profile picture in database'
+      });
+    }
+
+    // Clean up old profile picture from Cloudinary (optional, run in background)
+    if (currentUser.profilePicture && currentUser.profilePicture !== uploadResult.secure_url) {
+      try {
+        const oldPublicId = extractPublicId(currentUser.profilePicture);
+        if (oldPublicId) {
+          // Don't await this - run in background
+          deleteCloudinaryImage(oldPublicId).catch(err => {
+            console.error('Failed to delete old profile picture:', err.message);
+          });
+        }
+      } catch (cleanupError) {
+        console.error('Error extracting old image public ID:', cleanupError.message);
+      }
+    }
+
+    console.log('✅ Profile picture upload completed successfully');
+
+    return res.status(200).json({
+      success: true,
+      message: 'Profile picture updated successfully',
+      data: {
+        profilePicture: uploadResult.secure_url,
+        user: updatedUser
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error in uploadProfilePicture:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to upload profile picture',
+      error: error.message
+    });
+  }
+};
+
+// Add this method to your userController.js exports (after the uploadProfilePicture method)
+
+exports.deleteProfilePicture = async (req, res) => {
+  try {
+    console.log('=== DELETE PROFILE PICTURE ===');
+    console.log('User ID:', req.user?.id || req.user?._id);
+
+    const userId = req.user?.id || req.user?._id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Not authenticated'
+      });
+    }
+
+    // Get current user to find existing profile picture
+    let currentUser = null;
+
+    // Try to get user from tenant connection first
+    if (req.tenantConnection) {
+      try {
+        const User = req.tenantConnection.model('User');
+        currentUser = await User.findById(userId).select('profilePicture');
+      } catch (tenantError) {
+        console.error('Tenant user lookup failed:', tenantError.message);
+      }
+    }
+
+    // Fallback to default database
+    if (!currentUser) {
+      try {
+        const User = require('../models/User');
+        currentUser = await User.findById(userId).select('profilePicture');
+      } catch (defaultError) {
+        console.error('Default database user lookup failed:', defaultError.message);
+      }
+    }
+
+    if (!currentUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Check if user has a profile picture to delete
+    if (!currentUser.profilePicture) {
+      return res.status(400).json({
+        success: false,
+        message: 'No profile picture to delete'
+      });
+    }
+
+    console.log('🗑️ Deleting profile picture:', currentUser.profilePicture);
+
+    // Remove profile picture from database first
+    const updateData = {
+      profilePicture: null,
+      updatedAt: new Date()
+    };
+
+    let updatedUser = null;
+
+    // Try tenant connection first
+    if (req.tenantConnection) {
+      try {
+        if (req.tenantConnection.db) {
+          // Direct collection update
+          const usersCollection = req.tenantConnection.db.collection('users');
+          const mongoose = require('mongoose');
+          
+          const userObjectId = mongoose.Types.ObjectId.isValid(userId)
+            ? new mongoose.Types.ObjectId(userId)
+            : userId;
+
+          const updateResult = await usersCollection.updateOne(
+            { _id: userObjectId },
+            { $set: updateData }
+          );
+
+          if (updateResult.modifiedCount > 0) {
+            updatedUser = await usersCollection.findOne(
+              { _id: userObjectId },
+              { projection: { password: 0 } }
+            );
+            console.log('✅ Profile picture removed via tenant connection');
+          }
+        }
+
+        if (!updatedUser) {
+          const User = req.tenantConnection.model('User');
+          updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { $set: updateData },
+            { new: true, runValidators: true }
+          ).select('-password').lean();
+        }
+      } catch (tenantError) {
+        console.error('Tenant update failed:', tenantError.message);
+      }
+    }
+
+    // Fallback to default database
+    if (!updatedUser) {
+      try {
+        const User = require('../models/User');
+        updatedUser = await User.findByIdAndUpdate(
+          userId,
+          { $set: updateData },
+          { new: true, runValidators: true }
+        ).select('-password').lean();
+        
+        if (updatedUser) {
+          console.log('✅ Profile picture removed via default database');
+        }
+      } catch (defaultError) {
+        console.error('Default database update failed:', defaultError.message);
+      }
+    }
+
+    if (!updatedUser) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to remove profile picture from database'
+      });
+    }
+
+    // Delete image from Cloudinary (run in background, don't fail if this fails)
+    try {
+      const oldPublicId = extractPublicId(currentUser.profilePicture);
+      if (oldPublicId) {
+        // Run deletion in background - don't await
+        deleteCloudinaryImage(oldPublicId).then(result => {
+          console.log('✅ Old profile picture deleted from Cloudinary:', result);
+        }).catch(error => {
+          console.error('❌ Failed to delete image from Cloudinary:', error.message);
+          // Don't fail the request if Cloudinary deletion fails
+        });
+      }
+    } catch (cleanupError) {
+      console.error('Error extracting public ID for deletion:', cleanupError.message);
+      // Don't fail the request if we can't extract the public ID
+    }
+
+    console.log('✅ Profile picture deletion completed successfully');
+
+    return res.status(200).json({
+      success: true,
+      message: 'Profile picture deleted successfully',
+      data: {
+        profilePicture: null,
+        user: updatedUser
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error in deleteProfilePicture:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to delete profile picture',
+      error: error.message
     });
   }
 };
