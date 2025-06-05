@@ -236,11 +236,11 @@
 .actions-cell {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 12px;
-  justify-content: space-between;
 }
 
-/* View Journals Button */
+/* Position View Journals button to the left */
 .view-journals-button {
   background-color: #f0f8f4;
   border: none;
@@ -251,6 +251,7 @@
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
+  margin-right: auto; /* Push this button to the left */
 }
 
 .view-journals-button:hover {

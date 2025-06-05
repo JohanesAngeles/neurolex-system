@@ -1,7 +1,7 @@
 // server/src/routes/notificationRoutes.js - MISSING FILE THAT FIXES 404!
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middleware/auth');
+const protect = require('../middleware/auth');
 const notificationController = require('../controllers/notificationController');
 
 // 🔧 CRITICAL: Apply authentication middleware to all routes
