@@ -1,5 +1,5 @@
 /**
- * User schema definition - Updated with new registration fields and payment methods
+ * User schema definition - YOUR EXISTING SCHEMA + FCM TOKEN SUPPORT
  */
 const mongoose = require('mongoose');
 const bcryptjs = require('bcryptjs');
@@ -77,6 +77,76 @@ function createUserSchema() {
     onboardingCompleted: {
       type: Boolean,
       default: false
+    },
+    
+    // 🔥 NEW: MOBILE PUSH NOTIFICATION SUPPORT
+    fcmToken: {
+      type: String,
+      default: null,
+      select: false // Don't include in regular queries for security
+    },
+    
+    // 🔥 NEW: Device information for notifications
+    deviceInfo: {
+      platform: {
+        type: String,
+        enum: ['ios', 'android', 'web', 'mobile'],
+        default: null
+      },
+      deviceType: {
+        type: String,
+        default: null
+      },
+      appVersion: {
+        type: String,
+        default: null
+      },
+      lastActive: {
+        type: Date,
+        default: Date.now
+      }
+    },
+    
+    // 🔥 NEW: Notification preferences
+    notificationSettings: {
+      pushNotifications: {
+        type: Boolean,
+        default: true
+      },
+      emailNotifications: {
+        type: Boolean,
+        default: true
+      },
+      smsNotifications: {
+        type: Boolean,
+        default: false
+      },
+      messageNotifications: {
+        type: Boolean,
+        default: true
+      },
+      appointmentReminders: {
+        type: Boolean,
+        default: true
+      },
+      systemNotifications: {
+        type: Boolean,
+        default: true
+      },
+      quietHours: {
+        enabled: {
+          type: Boolean,
+          default: false
+        },
+        startTime: {
+          type: String,
+          default: '22:00'
+        },
+        endTime: {
+          type: String,
+          default: '08:00'
+        }
+      }
     },
     
     // NEW: Contact Information
@@ -582,6 +652,117 @@ function createUserSchema() {
       return false;
     }
   };
+
+  // 🔥 NEW: FCM TOKEN METHODS
+
+  /**
+   * Update user's FCM token for push notifications
+   */
+  userSchema.methods.updateFCMToken = async function(token, deviceInfo = {}) {
+    try {
+      this.fcmToken = token;
+      this.deviceInfo = {
+        ...this.deviceInfo,
+        ...deviceInfo,
+        lastActive: new Date()
+      };
+      
+      await this.save();
+      console.log(`✅ FCM token updated for user: ${this._id}`);
+      return true;
+    } catch (error) {
+      console.error(`❌ Error updating FCM token for user ${this._id}:`, error);
+      return false;
+    }
+  };
+
+  /**
+   * Remove FCM token (when user logs out or token expires)
+   */
+  userSchema.methods.removeFCMToken = async function() {
+    try {
+      this.fcmToken = null;
+      await this.save();
+      console.log(`✅ FCM token removed for user: ${this._id}`);
+      return true;
+    } catch (error) {
+      console.error(`❌ Error removing FCM token for user ${this._id}:`, error);
+      return false;
+    }
+  };
+
+  /**
+   * Get FCM token for notifications
+   */
+  userSchema.methods.getFCMToken = function() {
+    return this.fcmToken;
+  };
+
+  /**
+   * Check if user can receive push notifications
+   */
+  userSchema.methods.canReceivePushNotifications = function() {
+    return !!(
+      this.fcmToken && 
+      this.isActive && 
+      this.notificationSettings?.pushNotifications !== false
+    );
+  };
+
+  /**
+   * Check if user is in quiet hours
+   */
+  userSchema.methods.isInQuietHours = function() {
+    if (!this.notificationSettings?.quietHours?.enabled) {
+      return false;
+    }
+    
+    const now = new Date();
+    const currentTime = now.getHours().toString().padStart(2, '0') + ':' + 
+                       now.getMinutes().toString().padStart(2, '0');
+    
+    const startTime = this.notificationSettings.quietHours.startTime;
+    const endTime = this.notificationSettings.quietHours.endTime;
+    
+    // Handle overnight quiet hours (e.g., 22:00 to 08:00)
+    if (startTime > endTime) {
+      return currentTime >= startTime || currentTime <= endTime;
+    }
+    
+    // Handle same-day quiet hours (e.g., 12:00 to 14:00)
+    return currentTime >= startTime && currentTime <= endTime;
+  };
+
+  /**
+   * Update notification settings
+   */
+  userSchema.methods.updateNotificationSettings = async function(settings) {
+    try {
+      this.notificationSettings = {
+        ...this.notificationSettings,
+        ...settings
+      };
+      
+      await this.save();
+      console.log(`✅ Notification settings updated for user: ${this._id}`);
+      return true;
+    } catch (error) {
+      console.error(`❌ Error updating notification settings for user ${this._id}:`, error);
+      return false;
+    }
+  };
+
+  // 🔥 NEW: Virtual for full name
+  userSchema.virtual('fullName').get(function() {
+    return `${this.firstName} ${this.lastName}`;
+  });
+
+  // 🔥 NEW: Create indexes for better performance
+  userSchema.index({ email: 1 });
+  userSchema.index({ role: 1, isActive: 1 });
+  userSchema.index({ fcmToken: 1 }); // 🔥 NEW: Index for FCM token queries
+  userSchema.index({ 'deviceInfo.lastActive': -1 }); // 🔥 NEW: Index for device activity
+  userSchema.index({ createdAt: -1 });
 
   return userSchema;
 }

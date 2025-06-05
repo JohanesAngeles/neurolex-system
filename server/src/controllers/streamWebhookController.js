@@ -1,10 +1,42 @@
-// server/src/controllers/streamWebhookController.js
+// server/src/controllers/streamWebhookController.js - ENHANCED WITH MOBILE PUSH NOTIFICATIONS
 const crypto = require('crypto');
+const admin = require('firebase-admin');
 const notificationController = require('./notificationController');
 const { getIo } = require('../utils/socket');
+const User = require('../models/User');
 
 // Your Stream Chat webhook secret (set this in your .env file)
 const STREAM_WEBHOOK_SECRET = process.env.STREAM_WEBHOOK_SECRET || 'your-webhook-secret';
+
+// 🔥 FIREBASE ADMIN INITIALIZATION
+let firebaseInitialized = false;
+
+function initializeFirebase() {
+  if (firebaseInitialized) return;
+  
+  try {
+    if (!admin.apps.length) {
+      // Initialize Firebase Admin with service account
+      const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY 
+        ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)
+        : require('../../config/firebase-service-account.json'); // Fallback to file
+
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        projectId: process.env.FIREBASE_PROJECT_ID
+      });
+
+      console.log('🔥 Firebase Admin initialized successfully');
+      firebaseInitialized = true;
+    }
+  } catch (error) {
+    console.error('❌ Firebase Admin initialization failed:', error);
+    console.log('⚠️ Mobile push notifications will not work without Firebase');
+  }
+}
+
+// Initialize Firebase on module load
+initializeFirebase();
 
 /**
  * Handle Stream Chat webhooks
@@ -37,12 +69,17 @@ exports.handleStreamWebhook = async (req, res) => {
     // Handle other events you might want notifications for
     else if (type === 'user.presence.changed') {
       console.log('👥 User presence changed:', user?.id, user?.online);
-      // You could create notifications for when doctors come online
+      await handleUserPresenceChange(user);
     }
     
     else if (type === 'channel.created') {
       console.log('📝 New channel created:', channel?.id);
-      // You could create notifications for new conversation started
+      await handleChannelCreated(channel, user);
+    }
+    
+    else if (type === 'call.created') {
+      console.log('📞 Call created:', channel?.id);
+      await handleCallCreated(req.body);
     }
     
     else {
@@ -111,6 +148,99 @@ async function handleNewMessageEvent(message, sender, channel) {
 }
 
 /**
+ * Handle user presence changes (when doctors come online)
+ */
+async function handleUserPresenceChange(user) {
+  try {
+    if (!user?.online || !user?.id) return;
+    
+    console.log(`👥 User ${user.id} came online`);
+    
+    // Find patients who have this doctor and might want to be notified
+    const dbUser = await User.findById(user.id);
+    if (dbUser?.role === 'doctor') {
+      // Notify patients that their doctor is now online
+      const patients = dbUser.patients || [];
+      
+      for (const patientId of patients) {
+        await createSystemNotificationForUser({
+          recipientId: patientId,
+          title: 'Doctor Available',
+          message: `Dr. ${dbUser.firstName} ${dbUser.lastName} is now online`,
+          systemEvent: 'doctor_online',
+          data: { doctorId: user.id, doctorName: `${dbUser.firstName} ${dbUser.lastName}` }
+        });
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error handling user presence change:', error);
+  }
+}
+
+/**
+ * Handle new channel creation (new conversation started)
+ */
+async function handleChannelCreated(channel, creator) {
+  try {
+    console.log(`📝 New channel created: ${channel?.id}`);
+    
+    const channelMembers = channel?.members || [];
+    const creatorId = creator?.id;
+    
+    // Notify all members except creator about new conversation
+    for (const member of channelMembers) {
+      const memberId = member.user_id || member.user?.id;
+      
+      if (memberId && memberId !== creatorId) {
+        await createSystemNotificationForUser({
+          recipientId: memberId,
+          title: 'New Conversation',
+          message: `${creator?.name || 'Someone'} started a new conversation with you`,
+          systemEvent: 'conversation_started',
+          data: { channelId: channel.id, creatorId }
+        });
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error handling channel creation:', error);
+  }
+}
+
+/**
+ * Handle call creation (incoming video/voice calls)
+ */
+async function handleCallCreated(webhookData) {
+  try {
+    const { call, user, channel } = webhookData;
+    
+    console.log(`📞 Call created in channel: ${channel?.id}`);
+    
+    const callerId = user?.id;
+    const callerName = user?.name || `${user?.first_name || ''} ${user?.last_name || ''}`.trim();
+    const channelMembers = channel?.members || [];
+    
+    // Notify all channel members except the caller about incoming call
+    for (const member of channelMembers) {
+      const memberId = member.user_id || member.user?.id;
+      
+      if (memberId && memberId !== callerId) {
+        // Create high-priority call notification
+        await createCallNotificationForUser({
+          recipientId: memberId,
+          callerId: callerId,
+          callerName: callerName,
+          channelId: channel.id,
+          callId: call?.id || channel.id,
+          callType: call?.type || 'video'
+        });
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error handling call creation:', error);
+  }
+}
+
+/**
  * Create a message notification for a specific user
  */
 async function createMessageNotificationForUser({ recipientId, senderId, senderName, messageContent, conversationId }) {
@@ -140,7 +270,13 @@ async function createMessageNotificationForUser({ recipientId, senderId, senderN
     // Use your existing notification creation logic
     const fakeReq = {
       user: { id: senderId },
-      body: notificationData
+      body: {
+        recipientId: recipientId,
+        title: notificationData.title,
+        message: notificationData.message,
+        type: notificationData.type,
+        data: notificationData.data
+      }
     };
     
     const fakeRes = {
@@ -148,6 +284,19 @@ async function createMessageNotificationForUser({ recipientId, senderId, senderN
         json: (data) => {
           if (code === 201 || code === 200) {
             console.log(`✅ Notification created successfully for user ${recipientId}`);
+            
+            // Send mobile push notification
+            sendMobilePushNotification({
+              recipientId,
+              title: notificationData.title,
+              body: notificationData.message,
+              data: {
+                type: 'message',
+                conversationId,
+                senderId,
+                senderName
+              }
+            });
             
             // Broadcast via Socket.io for real-time delivery
             broadcastNotificationViaSocket(recipientId, notificationData);
@@ -163,6 +312,183 @@ async function createMessageNotificationForUser({ recipientId, senderId, senderN
     
   } catch (error) {
     console.error('❌ Error creating message notification:', error);
+  }
+}
+
+/**
+ * Create a system notification for a specific user
+ */
+async function createSystemNotificationForUser({ recipientId, title, message, systemEvent, data = {} }) {
+  try {
+    console.log(`🌐 Creating system notification for user: ${recipientId}`);
+    
+    const fakeReq = {
+      user: { id: 'system' },
+      body: {
+        recipientId,
+        systemEvent,
+        eventData: data
+      }
+    };
+    
+    const fakeRes = {
+      status: (code) => ({
+        json: (responseData) => {
+          if (code === 201 || code === 200) {
+            console.log(`✅ System notification created for user ${recipientId}`);
+            
+            // Send mobile push notification
+            sendMobilePushNotification({
+              recipientId,
+              title,
+              body: message,
+              data: {
+                type: 'system',
+                systemEvent,
+                ...data
+              }
+            });
+          }
+        }
+      })
+    };
+    
+    await notificationController.createSystemNotification(fakeReq, fakeRes);
+    
+  } catch (error) {
+    console.error('❌ Error creating system notification:', error);
+  }
+}
+
+/**
+ * Create a call notification for a specific user
+ */
+async function createCallNotificationForUser({ recipientId, callerId, callerName, channelId, callId, callType }) {
+  try {
+    console.log(`📞 Creating call notification for user: ${recipientId}`);
+    
+    const fakeReq = {
+      user: { id: callerId },
+      body: {
+        recipientId,
+        channelName: callId,
+        callType
+      }
+    };
+    
+    const fakeRes = {
+      status: (code) => ({
+        json: (data) => {
+          if (code === 201 || code === 200) {
+            console.log(`✅ Call notification created for user ${recipientId}`);
+            
+            // Send HIGH PRIORITY mobile push notification for calls
+            sendMobilePushNotification({
+              recipientId,
+              title: 'Incoming Call',
+              body: `${callerName} is calling you`,
+              data: {
+                type: 'call',
+                callId,
+                callerId,
+                callerName,
+                channelId,
+                callType
+              },
+              priority: 'high',
+              sound: 'default'
+            });
+          }
+        }
+      })
+    };
+    
+    await notificationController.createCallNotification(fakeReq, fakeRes);
+    
+  } catch (error) {
+    console.error('❌ Error creating call notification:', error);
+  }
+}
+
+/**
+ * 📱 SEND MOBILE PUSH NOTIFICATION VIA FCM
+ */
+async function sendMobilePushNotification({ recipientId, title, body, data = {}, priority = 'normal', sound = null }) {
+  try {
+    if (!firebaseInitialized) {
+      console.log('⚠️ Firebase not initialized, skipping mobile push notification');
+      return;
+    }
+    
+    console.log(`📱 Sending mobile push notification to user: ${recipientId}`);
+    
+    // Get user's FCM token from database
+    const user = await User.findById(recipientId);
+    if (!user || !user.fcmToken) {
+      console.log(`⚠️ No FCM token found for user ${recipientId}, skipping mobile push`);
+      return;
+    }
+    
+    const fcmToken = user.fcmToken;
+    
+    // Prepare the FCM message
+    const message = {
+      token: fcmToken,
+      notification: {
+        title: title,
+        body: body,
+      },
+      data: {
+        ...data,
+        timestamp: new Date().toISOString(),
+        recipientId: recipientId
+      },
+      android: {
+        notification: {
+          channelId: 'neurolex_notifications',
+          priority: priority === 'high' ? 'max' : 'default',
+          sound: sound || 'default',
+          clickAction: 'FLUTTER_NOTIFICATION_CLICK'
+        },
+        priority: priority === 'high' ? 'high' : 'normal'
+      },
+      apns: {
+        payload: {
+          aps: {
+            alert: {
+              title: title,
+              body: body
+            },
+            sound: sound || 'default',
+            badge: 1,
+            'content-available': 1
+          }
+        },
+        headers: {
+          'apns-priority': priority === 'high' ? '10' : '5'
+        }
+      }
+    };
+    
+    // Send the push notification
+    const response = await admin.messaging().send(message);
+    console.log(`✅ Mobile push notification sent successfully: ${response}`);
+    
+  } catch (error) {
+    if (error.code === 'messaging/registration-token-not-registered') {
+      console.log(`⚠️ FCM token expired for user ${recipientId}, removing from database`);
+      
+      // Remove the expired token from user's record
+      try {
+        await User.findByIdAndUpdate(recipientId, { 
+          $unset: { fcmToken: 1 } 
+        });
+      } catch (updateError) {
+        console.error('❌ Error removing expired FCM token:', updateError);
+      }
+    } else {
+      console.error('❌ Error sending mobile push notification:', error);
+    }
   }
 }
 
@@ -243,10 +569,22 @@ exports.testWebhook = async (req, res) => {
   console.log('🧪 Test webhook endpoint called');
   console.log('📝 Test payload:', req.body);
   
+  // Test mobile push notification
+  const { userId, title, message } = req.body;
+  if (userId) {
+    await sendMobilePushNotification({
+      recipientId: userId,
+      title: title || 'Test Notification',
+      body: message || 'This is a test notification from Neurolex',
+      data: { type: 'test' }
+    });
+  }
+  
   res.status(200).json({
     success: true,
     message: 'Test webhook received successfully',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    firebaseStatus: firebaseInitialized ? 'INITIALIZED' : 'NOT INITIALIZED'
   });
 };
 
