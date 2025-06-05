@@ -153,6 +153,19 @@ const PatientList = () => {
     setShowActionMenu(false);
   };
   
+  const handleEditPatient = (patientId) => {
+    navigate(`/doctor/patients/${patientId}/edit`);
+  };
+  
+  const handleDeletePatient = (patientId) => {
+    // Add confirmation dialog
+    if (window.confirm('Are you sure you want to delete this patient? This action cannot be undone.')) {
+      // TODO: Implement delete functionality
+      console.log('Delete patient:', patientId);
+      // You can add the actual delete API call here
+    }
+  };
+  
   const handleAssignTemplates = (patientId) => {
     navigate(`/doctor/form-templates/assign`, { 
       state: { selectedPatients: [patientId] } 
@@ -225,7 +238,7 @@ const PatientList = () => {
             currentPatients.map((patient, index) => (
               <div 
                 key={patient._id} 
-                className={`table-row ${index % 2 === 0 ? 'odd-row' : 'even-row'}`}
+                className="table-row"
               >
                 <div className="table-cell patient-cell">
                   <div className="patient-avatar">
@@ -251,26 +264,53 @@ const PatientList = () => {
                 
                 <div className="table-cell">
                   <div className="action-buttons">
+                    {/* View Button */}
                     <button 
                       className="btn-icon view"
                       onClick={() => handleViewPatient(patient._id)}
                       title="View patient details"
                     >
-                      <div className="icon-view"></div>
+                      <svg className="icon-view" viewBox="0 0 24 24">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
                     </button>
+                    
+                    {/* Edit Button */}
                     <button 
-                      className="btn-icon approve"
-                      onClick={() => handleAssignTemplates(patient._id)}
-                      title="Assign forms"
+                      className="btn-icon edit"
+                      onClick={() => handleEditPatient(patient._id)}
+                      title="Edit patient"
                     >
-                      <div className="icon-assign"></div>
+                      <svg className="icon-edit" viewBox="0 0 24 24">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="m18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
                     </button>
+                    
+                    {/* Delete Button */}
+                    <button
+                      className="btn-icon delete"
+                      onClick={() => handleDeletePatient(patient._id)}
+                      title="Delete patient"
+                    >
+                      <svg className="icon-delete" viewBox="0 0 24 24">
+                        <path d="M18 6L6 18"/>
+                        <path d="M6 6l12 12"/>
+                      </svg>
+                    </button>
+                    
+                    {/* Action Menu Button */}
                     <button
                       className="btn-icon more"
                       onClick={(e) => handleShowActionMenu(e, patient)}
-                      title="More options"
+                      title="More actions"
                     >
-                      <div className="icon-more"></div>
+                      <svg className="icon-more" viewBox="0 0 24 24">
+                        <circle cx="5" cy="12" r="2"/>
+                        <circle cx="12" cy="12" r="2"/>
+                        <circle cx="19" cy="12" r="2"/>
+                      </svg>
                     </button>
                   </div>
                 </div>
