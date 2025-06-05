@@ -148,81 +148,81 @@ const chatService = {
 
   // Create or get a channel between doctor and patient
   createDoctorPatientChannel: async (streamClient, doctorId, patientId, doctorInfo, patientInfo) => {
-    try {
-      console.log('💬 Creating/getting doctor-patient channel...');
-      console.log('Doctor ID:', doctorId);
-      console.log('Patient ID:', patientId);
-      
-      if (!streamClient) {
-        throw new Error('Stream Chat client not initialized');
-      }
-      
-      // Create unique channel ID for this doctor-patient pair
-      const channelId = `doctor-patient-${doctorId}-${patientId}`;
-      
-      // Create channel
-      const channel = streamClient.channel('messaging', channelId, {
-        name: `Dr. ${doctorInfo.firstName} ${doctorInfo.lastName} & ${patientInfo.firstName} ${patientInfo.lastName}`,
-        members: [doctorId, patientId],
-        created_by_id: doctorId,
-        doctor_id: doctorId,
-        patient_id: patientId,
-        channel_type: 'doctor_patient',
-        doctor_name: `Dr. ${doctorInfo.firstName} ${doctorInfo.lastName}`,
-        patient_name: `${patientInfo.firstName} ${patientInfo.lastName}`,
-        tenant_id: getCurrentTenantId()
-      });
-      
-      // Watch the channel (this creates it if it doesn't exist)
-      await channel.watch();
-      
-      console.log('✅ Doctor-patient channel created/retrieved:', channelId);
-      return channel;
-      
-    } catch (error) {
-      console.error('❌ Error creating doctor-patient channel:', error);
-      throw new Error(`Failed to create channel: ${error.message}`);
+  try {
+    console.log('💬 Creating/getting doctor-patient channel...');
+    console.log('Doctor ID:', doctorId);
+    console.log('Patient ID:', patientId);
+    
+    if (!streamClient) {
+      throw new Error('Stream Chat client not initialized');
     }
-  },
+    
+    // 🚀 FIXED: Use consistent channel ID format (patient_doctor order)
+    const channelId = `doctor_${patientId}_${doctorId}`;
+    
+    // Create channel
+    const channel = streamClient.channel('messaging', channelId, {
+      name: `Dr. ${doctorInfo.firstName} ${doctorInfo.lastName} & ${patientInfo.firstName} ${patientInfo.lastName}`,
+      members: [doctorId, patientId],
+      created_by_id: doctorId,
+      doctor_id: doctorId,
+      patient_id: patientId,
+      channel_type: 'doctor_patient',
+      doctor_name: `Dr. ${doctorInfo.firstName} ${doctorInfo.lastName}`,
+      patient_name: `${patientInfo.firstName} ${patientInfo.lastName}`,
+      tenant_id: getCurrentTenantId()
+    });
+    
+    // Watch the channel (this creates it if it doesn't exist)
+    await channel.watch();
+    
+    console.log('✅ Doctor-patient channel created/retrieved:', channelId);
+    return channel;
+    
+  } catch (error) {
+    console.error('❌ Error creating doctor-patient channel:', error);
+    throw new Error(`Failed to create channel: ${error.message}`);
+  }
+},
 
-  // Get or create channel for patient-doctor communication
-  getPatientDoctorChannel: async (streamClient, patientId, doctorId, patientInfo, doctorInfo) => {
-    try {
-      console.log('💬 Getting patient-doctor channel...');
-      console.log('Patient ID:', patientId);
-      console.log('Doctor ID:', doctorId);
-      
-      if (!streamClient) {
-        throw new Error('Stream Chat client not initialized');
-      }
-      
-      // Create unique channel ID (same format as doctor creates)
-      const channelId = `doctor-patient-${doctorId}-${patientId}`;
-      
-      // Create/get channel
-      const channel = streamClient.channel('messaging', channelId, {
-        name: `${patientInfo.firstName} ${patientInfo.lastName} & Dr. ${doctorInfo.firstName} ${doctorInfo.lastName}`,
-        members: [patientId, doctorId],
-        created_by_id: patientId,
-        doctor_id: doctorId,
-        patient_id: patientId,
-        channel_type: 'doctor_patient',
-        doctor_name: `Dr. ${doctorInfo.firstName} ${doctorInfo.lastName}`,
-        patient_name: `${patientInfo.firstName} ${patientInfo.lastName}`,
-        tenant_id: getCurrentTenantId()
-      });
-      
-      // Watch the channel
-      await channel.watch();
-      
-      console.log('✅ Patient-doctor channel retrieved:', channelId);
-      return channel;
-      
-    } catch (error) {
-      console.error('❌ Error getting patient-doctor channel:', error);
-      throw new Error(`Failed to get channel: ${error.message}`);
+// Get or create channel for patient-doctor communication  
+getPatientDoctorChannel: async (streamClient, patientId, doctorId, patientInfo, doctorInfo) => {
+  try {
+    console.log('💬 Getting patient-doctor channel...');
+    console.log('Patient ID:', patientId);
+    console.log('Doctor ID:', doctorId);
+    
+    if (!streamClient) {
+      throw new Error('Stream Chat client not initialized');
     }
-  },
+    
+    // 🚀 FIXED: Use SAME format as Flutter (patient_doctor order)
+    const channelId = `doctor_${patientId}_${doctorId}`;
+    
+    // Create/get channel
+    const channel = streamClient.channel('messaging', channelId, {
+      name: `${patientInfo.firstName} ${patientInfo.lastName} & Dr. ${doctorInfo.firstName} ${doctorInfo.lastName}`,
+      members: [patientId, doctorId],
+      created_by_id: patientId,
+      doctor_id: doctorId,
+      patient_id: patientId,
+      channel_type: 'doctor_patient',
+      doctor_name: `Dr. ${doctorInfo.firstName} ${doctorInfo.lastName}`,
+      patient_name: `${patientInfo.firstName} ${patientInfo.lastName}`,
+      tenant_id: getCurrentTenantId()
+    });
+    
+    // Watch the channel
+    await channel.watch();
+    
+    console.log('✅ Patient-doctor channel retrieved:', channelId);
+    return channel;
+    
+  } catch (error) {
+    console.error('❌ Error getting patient-doctor channel:', error);
+    throw new Error(`Failed to get channel: ${error.message}`);
+  }
+},
 
   // Send a message in a channel
   sendMessage: async (channel, messageText, senderType = 'user') => {
