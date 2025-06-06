@@ -13,10 +13,10 @@ class NLPService {
     this.API_KEY = process.env.HUGGING_FACE_API_KEY;
     
     this.models = {
-      sentiment: "CardiffNLP/twitter-roberta-base-sentiment", 
-      emotion: "j-hartmann/emotion-english-distilroberta-base", 
-      summarization: "facebook/bart-large-cnn" 
-    };
+    sentiment: "cardiffnlp/twitter-roberta-base-sentiment-latest", 
+    emotion: "j-hartmann/emotion-english-distilroberta-base",       
+    summarization: "facebook/bart-large-cnn"                      
+  };
 
     // Initialize mental health specific sentiment analysis
     this.mentalHealthModel = {
