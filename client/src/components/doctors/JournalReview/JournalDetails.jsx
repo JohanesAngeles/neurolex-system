@@ -19,8 +19,6 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  // eslint-disable-next-line no-unused-vars
-  ListItemText,
   Switch,
   FormControlLabel
 } from '@mui/material';
@@ -29,8 +27,6 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import MoodIcon from '@mui/icons-material/Mood';
 import SentimentVeryDissatisfiedIcon from '@mui/icons-material/SentimentVeryDissatisfied';
 import SentimentNeutralIcon from '@mui/icons-material/SentimentNeutral';
-// eslint-disable-next-line no-unused-vars
-import NoteIcon from '@mui/icons-material/Note';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import { format, parseISO, isValid } from 'date-fns';
 import doctorService from '../../../services/doctorService';
@@ -62,14 +58,12 @@ const JournalEntryDetail = () => {
       
       let parsedDate;
       
-      // Try parsing different date formats
       try {
         parsedDate = parseISO(dateString);
       } catch {
         parsedDate = new Date(dateString);
       }
       
-      // Check if the date is valid
       if (!isValid(parsedDate)) {
         return 'Invalid Date';
       }
@@ -95,7 +89,7 @@ const JournalEntryDetail = () => {
         setLoading(true);
         const data = await doctorService.getJournalEntry(id);
         
-        console.log('Journal entry data:', data); // Debug log
+        console.log('Journal entry data:', data);
         
         setEntry(data);
         
@@ -138,7 +132,7 @@ const JournalEntryDetail = () => {
     try {
       const response = await doctorService.analyzeJournalEntry(id, {
         ...analysis,
-        useAI: useAI && !aiAnalysis // Only run AI if selected and not already done
+        useAI: useAI && !aiAnalysis
       });
       
       setSaveSuccess(true);
@@ -146,7 +140,6 @@ const JournalEntryDetail = () => {
       // Update local entry data
       const updatedEntry = { ...entry };
       
-      // Update with the new sentimentAnalysis structure
       if (!updatedEntry.sentimentAnalysis) {
         updatedEntry.sentimentAnalysis = {};
       }
@@ -159,12 +152,10 @@ const JournalEntryDetail = () => {
       
       setEntry(updatedEntry);
       
-      // Store AI analysis results if available
       if (response.aiAnalysis) {
         setAiAnalysis(response.aiAnalysis);
       }
       
-      // Reset success message after delay
       setTimeout(() => {
         setSaveSuccess(false);
       }, 3000);
@@ -176,13 +167,12 @@ const JournalEntryDetail = () => {
     }
   };
   
-  // Run AI analysis manually - UPDATED IMPLEMENTATION
+  // Run AI analysis manually
   const runAIAnalysis = async () => {
     setAiLoading(true);
     setError(null);
     
     try {
-      // Get the authentication token
       const token = localStorage.getItem('token');
       
       if (!token) {
@@ -191,61 +181,39 @@ const JournalEntryDetail = () => {
       
       console.log(`Starting AI analysis for entry ID: ${id}`);
       
-      // Make the direct API call with explicit request for highlights
       const response = await axios.post(
         `/api/doctor/journal-entries/${id}/analyze`,
         { 
           useAI: true, 
           applyChanges: false,
-          includeHighlights: true  // Explicitly request highlights
+          includeHighlights: true
         },
         {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          timeout: 20000 // 20 second timeout
+          timeout: 20000
         }
       );
       
       console.log('Raw AI analysis response:', response.data);
       
-      // Add specific checks for highlights
-      if (response.data.aiAnalysis?.highlights) {
-        console.log('Found highlights in aiAnalysis:', response.data.aiAnalysis.highlights);
-      }
-      if (response.data.data?.sentimentAnalysis?.highlights) {
-        console.log('Found highlights in sentimentAnalysis:', 
-                  response.data.data.sentimentAnalysis.highlights);
-      }
-      
-      // Extract the analysis data based on the response structure
       let analysisData = null;
       
       if (response.data && response.data.success === true) {
-        // If the response has a nested data structure
         if (response.data.data && response.data.data.sentimentAnalysis) {
-          // Case 1: data.sentimentAnalysis contains the analysis
-          console.log('Found analysis in data.sentimentAnalysis', response.data.data.sentimentAnalysis);
           analysisData = response.data.data.sentimentAnalysis;
         } else if (response.data.aiAnalysis) {
-          // Case 2: aiAnalysis contains the analysis
-          console.log('Found analysis in aiAnalysis', response.data.aiAnalysis);
           analysisData = response.data.aiAnalysis;
         } else if (response.data.data) {
-          // Case 3: data itself might be the analysis
-          console.log('Using data as analysis', response.data.data);
           analysisData = response.data.data;
         } else {
-          // Case 4: the entire response might be the analysis
-          console.log('Using entire response as analysis', response.data);
           analysisData = response.data;
         }
       }
       
       if (analysisData) {
-        // Set AI analysis state with extracted data
-        // Make sure to preserve highlights from wherever they might be
         setAiAnalysis({
           ...analysisData,
           highlights: analysisData.highlights || 
@@ -253,18 +221,14 @@ const JournalEntryDetail = () => {
                     (response.data.aiAnalysis?.highlights) || []
         });
         
-        // Pre-fill the form with extracted sentiment and emotions
         setAnalysis(prev => {
           const updatedAnalysis = { ...prev };
           
-          // Try to extract sentiment type from various possible structures
           if (analysisData.sentiment && analysisData.sentiment.type) {
             updatedAnalysis.sentiment = analysisData.sentiment.type;
           }
           
-          // Try to extract emotions from various possible structures
           if (analysisData.emotions && Array.isArray(analysisData.emotions)) {
-            // Map emotions to simple strings if they're objects
             updatedAnalysis.emotions = analysisData.emotions.map(e => 
               typeof e === 'object' ? e.name : e
             );
@@ -279,24 +243,19 @@ const JournalEntryDetail = () => {
     } catch (error) {
       console.error('Error running AI analysis:', error);
       
-      // Provide a more detailed error message for debugging
       let errorMessage = 'Failed to run AI analysis. ';
       
       if (error.response) {
-        // The request was made and the server responded with a non-2xx status code
         errorMessage += `Server responded with status ${error.response.status}: ${error.response.data?.message || 'Unknown error'}`;
         console.error('Error response data:', error.response.data);
       } else if (error.request) {
-        // The request was made but no response was received
         errorMessage += 'No response received from server. Please check your network connection.';
       } else {
-        // Something happened in setting up the request that triggered an Error
         errorMessage += error.message || 'Unknown error occurred';
       }
       
       setError(errorMessage);
       
-      // For development/testing only - use mock data if real API fails
       if (process.env.NODE_ENV === 'development') {
         console.log('Using mock AI analysis data for development');
         const mockAnalysis = {
@@ -361,7 +320,90 @@ const JournalEntryDetail = () => {
     handleAnalysisChange('flags', flags);
   };
   
-  // Render a form field's response
+  // ✅ FIXED: Render journal content (rawText instead of structured responses)
+  const renderJournalContent = () => {
+    // Priority 1: Check for rawText (new simplified format)
+    if (entry?.rawText) {
+      return (
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+            Journal Entry Content
+          </Typography>
+          <Paper 
+            variant="outlined" 
+            sx={{ 
+              p: 2, 
+              backgroundColor: 'grey.50',
+              borderRadius: 2
+            }}
+          >
+            <Typography 
+              variant="body1" 
+              sx={{ 
+                whiteSpace: 'pre-line',
+                lineHeight: 1.6
+              }}
+            >
+              {entry.rawText}
+            </Typography>
+          </Paper>
+        </Box>
+      );
+    }
+    
+    // Priority 2: Check for old structured responses (for backward compatibility)
+    if (entry?.template?.fields && Array.isArray(entry.template.fields) && entry.template.fields.length > 0) {
+      return entry.template.fields.map((field, index) => (
+        <Box key={field.id || `field-${index}`} sx={{ mb: 3 }}>
+          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+            {field.label}
+          </Typography>
+          {renderFieldResponse(field)}
+        </Box>
+      ));
+    }
+    
+    // Priority 3: Check for responses object
+    if (entry?.responses && Object.keys(entry.responses).length > 0) {
+      return Object.entries(entry.responses).map(([key, value], index) => (
+        <Box key={key} sx={{ mb: 3 }}>
+          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+            {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+          </Typography>
+          <Typography>
+            {typeof value === 'object' ? JSON.stringify(value) : value}
+          </Typography>
+        </Box>
+      ));
+    }
+    
+    // Priority 4: Check for journalFields
+    if (entry?.journalFields && Object.keys(entry.journalFields).length > 0) {
+      return Object.entries(entry.journalFields).map(([key, value], index) => (
+        <Box key={key} sx={{ mb: 3 }}>
+          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+            {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+          </Typography>
+          <Typography>
+            {Array.isArray(value) 
+              ? value.join(', ') 
+              : (typeof value === 'object' ? JSON.stringify(value) : value)}
+          </Typography>
+        </Box>
+      ));
+    }
+    
+    // No content found
+    return (
+      <Box sx={{ textAlign: 'center', py: 4 }}>
+        <Typography color="text.secondary">
+          No journal content found
+        </Typography>
+      </Box>
+    );
+  };
+  
+  // Render a form field's response (for backward compatibility)
   const renderFieldResponse = (field) => {
     if (!entry || !field || !entry.responses) return 'No response';
     
@@ -519,50 +561,8 @@ const JournalEntryDetail = () => {
               Responses
             </Typography>
             
-            {/* Handle case when template fields exist */}
-            {entry?.template?.fields && Array.isArray(entry.template.fields) && entry.template.fields.length > 0 ? (
-              entry.template.fields.map((field, index) => (
-                <Box key={field.id || `field-${index}`} sx={{ mb: 3 }}>
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                    {field.label}
-                  </Typography>
-                  {renderFieldResponse(field)}
-                </Box>
-              ))
-            ) : (
-              // Handle case when template fields don't exist but responses do
-              entry?.responses && Object.keys(entry.responses).length > 0 ? (
-                Object.entries(entry.responses).map(([key, value], index) => (
-                  <Box key={key} sx={{ mb: 3 }}>
-                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                      {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                    </Typography>
-                    <Typography>
-                      {typeof value === 'object' ? JSON.stringify(value) : value}
-                    </Typography>
-                  </Box>
-                ))
-              ) : (
-                // Handle case when journalFields exist
-                entry?.journalFields && Object.keys(entry.journalFields).length > 0 ? (
-                  Object.entries(entry.journalFields).map(([key, value], index) => (
-                    <Box key={key} sx={{ mb: 3 }}>
-                      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                        {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                      </Typography>
-                      <Typography>
-                        {Array.isArray(value) 
-                          ? value.join(', ') 
-                          : (typeof value === 'object' ? JSON.stringify(value) : value)}
-                      </Typography>
-                    </Box>
-                  ))
-                ) : (
-                  // No responses found
-                  <Typography color="text.secondary">No responses found</Typography>
-                )
-              )
-            )}
+            {/* ✅ FIXED: Use the new renderJournalContent function */}
+            {renderJournalContent()}
           </Paper>
         </Grid>
         
@@ -637,7 +637,6 @@ const JournalEntryDetail = () => {
                     </Box>
                   )}
                   
-                  {/* NEW HIGHLIGHT SECTION */}
                   {aiAnalysis.highlights && aiAnalysis.highlights.length > 0 && (
                     <Box sx={{ mt: 2 }}>
                       <Typography variant="subtitle2" color="text.secondary" gutterBottom>
