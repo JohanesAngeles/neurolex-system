@@ -3,6 +3,7 @@ const socketIo = require('socket.io');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
+const { sendPushNotification, cleanupExpiredTokens } = require('../config/firebase');
 
 let io;
 
@@ -448,6 +449,13 @@ async function createMessageNotification(senderId, notificationData) {
     
     if (!sender) return;
 
+    // Get recipient with FCM token
+    const recipient = await User.findById(notificationData.recipientId)
+      .select('name fcmToken notificationSettings deviceInfo');
+
+    if (!recipient) return;
+
+    // Create notification in database
     const notification = await Notification.create({
       recipient: notificationData.recipientId,
       sender: senderId,
@@ -468,7 +476,42 @@ async function createMessageNotification(senderId, notificationData) {
 
     await notification.populate('sender', 'name profilePicture');
 
-    // Emit notification
+    // 🔥 NEW: Send FCM push notification if user has token and preferences allow
+    if (recipient.canReceivePushNotifications() && !recipient.isInQuietHours()) {
+      const fcmResult = await sendPushNotification({
+        fcmToken: recipient.fcmToken,
+        title: 'New Message',
+        body: `${sender.name}: ${notificationData.messageContent.substring(0, 100)}`,
+        data: {
+          type: 'message',
+          senderId: senderId.toString(),
+          senderName: sender.name,
+          conversationId: notificationData.conversationId || '',
+          notificationId: notification._id.toString(),
+          clickAction: 'OPEN_CONVERSATION'
+        },
+        priority: 'normal',
+        sound: 'message_sound'
+      });
+
+      // 🔥 Handle expired tokens
+      if (!fcmResult.success && fcmResult.reason === 'token_expired') {
+        console.log(`🧹 Cleaning up expired FCM token for user: ${recipient._id}`);
+        await cleanupExpiredTokens(recipient._id, recipient.fcmToken);
+      } else if (fcmResult.success) {
+        console.log(`✅ FCM push notification sent to ${recipient.name} for message from ${sender.name}`);
+      } else {
+        console.error(`❌ FCM push notification failed:`, fcmResult);
+      }
+    } else {
+      console.log(`⚠️ Skipping FCM notification for user ${recipient.name}:`, {
+        hasToken: !!recipient.fcmToken,
+        pushEnabled: recipient.notificationSettings?.pushNotifications,
+        isQuietHours: recipient.isInQuietHours()
+      });
+    }
+
+    // Send Socket.IO notification (for real-time when app is open)
     if (io) {
       io.to(`user-${notificationData.recipientId}`).emit('notification', {
         notification: {
@@ -486,8 +529,43 @@ async function createMessageNotification(senderId, notificationData) {
       // Update notification count
       await sendNotificationCount(notificationData.recipientId);
     }
+
+    console.log(`✅ Message notification created: ${sender.name} -> ${recipient.name}`);
+    
   } catch (error) {
     console.error('❌ Error creating message notification:', error);
+  }
+}
+
+/**
+ * Handle Stream Chat message webhook for FCM notifications
+ * Call this from a webhook endpoint when Stream Chat sends messages
+ */
+async function handleStreamChatMessage(messageData) {
+  try {
+    console.log('📨 Processing Stream Chat message for notifications:', messageData);
+    
+    const { user, message, channel } = messageData;
+    
+    // Extract recipient IDs from channel members (excluding sender)
+    const recipientIds = channel.members
+      .filter(member => member.user_id !== user.id)
+      .map(member => member.user_id);
+    
+    // Send notification to each recipient
+    for (const recipientId of recipientIds) {
+      await createMessageNotification(user.id, {
+        recipientId: recipientId,
+        messageContent: message.text || 'New message',
+        conversationId: channel.id
+      });
+    }
+    
+    return { success: true, notificationsSent: recipientIds.length };
+    
+  } catch (error) {
+    console.error('❌ Error handling Stream Chat message:', error);
+    return { success: false, error: error.message };
   }
 }
 

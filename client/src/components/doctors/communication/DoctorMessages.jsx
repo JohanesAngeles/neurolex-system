@@ -272,15 +272,16 @@ const loadPatientsWithProfile = async (profile) => {
       sender_type: 'doctor'
     });
     
-    // ✅ STEP 2: Trigger notification to mobile user (NEW CODE)
+    // ✅ STEP 2: Trigger FCM notification to mobile user (FIXED ENDPOINT)
     try {
       console.log('🔔 Triggering mobile notification...');
       
-      const response = await fetch('/api/notifications/message', {
+      // 🔥 FIXED: Use the correct endpoint from your notificationController
+      const response = await fetch('/api/notifications/create-message', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}` // Add auth token
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
           recipientId: selectedPatient._id,
@@ -290,9 +291,11 @@ const loadPatientsWithProfile = async (profile) => {
       });
       
       if (response.ok) {
-        console.log('✅ Mobile notification triggered successfully!');
+        const result = await response.json();
+        console.log('✅ FCM notification triggered successfully!', result);
       } else {
-        console.error('❌ Failed to trigger mobile notification:', response.status);
+        const errorText = await response.text();
+        console.error('❌ Failed to trigger FCM notification:', response.status, errorText);
       }
     } catch (notificationError) {
       console.error('❌ Error triggering notification:', notificationError);

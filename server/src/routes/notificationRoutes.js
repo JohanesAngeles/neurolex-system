@@ -43,6 +43,14 @@ router.post('/assignment', notificationController.createAssignmentNotification);
 // Message notifications (chat messages)
 router.post('/message', notificationController.createMessageNotification);
 
+// 🔥 NEW: Message notifications with FCM (fixed endpoint for frontend)
+/**
+ * @route   POST /api/notifications/create-message
+ * @desc    Create message notification with FCM
+ * @access  Private - Requires authentication
+ */
+router.post('/create-message', notificationController.createMessageNotification);
+
 // System notifications (automated system events)
 router.post('/system', notificationController.createSystemNotification);
 
@@ -63,6 +71,7 @@ router.get('/test', (req, res) => {
       'POST /api/notifications - Create generic notification',
       'POST /api/notifications/assignment - Create assignment notification',
       'POST /api/notifications/message - Create message notification',
+      'POST /api/notifications/create-message - Create message notification (FCM)', // 🔥 NEW
       'POST /api/notifications/system - Create system notification',
       'POST /api/notifications/call - Create call notification'
     ],
