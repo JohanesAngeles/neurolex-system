@@ -276,8 +276,15 @@ const loadPatientsWithProfile = async (profile) => {
     try {
       console.log('🔔 Triggering mobile notification...');
       
-      // 🔥 FIXED: Use the correct endpoint from your notificationController
-      const response = await fetch('/api/notifications/create-message', {
+      // Before the fetch call, add debug info:
+      const token = localStorage.getItem('token');
+      console.log('🔍 Auth token:', token ? 'EXISTS' : 'MISSING');
+      console.log('🔍 Calling URL:', '/api/notifications/message');
+      console.log('🔍 Recipient ID:', selectedPatient._id);
+      console.log('🔍 Message content:', newMessage.trim());
+      
+      // 🔥 FIXED: Use the working endpoint (/message not /create-message)
+      const response = await fetch('/api/notifications/message', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -296,6 +303,7 @@ const loadPatientsWithProfile = async (profile) => {
       } else {
         const errorText = await response.text();
         console.error('❌ Failed to trigger FCM notification:', response.status, errorText);
+        console.error('❌ Error details:', errorText);
       }
     } catch (notificationError) {
       console.error('❌ Error triggering notification:', notificationError);
