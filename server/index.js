@@ -696,10 +696,13 @@ if (journalRoutes) {
   console.log('✅ Journal routes mounted at /api/journal');
 }
 
-// Mount mood routes
-if (moodRoutes) {
+// Mount mood routes with tenant middleware
+if (moodRoutes && tenantMiddleware) {
+  app.use('/api/mood', protect, tenantMiddleware, moodRoutes);
+  console.log('✅ Mood routes mounted at /api/mood with tenant middleware');
+} else if (moodRoutes) {
   app.use('/api/mood', moodRoutes);
-  console.log('✅ Mood routes mounted at /api/mood');
+  console.log('✅ Mood routes mounted at /api/mood (no tenant middleware)');
 }
 
 // Mount billing routes
