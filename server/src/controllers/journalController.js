@@ -710,20 +710,64 @@ exports.analyzeJournalEntry = async (req, res) => {
     const { id } = req.params;
     const { sentiment, notes, useAI, applyChanges = true } = req.body;
     
+    console.log(`🩺 Doctor ${doctorId} attempting to analyze journal entry ${id}`);
+    
+    // Get the correct model
+    let JournalEntry;
+    if (req.tenantConnection) {
+      JournalEntry = req.tenantConnection.model('JournalEntry');
+      console.log('Using tenant connection for journal analysis');
+    } else {
+      JournalEntry = require('../models/JournalEntry');
+      console.log('Using default database for journal analysis');
+    }
+    
+    // ✅ FIXED: Use the same permission logic as getDoctorJournalEntry
     const entry = await JournalEntry.findOne({
       _id: id,
-      $or: [
-        { assignedDoctor: doctorId },
-        { isSharedWithDoctor: true }
+      $and: [
+        {
+          $or: [
+            { assignedDoctor: doctorId },              // Assigned to this doctor
+            { 
+              isSharedWithDoctor: true,
+              assignedDoctor: null                     // Unassigned but shared entries
+            }
+          ]
+        },
+        { isPrivate: { $ne: true } }                  // Exclude private entries
       ]
     });
     
     if (!entry) {
+      console.log(`❌ Journal entry ${id} not found or not accessible by doctor ${doctorId}`);
+      
+      // ✅ Enhanced debugging: Check what the actual entry looks like
+      const debugEntry = await JournalEntry.findById(id);
+      if (debugEntry) {
+        console.log(`📋 Entry exists but access denied:`, {
+          id: debugEntry._id,
+          assignedDoctor: debugEntry.assignedDoctor,
+          isSharedWithDoctor: debugEntry.isSharedWithDoctor,
+          isPrivate: debugEntry.isPrivate,
+          requestingDoctor: doctorId
+        });
+      } else {
+        console.log(`📋 Entry ${id} does not exist in database`);
+      }
+      
       return res.status(404).json({
         success: false,
         message: 'Journal entry not found or you do not have permission to analyze it'
       });
     }
+    
+    console.log(`✅ Found journal entry for analysis:`, {
+      id: entry._id,
+      assignedDoctor: entry.assignedDoctor || 'Unassigned',
+      isShared: entry.isSharedWithDoctor,
+      isPrivate: entry.isPrivate
+    });
     
     let aiAnalysis = null;
     if (useAI) {
@@ -759,6 +803,28 @@ exports.analyzeJournalEntry = async (req, res) => {
         }
       } catch (nlpError) {
         console.error('Error running NLP analysis:', nlpError);
+        
+        // ✅ Provide mock analysis in development mode
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Using mock AI analysis for development');
+          aiAnalysis = {
+            sentiment: { type: 'neutral', score: 65 },
+            emotions: [
+              { name: 'calm', score: 0.7 },
+              { name: 'thoughtful', score: 0.5 }
+            ],
+            highlights: [
+              {
+                text: "Sample highlighted text from journal",
+                keyword: "emotion",
+                type: "neutral"
+              }
+            ],
+            flags: [],
+            summary: "Mock analysis summary for development",
+            source: 'mock'
+          };
+        }
       }
     }
     
@@ -794,9 +860,11 @@ exports.analyzeJournalEntry = async (req, res) => {
       responseData.data = entry;
     }
     
+    console.log(`✅ Analysis completed successfully for entry ${id}`);
+    
     return res.status(200).json(responseData);
   } catch (error) {
-    console.error('Error analyzing journal entry:', error);
+    console.error('❌ Error analyzing journal entry:', error);
     return res.status(500).json({
       success: false,
       message: 'Error analyzing journal entry',
