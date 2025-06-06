@@ -2420,3 +2420,160 @@ exports.getDoctorPaymentMethods = async (req, res) => {
   }
 };
 
+/**
+ * End care relationship with a patient (terminate association)
+ * @authenticated - Doctor only
+ */
+exports.endPatientCare = async (req, res) => {
+  try {
+    console.log('🔴 endPatientCare called');
+    console.log('🏢 Tenant context:', {
+      tenantId: req.tenantId || 'None',
+      tenantDbName: req.tenantDbName || 'None',
+      tenantConnection: !!req.tenantConnection
+    });
+    
+    const doctorId = req.user._id || req.user.id;
+    const patientId = req.params.patientId;
+    
+    console.log(`🔍 Doctor ${doctorId} ending care for patient ${patientId}`);
+    
+    if (!patientId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Patient ID is required'
+      });
+    }
+    
+    // Validate ObjectId format
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(patientId)) {
+      console.log('❌ Invalid patient ID format:', patientId);
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid patient ID format'
+      });
+    }
+    
+    // Get tenant-specific PatientDoctorAssociation model
+    let PatientDoctorAssociation;
+    
+    if (req.tenantConnection) {
+      try {
+        PatientDoctorAssociation = req.tenantConnection.model('PatientDoctorAssociation');
+        console.log('✅ Using PatientDoctorAssociation model from tenant connection:', req.tenantDbName);
+      } catch (err) {
+        console.error('❌ Error getting PatientDoctorAssociation model from tenant connection:', err);
+        PatientDoctorAssociation = require('../models/PatientDoctorAssociation');
+        console.log('🔄 Falling back to global PatientDoctorAssociation model');
+      }
+    } else if (req.getModel) {
+      PatientDoctorAssociation = req.getModel('PatientDoctorAssociation');
+      console.log('✅ Using PatientDoctorAssociation model from req.getModel');
+    } else {
+      PatientDoctorAssociation = require('../models/PatientDoctorAssociation');
+      console.log('🔄 Using global PatientDoctorAssociation model (no tenant connection)');
+    }
+    
+    // Find the active association between doctor and patient
+    const association = await PatientDoctorAssociation.findOne({
+      doctor: doctorId,
+      patient: patientId,
+      status: 'active'
+    });
+    
+    if (!association) {
+      console.log('❌ No active association found between doctor and patient');
+      
+      // Check if any association exists (for debugging)
+      const anyAssociation = await PatientDoctorAssociation.findOne({
+        doctor: doctorId,
+        patient: patientId
+      });
+      
+      if (anyAssociation) {
+        console.log('🔍 Association exists but status is:', anyAssociation.status);
+        return res.status(400).json({
+          success: false,
+          message: `Care relationship is already ${anyAssociation.status}`,
+          currentStatus: anyAssociation.status
+        });
+      }
+      
+      return res.status(404).json({
+        success: false,
+        message: 'No active care relationship found with this patient'
+      });
+    }
+    
+    console.log('✅ Found active association:', {
+      id: association._id,
+      status: association.status,
+      createdAt: association.createdAt
+    });
+    
+    // Get patient info for the response
+    let UserModel;
+    if (req.tenantConnection) {
+      try {
+        UserModel = req.tenantConnection.model('User');
+      } catch (err) {
+        console.error('Error getting User model:', err);
+        UserModel = require('../models/User');
+      }
+    } else if (req.getModel) {
+      UserModel = req.getModel('User');
+    } else {
+      UserModel = require('../models/User');
+    }
+    
+    const patient = await UserModel.findById(patientId).select('firstName lastName email');
+    
+    // Update the association status to 'terminated'
+    association.status = 'terminated';
+    association.updatedAt = new Date();
+    
+    // Add a note about the termination
+    association.notes.push({
+      content: 'Care relationship ended by doctor',
+      createdBy: doctorId,
+      createdAt: new Date()
+    });
+    
+    // Deactivate all assigned templates
+    association.assignedTemplates.forEach(template => {
+      template.active = false;
+    });
+    
+    await association.save();
+    
+    console.log('✅ Care relationship terminated successfully');
+    
+    // Optional: You might want to notify the patient via email/notification
+    // This is where you could add notification logic
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Care relationship ended successfully',
+      data: {
+        associationId: association._id,
+        patient: patient ? {
+          id: patient._id,
+          name: `${patient.firstName} ${patient.lastName}`,
+          email: patient.email
+        } : null,
+        terminatedAt: association.updatedAt,
+        previousStatus: 'active',
+        newStatus: 'terminated'
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error ending patient care:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to end care relationship',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+};

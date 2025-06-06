@@ -1,4 +1,4 @@
-// server/src/routes/doctorRoutes.js - COMPLETE VERSION WITH BILLING ROUTES
+// server/src/routes/doctorRoutes.js - COMPLETE VERSION WITH BILLING ROUTES + END CARE
 const express = require('express');
 const router = express.Router();
 const doctorController = require('../controllers/doctorController');
@@ -102,6 +102,7 @@ router.use(restrictTo('doctor'));
 router.get('/profile', doctorController.getCurrentDoctorProfile);
 router.get('/dashboard/stats', doctorController.getDashboardStats);
 router.get('/patients', doctorController.getPatients);
+router.delete('/patients/:patientId/end-care', doctorController.endPatientCare); // ✅ NEW: End care route
 router.post('/assign-template', doctorController.assignTemplate);
 
 // Templates
