@@ -1,4 +1,4 @@
-// server/src/controllers/journalController.js - FIXED VERSION
+// server/src/controllers/journalController.js - FIXED VERSION WITH AUTO-DOCTOR ASSIGNMENT
 
 const JournalEntry = require('../models/JournalEntry');
 const PatientDoctorAssociation = require('../models/PatientDoctorAssociation');
@@ -7,7 +7,54 @@ const Appointment = require('../models/Appointment');
 const nlpService = require('../services/nlpService');
 const dbManager = require('../utils/dbManager');
 
-// SIMPLIFIED: Submit a new journal entry
+// ✅ FIXED: Helper function to find patient's assigned doctor
+async function findPatientAssignedDoctor(userId, tenantConnection = null) {
+  try {
+    console.log(`Finding assigned doctor for patient: ${userId}`);
+    
+    let Appointment, PatientDoctorAssociation;
+    
+    // Get the correct models based on tenant connection
+    if (tenantConnection) {
+      Appointment = tenantConnection.model('Appointment');
+      PatientDoctorAssociation = tenantConnection.model('PatientDoctorAssociation');
+    } else {
+      Appointment = require('../models/Appointment');
+      PatientDoctorAssociation = require('../models/PatientDoctorAssociation');
+    }
+    
+    // Strategy 1: Find from active/scheduled appointments (most reliable)
+    const activeAppointment = await Appointment.findOne({
+      patient: userId,
+      status: { $in: ['Scheduled', 'Completed'] }
+    }).sort({ appointmentDate: -1 }); // Get most recent appointment
+    
+    if (activeAppointment && activeAppointment.doctor) {
+      console.log(`Found doctor from appointment: ${activeAppointment.doctor}`);
+      return activeAppointment.doctor;
+    }
+    
+    // Strategy 2: Find from patient-doctor associations (fallback)
+    const association = await PatientDoctorAssociation.findOne({
+      patient: userId,
+      status: 'active'
+    });
+    
+    if (association && association.doctor) {
+      console.log(`Found doctor from association: ${association.doctor}`);
+      return association.doctor;
+    }
+    
+    console.log(`No assigned doctor found for patient: ${userId}`);
+    return null;
+    
+  } catch (error) {
+    console.error('Error finding assigned doctor:', error);
+    return null;
+  }
+}
+
+// ✅ FIXED: Submit a new journal entry with auto-doctor assignment
 exports.submitJournalEntry = async (req, res) => {
   try {
     console.log('Request received for journal submission');
@@ -61,7 +108,7 @@ exports.submitJournalEntry = async (req, res) => {
     
     console.log(`Processing journal entry for user ID: ${userId}`);
     
-    // SIMPLIFIED: Extract only rawText and sharing preferences
+    // Extract journal data
     const { rawText, isSharedWithDoctor, isPrivate } = req.body;
     
     console.log('Journal data received:', {
@@ -98,25 +145,44 @@ exports.submitJournalEntry = async (req, res) => {
       databaseUsed = 'default (required)';
     }
     
-    // SIMPLIFIED: Create journal entry with only essential fields
+    // ✅ NEW: Find and assign the patient's doctor
+    console.log('Finding assigned doctor for patient...');
+    const assignedDoctorId = await findPatientAssignedDoctor(userId, req.tenantConnection);
+    
+    if (assignedDoctorId) {
+      console.log(`✅ Found assigned doctor: ${assignedDoctorId}`);
+    } else {
+      console.log('⚠️ No assigned doctor found - journal will be unassigned');
+    }
+    
+    // ✅ FIXED: Create journal entry with assigned doctor
     const journalEntry = new JournalEntry({
       user: userId,
       rawText: rawText.trim(),
+      assignedDoctor: assignedDoctorId, // ✅ NOW PROPERLY ASSIGNED!
       isSharedWithDoctor: isSharedWithDoctor !== false,
       isPrivate: isPrivate || false,
       tenantId: req.tenantId
     });
     
     console.log('Saving journal entry to database...');
+    console.log('Journal entry data:', {
+      user: userId,
+      assignedDoctor: assignedDoctorId,
+      isSharedWithDoctor: journalEntry.isSharedWithDoctor,
+      isPrivate: journalEntry.isPrivate
+    });
     
     const savedEntry = await journalEntry.save();
     
-    console.log(`Journal entry saved successfully with ID: ${savedEntry._id} to database: ${databaseUsed}`);
+    console.log(`✅ Journal entry saved successfully with ID: ${savedEntry._id} to database: ${databaseUsed}`);
+    console.log(`✅ Assigned to doctor: ${savedEntry.assignedDoctor || 'None'}`);
     
     return res.status(201).json({
       success: true,
       data: savedEntry,
       message: 'Journal entry created successfully',
+      assignedDoctor: assignedDoctorId,
       databaseInfo: {
         name: databaseUsed
       }
@@ -140,7 +206,223 @@ exports.submitJournalEntry = async (req, res) => {
   }
 };
 
-// FIXED: Get journal entries for the logged-in user (REMOVED TEMPLATE POPULATION)
+// ✅ IMPROVED: Get doctor journal entries with better debugging
+exports.getDoctorJournalEntries = async (req, res) => {
+  try {
+    const { 
+      patient, 
+      dateFrom, 
+      dateTo, 
+      sentiment, 
+      analyzed, 
+      page = 1, 
+      limit = 10 
+    } = req.query;
+
+    const doctorId = req.user._id;
+    console.log(`🩺 Doctor ${doctorId} requesting journal entries`);
+
+    // ✅ IMPROVED: Better query construction
+    const query = {
+      $and: [
+        {
+          $or: [
+            { assignedDoctor: doctorId },
+            { 
+              isSharedWithDoctor: true,
+              assignedDoctor: null // Unassigned but shared entries
+            }
+          ]
+        },
+        { isPrivate: { $ne: true } } // Exclude private entries
+      ]
+    };
+    
+    if (patient) {
+      query.user = patient;
+      console.log(`📋 Filtering by patient: ${patient}`);
+    }
+    
+    if (dateFrom || dateTo) {
+      query.createdAt = {};
+      if (dateFrom) query.createdAt.$gte = new Date(dateFrom);
+      if (dateTo) query.createdAt.$lte = new Date(dateTo);
+      console.log(`📅 Date filter applied: ${dateFrom} to ${dateTo}`);
+    }
+    
+    if (sentiment) {
+      query['sentimentAnalysis.sentiment.type'] = sentiment;
+      console.log(`😊 Sentiment filter: ${sentiment}`);
+    }
+    
+    if (analyzed === 'analyzed') {
+      query['sentimentAnalysis.sentiment'] = { $exists: true };
+    } else if (analyzed === 'unanalyzed') {
+      query['sentimentAnalysis.sentiment'] = { $exists: false };
+    }
+
+    const skip = (page - 1) * limit;
+    
+    console.log('🔍 Final query:', JSON.stringify(query, null, 2));
+    
+    // Get the correct model
+    let JournalEntry;
+    if (req.tenantConnection) {
+      JournalEntry = req.tenantConnection.model('JournalEntry');
+      console.log('Using tenant connection for doctor journal entries');
+    } else {
+      JournalEntry = require('../models/JournalEntry');
+      console.log('Using default database for doctor journal entries');
+    }
+    
+    // Fetch entries
+    const entries = await JournalEntry.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit))
+      .populate({
+        path: 'user',
+        select: 'firstName lastName'
+      })
+      .populate({
+        path: 'assignedDoctor',
+        select: 'firstName lastName'
+      });
+
+    const total = await JournalEntry.countDocuments(query);
+    
+    console.log(`📊 Found ${entries.length} journal entries out of ${total} total for doctor ${doctorId}`);
+    
+    // Enhanced debugging: Log each entry details
+    entries.forEach((entry, index) => {
+      console.log(`Entry ${index + 1}:`, {
+        id: entry._id,
+        patient: entry.user ? `${entry.user.firstName} ${entry.user.lastName}` : 'Unknown',
+        assignedDoctor: entry.assignedDoctor || 'Unassigned',
+        isShared: entry.isSharedWithDoctor,
+        isPrivate: entry.isPrivate,
+        date: entry.createdAt
+      });
+    });
+
+    // Transform entries for doctor view
+    const transformedEntries = entries.map(entry => ({
+      _id: entry._id,
+      date: entry.createdAt,
+      patientName: entry.user ? `${entry.user.firstName} ${entry.user.lastName}` : 'Unknown',
+      content: entry.rawText ? entry.rawText.substring(0, 100) + '...' : 'No content',
+      sentiment: entry.sentimentAnalysis?.sentiment,
+      isAnalyzed: !!entry.sentimentAnalysis?.sentiment,
+      isShared: entry.isSharedWithDoctor,
+      isPrivate: entry.isPrivate,
+      assignedDoctor: entry.assignedDoctor
+    }));
+
+    return res.status(200).json({
+      success: true,
+      data: transformedEntries,
+      pagination: {
+        total,
+        page: Number(page),
+        limit: Number(limit),
+        pages: Math.ceil(total / Number(limit))
+      },
+      debug: {
+        doctorId,
+        queryUsed: query,
+        totalFound: total
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error fetching doctor journal entries:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching journal entries',
+      error: error.message
+    });
+  }
+};
+
+// ✅ IMPROVED: Get specific doctor journal entry
+exports.getDoctorJournalEntry = async (req, res) => {
+  try {
+    const doctorId = req.user._id;
+    const { id } = req.params;
+    
+    console.log(`🩺 Doctor ${doctorId} requesting journal entry ${id}`);
+    
+    // Get the correct model
+    let JournalEntry;
+    if (req.tenantConnection) {
+      JournalEntry = req.tenantConnection.model('JournalEntry');
+    } else {
+      JournalEntry = require('../models/JournalEntry');
+    }
+    
+    // ✅ IMPROVED: Better query for single entry
+    const entry = await JournalEntry.findOne({
+      _id: id,
+      $and: [
+        {
+          $or: [
+            { assignedDoctor: doctorId },
+            { 
+              isSharedWithDoctor: true,
+              assignedDoctor: null
+            }
+          ]
+        },
+        { isPrivate: { $ne: true } }
+      ]
+    })
+    .populate({
+      path: 'user',
+      select: 'firstName lastName'
+    })
+    .populate({
+      path: 'assignedDoctor',
+      select: 'firstName lastName'
+    });
+    
+    if (!entry) {
+      console.log(`❌ Journal entry ${id} not found or not accessible by doctor ${doctorId}`);
+      return res.status(404).json({
+        success: false,
+        message: 'Journal entry not found or you do not have permission to view it'
+      });
+    }
+    
+    console.log(`✅ Found journal entry for doctor:`, {
+      id: entry._id,
+      patient: entry.user ? `${entry.user.firstName} ${entry.user.lastName}` : 'Unknown',
+      assignedDoctor: entry.assignedDoctor || 'Unassigned',
+      isShared: entry.isSharedWithDoctor
+    });
+    
+    // Transform entry
+    const transformedEntry = {
+      ...entry.toObject(),
+      patientName: entry.user ? `${entry.user.firstName} ${entry.user.lastName}` : 'Unknown',
+      date: entry.createdAt,
+      sentiment: entry.sentimentAnalysis?.sentiment,
+      isAnalyzed: !!entry.sentimentAnalysis?.sentiment
+    };
+    
+    return res.status(200).json({
+      success: true,
+      data: transformedEntry
+    });
+  } catch (error) {
+    console.error('❌ Error fetching doctor journal entry:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching journal entry',
+      error: error.message
+    });
+  }
+};
+
+// Keep all other existing methods unchanged...
 exports.getUserJournalEntries = async (req, res) => {
   try {
     const userId = req.user?.id || req.user?._id || req.userId;
@@ -201,7 +483,7 @@ exports.getUserJournalEntries = async (req, res) => {
     
     console.log(`Querying journal entries with:`, query);
     
-    // FIXED: Get entries WITHOUT populating template (removed .populate('template'))
+    // Get entries
     const entries = await JournalEntry.find(query)
       .sort({ createdAt: -1 }) // Most recent first
       .skip(skip)
@@ -242,13 +524,12 @@ exports.getUserJournalEntries = async (req, res) => {
   }
 };
 
-// FIXED: Get a specific journal entry (REMOVED TEMPLATE POPULATION)
+// Keep all other existing methods unchanged...
 exports.getJournalEntry = async (req, res) => {
   try {
     const userId = req.user._id;
     const { id } = req.params;
     
-    // FIXED: Find the entry WITHOUT populating template
     const entry = await JournalEntry.findOne({
       _id: id,
       $or: [
@@ -285,14 +566,12 @@ exports.getJournalEntry = async (req, res) => {
   }
 };
 
-// SIMPLIFIED: Update a journal entry
 exports.updateJournalEntry = async (req, res) => {
   try {
     const userId = req.user._id;
     const { id } = req.params;
     const { rawText, isPrivate, isSharedWithDoctor } = req.body;
     
-    // Find the entry
     const entry = await JournalEntry.findOne({
       _id: id,
       user: userId
@@ -305,12 +584,10 @@ exports.updateJournalEntry = async (req, res) => {
       });
     }
     
-    // SIMPLIFIED: Update only essential fields
     if (rawText !== undefined) entry.rawText = rawText;
     if (isPrivate !== undefined) entry.isPrivate = isPrivate;
     if (isSharedWithDoctor !== undefined) entry.isSharedWithDoctor = isSharedWithDoctor;
     
-    // Save changes
     await entry.save();
     
     return res.status(200).json({
@@ -327,13 +604,11 @@ exports.updateJournalEntry = async (req, res) => {
   }
 };
 
-// Delete a journal entry (unchanged)
 exports.deleteJournalEntry = async (req, res) => {
   try {
     const userId = req.user._id;
     const { id } = req.params;
     
-    // Find and delete the entry
     const entry = await JournalEntry.findOneAndDelete({
       _id: id,
       user: userId
@@ -360,7 +635,7 @@ exports.deleteJournalEntry = async (req, res) => {
   }
 };
 
-// FIXED: Get default templates (REMOVED TEMPLATE POPULATION FROM DOCTOR METHODS)
+// Keep all other methods the same (templates, analysis, notes, etc.)
 exports.getDefaultTemplates = async (req, res) => {
   try {
     const templates = await FormTemplate.find({ 
@@ -382,7 +657,6 @@ exports.getDefaultTemplates = async (req, res) => {
   }
 };
 
-// Get assigned templates for the current user (unchanged)
 exports.getAssignedTemplates = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -429,150 +703,6 @@ exports.getAssignedTemplates = async (req, res) => {
     });
   }
 };
-
-// FIXED: Get doctor journal entries (REMOVED TEMPLATE POPULATION)
-exports.getDoctorJournalEntries = async (req, res) => {
-  try {
-    const { 
-      patient, 
-      dateFrom, 
-      dateTo, 
-      sentiment, 
-      analyzed, 
-      page = 1, 
-      limit = 10 
-    } = req.query;
-
-    const doctorId = req.user._id;
-
-    const query = {
-      $or: [
-        { assignedDoctor: doctorId },
-        { isSharedWithDoctor: true }
-      ]
-    };
-    
-    if (patient) {
-      query.user = patient;
-    }
-    
-    if (dateFrom || dateTo) {
-      query.createdAt = {};
-      if (dateFrom) query.createdAt.$gte = new Date(dateFrom);
-      if (dateTo) query.createdAt.$lte = new Date(dateTo);
-    }
-    
-    if (sentiment) {
-      query['sentimentAnalysis.sentiment.type'] = sentiment;
-    }
-    
-    if (analyzed === 'analyzed') {
-      query['sentimentAnalysis.sentiment'] = { $exists: true };
-    } else if (analyzed === 'unanalyzed') {
-      query['sentimentAnalysis.sentiment'] = { $exists: false };
-    }
-
-    const skip = (page - 1) * limit;
-    
-    // FIXED: Fetch entries WITHOUT populating template
-    const entries = await JournalEntry.find(query)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(Number(limit))
-      .populate({
-        path: 'user',
-        select: 'firstName lastName'
-      });
-
-    const total = await JournalEntry.countDocuments(query);
-
-    // SIMPLIFIED: Transform entries for doctor view
-    const transformedEntries = entries.map(entry => ({
-      _id: entry._id,
-      date: entry.createdAt,
-      patientName: entry.user ? `${entry.user.firstName} ${entry.user.lastName}` : 'Unknown',
-      content: entry.rawText ? entry.rawText.substring(0, 100) + '...' : 'No content',
-      sentiment: entry.sentimentAnalysis?.sentiment,
-      isAnalyzed: !!entry.sentimentAnalysis?.sentiment,
-      isShared: entry.isSharedWithDoctor,
-      isPrivate: entry.isPrivate
-    }));
-
-    return res.status(200).json({
-      success: true,
-      data: transformedEntries,
-      pagination: {
-        total,
-        page: Number(page),
-        limit: Number(limit),
-        pages: Math.ceil(total / Number(limit))
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching journal entries:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Error fetching journal entries',
-      error: error.message
-    });
-  }
-};
-
-// FIXED: Get doctor journal entry (REMOVED TEMPLATE POPULATION)
-exports.getDoctorJournalEntry = async (req, res) => {
-  try {
-    const doctorId = req.user._id;
-    const { id } = req.params;
-    
-    // FIXED: Find the entry WITHOUT populating template
-    const entry = await JournalEntry.findOne({
-      _id: id,
-      $or: [
-        { assignedDoctor: doctorId },
-        { isSharedWithDoctor: true }
-      ]
-    })
-    .populate({
-      path: 'user',
-      select: 'firstName lastName'
-    })
-    .populate({
-      path: 'assignedDoctor',
-      select: 'firstName lastName'
-    });
-    
-    if (!entry) {
-      return res.status(404).json({
-        success: false,
-        message: 'Journal entry not found or you do not have permission to view it'
-      });
-    }
-    
-    // SIMPLIFIED: Transform entry
-    const transformedEntry = {
-      ...entry.toObject(),
-      patientName: entry.user ? `${entry.user.firstName} ${entry.user.lastName}` : 'Unknown',
-      date: entry.createdAt,
-      sentiment: entry.sentimentAnalysis?.sentiment,
-      isAnalyzed: !!entry.sentimentAnalysis?.sentiment
-    };
-    
-    return res.status(200).json({
-      success: true,
-      data: transformedEntry
-    });
-  } catch (error) {
-    console.error('Error fetching journal entry:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Error fetching journal entry',
-      error: error.message
-    });
-  }
-};
-
-// All other methods remain the same...
-// (analyzeJournalEntry, addDoctorNoteToJournalEntry, getUserJournalCount)
 
 exports.analyzeJournalEntry = async (req, res) => {
   try {
