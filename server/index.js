@@ -456,14 +456,17 @@ try {
   console.warn('⚠️ Notification routes failed to load:', error.message);
 }
 
-if (notificationRoutes) {
-  app.use('/api/notifications', notificationRoutes);
-  console.log('✅ Notification routes mounted at /api/notifications');
+if (notificationRoutes && tenantMiddleware) {
+  app.use('/api/notifications', protect, tenantMiddleware, notificationRoutes);
+  console.log('✅ Notification routes mounted at /api/notifications with tenant middleware');
   console.log('   - POST /api/notifications/message (Message notifications)');
   console.log('   - POST /api/notifications/assignment (Assignment notifications)');
   console.log('   - POST /api/notifications/system (System notifications)');
   console.log('   - POST /api/notifications/call (Call notifications)');
   console.log('   - GET /api/notifications (Get all notifications)');
+} else if (notificationRoutes) {
+  app.use('/api/notifications', notificationRoutes);
+  console.log('✅ Notification routes mounted at /api/notifications (no tenant middleware)');
 }
 
 // Patient-facing endpoints
