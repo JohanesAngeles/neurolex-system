@@ -741,21 +741,6 @@ exports.analyzeJournalEntry = async (req, res) => {
     
     if (!entry) {
       console.log(`❌ Journal entry ${id} not found or not accessible by doctor ${doctorId}`);
-      
-      // ✅ Enhanced debugging: Check what the actual entry looks like
-      const debugEntry = await JournalEntry.findById(id);
-      if (debugEntry) {
-        console.log(`📋 Entry exists but access denied:`, {
-          id: debugEntry._id,
-          assignedDoctor: debugEntry.assignedDoctor,
-          isSharedWithDoctor: debugEntry.isSharedWithDoctor,
-          isPrivate: debugEntry.isPrivate,
-          requestingDoctor: doctorId
-        });
-      } else {
-        console.log(`📋 Entry ${id} does not exist in database`);
-      }
-      
       return res.status(404).json({
         success: false,
         message: 'Journal entry not found or you do not have permission to analyze it'
@@ -778,8 +763,20 @@ exports.analyzeJournalEntry = async (req, res) => {
         
         if (textToAnalyze) {
           console.log('Analyzing text with NLP service:', textToAnalyze.substring(0, 100) + '...');
-          aiAnalysis = await nlpService.analyzeJournalEntry({ text: textToAnalyze });
-          console.log('NLP analysis result:', JSON.stringify(aiAnalysis));
+          
+          // ✅ NEW: Add timeout wrapper for AI analysis
+          const AI_TIMEOUT = 20000; // 20 seconds timeout
+          
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('AI analysis timeout')), AI_TIMEOUT);
+          });
+          
+          const analysisPromise = nlpService.analyzeJournalEntry({ text: textToAnalyze });
+          
+          // Race between AI analysis and timeout
+          aiAnalysis = await Promise.race([analysisPromise, timeoutPromise]);
+          
+          console.log('NLP analysis completed successfully:', JSON.stringify(aiAnalysis));
           
           if (applyChanges && aiAnalysis && !aiAnalysis.error) {
             if (!entry.sentimentAnalysis) {
@@ -804,30 +801,55 @@ exports.analyzeJournalEntry = async (req, res) => {
       } catch (nlpError) {
         console.error('Error running NLP analysis:', nlpError);
         
-        // ✅ Provide mock analysis in development mode
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Using mock AI analysis for development');
-          aiAnalysis = {
-            sentiment: { type: 'neutral', score: 65 },
-            emotions: [
-              { name: 'calm', score: 0.7 },
-              { name: 'thoughtful', score: 0.5 }
-            ],
-            highlights: [
-              {
-                text: "Sample highlighted text from journal",
-                keyword: "emotion",
-                type: "neutral"
-              }
-            ],
-            flags: [],
-            summary: "Mock analysis summary for development",
-            source: 'mock'
+        // ✅ NEW: Provide fallback analysis when AI fails or times out
+        console.log('Using fallback analysis due to AI timeout/error');
+        aiAnalysis = {
+          sentiment: { 
+            type: 'neutral', 
+            score: 50,
+            confidence: 0.5 
+          },
+          emotions: [
+            { name: 'thoughtful', score: 0.6 },
+            { name: 'reflective', score: 0.4 }
+          ],
+          highlights: [
+            {
+              text: "Analysis temporarily unavailable",
+              keyword: "system",
+              type: "neutral"
+            }
+          ],
+          flags: [],
+          summary: "AI analysis timed out. Manual review recommended.",
+          source: 'fallback',
+          note: 'AI service was unavailable or took too long to respond.'
+        };
+        
+        // Save the fallback analysis if applyChanges is true
+        if (applyChanges) {
+          if (!entry.sentimentAnalysis) {
+            entry.sentimentAnalysis = {};
+          }
+          
+          entry.sentimentAnalysis = {
+            sentiment: aiAnalysis.sentiment,
+            emotions: aiAnalysis.emotions,
+            highlights: aiAnalysis.highlights,
+            flags: aiAnalysis.flags,
+            summary: aiAnalysis.summary,
+            analyzed: true,
+            analyzedAt: new Date(),
+            analyzedBy: doctorId,
+            source: 'fallback'
           };
+          
+          await entry.save();
         }
       }
     }
     
+    // Handle manual sentiment and notes
     if (sentiment && applyChanges) {
       if (!entry.sentimentAnalysis) {
         entry.sentimentAnalysis = {};
