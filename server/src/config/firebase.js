@@ -1,18 +1,28 @@
-// server/config/firebase.js - FIREBASE ADMIN CONFIGURATION
+// server/config/firebase.js - FIREBASE ADMIN CONFIGURATION - FIXED VERSION
 
 const admin = require('firebase-admin');
 
 let firebaseApp = null;
 
 /**
- * Initialize Firebase Admin SDK
+ * Initialize Firebase Admin SDK - FIXED to prevent double initialization
  */
 function initializeFirebase() {
   try {
-    // Check if already initialized
+    // 🔥 FIXED: Check if already initialized first
     if (firebaseApp) {
       console.log('🔥 Firebase Admin already initialized');
       return firebaseApp;
+    }
+
+    // 🔥 FIXED: Check if default app already exists
+    try {
+      firebaseApp = admin.app(); // Get existing default app
+      console.log('🔥 Using existing Firebase default app');
+      return firebaseApp;
+    } catch (error) {
+      // Default app doesn't exist, create it
+      console.log('🔥 Creating new Firebase app...');
     }
 
     // Method 1: Use environment variable (recommended for production)
@@ -81,17 +91,17 @@ function initializeFirebase() {
 }
 
 /**
- * Get Firebase Admin instance
+ * Get Firebase Admin instance - FIXED
  */
 function getFirebaseAdmin() {
   if (!firebaseApp) {
-    return initializeFirebase();
+    firebaseApp = initializeFirebase();
   }
   return firebaseApp;
 }
 
 /**
- * Send push notification to a specific user
+ * Send push notification to a specific user - FIXED
  */
 async function sendPushNotification({
   fcmToken,
@@ -102,12 +112,30 @@ async function sendPushNotification({
   sound = 'default'
 }) {
   try {
+    console.log('🔥 Attempting to send FCM notification...');
+    
+    // 🔥 FIXED: Get Firebase instance safely
     const firebase = getFirebaseAdmin();
     
     if (!firebase) {
       console.warn('⚠️ Firebase not available - skipping push notification');
       return { success: false, reason: 'Firebase not initialized' };
     }
+
+    if (!fcmToken) {
+      console.error('❌ No FCM token provided');
+      return {
+        success: false,
+        reason: 'no_token',
+        error: 'FCM token is required'
+      };
+    }
+
+    console.log('🔥 Sending FCM message:', {
+      token: fcmToken.substring(0, 20) + '...',
+      title,
+      body
+    });
 
     const message = {
       token: fcmToken,
@@ -155,11 +183,26 @@ async function sendPushNotification({
   } catch (error) {
     console.error('❌ Error sending push notification:', error);
     
-    if (error.code === 'messaging/registration-token-not-registered') {
-      return { success: false, reason: 'token_expired', error: error.code };
+    // Handle specific FCM errors
+    if (error.code === 'messaging/invalid-registration-token') {
+      return {
+        success: false,
+        reason: 'invalid_token',
+        error: 'FCM token is invalid or expired'
+      };
+    } else if (error.code === 'messaging/registration-token-not-registered') {
+      return {
+        success: false,
+        reason: 'unregistered_token',
+        error: 'FCM token is not registered'
+      };
+    } else {
+      return {
+        success: false,
+        reason: 'send_failed',
+        error: error.message || 'Failed to send push notification'
+      };
     }
-    
-    return { success: false, reason: 'send_failed', error: error.message };
   }
 }
 
