@@ -328,7 +328,7 @@ class NLPService {
       console.log('Trying Hugging Face sentiment model as primary analysis method');
       
       const response = await axios({
-        url: "https://api-inference.huggingface.co/models/cardiffnlp/twitter-roberta-base-sentiment-latest",
+        url: "https://api-inference.huggingface.co/models/cardiffnlp/twitter-roberta-base-sentiment",
         method: 'POST',
         headers: {
           Authorization: `Bearer ${this.API_KEY}`,
