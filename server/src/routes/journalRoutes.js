@@ -1,4 +1,4 @@
-// server/src/routes/journalRoutes.js
+// server/src/routes/journalRoutes.js - COMPLETE FILE WITH ALL ANALYSIS ROUTES
 const express = require('express');
 const router = express.Router();
 const journalController = require('../controllers/journalController');
@@ -11,7 +11,7 @@ router.use(protect);
 // Apply tenant middleware
 router.use(tenantMiddleware);
 
-// Fixed routes - removing problematic patterns
+// Patient journal routes
 router.post('/', journalController.submitJournalEntry);
 router.get('/', journalController.getUserJournalEntries);
 router.get('/templates', journalController.getAssignedTemplates);
@@ -21,7 +21,17 @@ router.get('/count', journalController.getUserJournalCount);
 // Doctor-specific routes
 router.get('/doctor', journalController.getDoctorJournalEntries);
 
-// Fixed: Simplified user journal entries route
+// ✅ AI Analysis and Notes routes (multiple endpoint variations for compatibility)
+router.post('/:id/analyze', journalController.analyzeJournalEntry);
+router.post('/analyze/:id', journalController.analyzeJournalEntry); // Alternative endpoint
+router.post('/entry/:id/analyze', journalController.analyzeJournalEntry); // Alternative endpoint
+
+// Doctor notes routes
+router.post('/:id/notes', journalController.addDoctorNoteToJournalEntry);
+router.post('/notes/:id', journalController.addDoctorNoteToJournalEntry); // Alternative endpoint
+router.post('/entry/:id/notes', journalController.addDoctorNoteToJournalEntry); // Alternative endpoint
+
+// User journal entries route
 router.get('/users/:userId/entries', async (req, res) => {
   try {
     const { userId } = req.params;
@@ -63,7 +73,7 @@ router.get('/users/:userId/entries', async (req, res) => {
   }
 });
 
-// Individual journal entry routes - keep these simple
+// Individual journal entry routes
 router.get('/entry/:id', journalController.getJournalEntry);
 router.put('/entry/:id', journalController.updateJournalEntry);
 router.delete('/entry/:id', journalController.deleteJournalEntry);

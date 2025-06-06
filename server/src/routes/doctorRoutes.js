@@ -1,9 +1,9 @@
-// server/src/routes/doctorRoutes.js - COMPLETE VERSION WITH BILLING ROUTES + APPOINTMENT MANAGEMENT + END CARE
+// server/src/routes/doctorRoutes.js - COMPLETE VERSION WITH FIXED AI ANALYSIS ROUTES
 const express = require('express');
 const router = express.Router();
 const doctorController = require('../controllers/doctorController');
 const journalController = require('../controllers/journalController');
-const billingController = require('../controllers/billingController'); // ✅ ADDED - This was missing!
+const billingController = require('../controllers/billingController');
 const { protect, restrictTo } = require('../middleware/auth');
 const tenantMiddleware = require('../middleware/tenantMiddleware');
 const multer = require('multer');
@@ -23,7 +23,7 @@ const doctorUploadFields = upload.fields([
   { name: 'certifications', maxCount: 5 }
 ]);
 
-// Configure multer for QR code uploads - ✅ ADDED
+// Configure multer for QR code uploads
 const qrUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
@@ -102,7 +102,7 @@ router.use(restrictTo('doctor'));
 router.get('/profile', doctorController.getCurrentDoctorProfile);
 router.get('/dashboard/stats', doctorController.getDashboardStats);
 router.get('/patients', doctorController.getPatients);
-router.delete('/patients/:patientId/end-care', doctorController.endPatientCare); // ✅ NEW: End care route
+router.delete('/patients/:patientId/end-care', doctorController.endPatientCare);
 router.post('/assign-template', doctorController.assignTemplate);
 
 // Templates
@@ -116,8 +116,10 @@ router.post('/templates/assign/:id', doctorController.assignTemplate);
 // Journal entries routes
 router.get('/journal-entries', journalController.getDoctorJournalEntries || doctorController.getJournalEntries);
 router.get('/journal-entries/:id', journalController.getDoctorJournalEntry || doctorController.getJournalEntry);
-router.post('/journal-entries/analyze/:id', journalController.analyzeJournalEntry || doctorController.analyzeJournalEntry);
-router.post('/journal-entries/notes/:id', journalController.addDoctorNoteToJournalEntry || doctorController.addNoteToJournalEntry);
+
+// ✅ FIXED: AI Analysis and Notes routes (corrected URL structure)
+router.post('/journal-entries/:id/analyze', journalController.analyzeJournalEntry || doctorController.analyzeJournalEntry);
+router.post('/journal-entries/:id/notes', journalController.addDoctorNoteToJournalEntry || doctorController.addNoteToJournalEntry);
 
 // ============================================================================
 // APPOINTMENT ROUTES - EXISTING + NEW MANAGEMENT ROUTES
@@ -173,7 +175,7 @@ router.get('/appointments/pending', async (req, res) => {
 });
 
 // ============================================================================
-// NEW APPOINTMENT MANAGEMENT ROUTES - THESE WERE MISSING!
+// NEW APPOINTMENT MANAGEMENT ROUTES
 // ============================================================================
 console.log('Adding appointment management routes...');
 
@@ -426,11 +428,7 @@ router.put('/appointments/:id/status', async (req, res) => {
 console.log('Appointment management routes added successfully');
 
 // ============================================================================
-// END OF APPOINTMENT MANAGEMENT ROUTES
-// ============================================================================
-
-// ============================================================================
-// BILLING ROUTES - THESE WERE COMPLETELY MISSING FROM YOUR FILE!
+// BILLING ROUTES
 // ============================================================================
 console.log('Adding billing routes...');
 
@@ -453,10 +451,6 @@ router.put('/billing/:billingId/status', billingController.updateBillingStatus);
 router.put('/billing/:billingId/mark-paid', billingController.markAsPaid);
 
 console.log('Billing routes added successfully');
-
-// ============================================================================
-// END OF BILLING ROUTES
-// ============================================================================
 
 console.log('Complete doctor routes with billing functionality and appointment management loaded successfully');
 
