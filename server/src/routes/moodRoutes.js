@@ -2,11 +2,8 @@
 const express = require('express');
 const router = express.Router();
 
-// Import middleware
-const { protect } = require('../middleware/auth');
-const { tenantMiddleware } = require('../middleware/tenantMiddleware');
-
 // Import controllers
+// Note: Authentication (protect) and tenant middleware are applied in server/index.js
 const {
   createMoodCheckIn,
   getMoodHistory,
@@ -18,10 +15,6 @@ const {
   saveMood,
   getUserMoods
 } = require('../controllers/moodController');
-
-// Apply authentication and tenant middleware to all routes
-router.use(protect);
-router.use(tenantMiddleware);
 
 // === NEW MOOD CHECK-IN ROUTES ===
 
