@@ -195,87 +195,47 @@ exports.createAssignmentNotification = async (req, res) => {
  * @param {object} res - Express response object
  */
 exports.createMessageNotification = async (req, res) => {
+  console.log('🔥 createMessageNotification function called!');
+  console.log('🔥 Request body:', req.body);
+  console.log('🔥 User:', req.user);
+  
   try {
     const { recipientId, messageContent, conversationId } = req.body;
     
+    console.log('🔥 Extracted data:', { recipientId, messageContent, conversationId });
+    
     if (!recipientId || !messageContent) {
+      console.log('❌ Missing required fields');
       return res.status(400).json({
         success: false,
         error: 'Recipient ID and message content are required'
       });
     }
 
+    console.log('🔥 About to find sender...');
     // Get sender info
     const senderId = req.user.id;
     const sender = await User.findById(senderId).select('name profilePicture');
     
+    console.log('🔥 Sender found:', sender);
+    
     if (!sender) {
+      console.log('❌ Sender not found');
       return res.status(404).json({
         success: false,
         error: 'Sender not found'
       });
     }
 
-    // Create notification
-    const notification = await Notification.create({
-      recipient: recipientId,
-      sender: senderId,
-      title: 'New Message',
-      message: `${sender.name}: ${messageContent.substring(0, 50)}${messageContent.length > 50 ? '...' : ''}`,
-      type: 'message',
-      data: {
-        conversationId,
-        messagePreview: messageContent.substring(0, 100),
-        senderInfo: {
-          id: senderId,
-          name: sender.name,
-          profilePicture: sender.profilePicture
-        }
-      },
-      read: false
-    });
-
-    await notification.populate('sender', 'name profilePicture');
-
-    // Emit real-time notification
-    const io = getIo();
-    if (io) {
-      io.to(`user-${recipientId}`).emit('notification', {
-        notification: {
-          _id: notification._id,
-          title: notification.title,
-          message: notification.message,
-          type: notification.type,
-          data: notification.data,
-          sender: notification.sender,
-          createdAt: notification.createdAt,
-          read: false
-        }
-      });
-
-      // Emit specific message notification event
-      io.to(`user-${recipientId}`).emit('newMessage', {
-        conversationId,
-        notification: notification
-      });
-
-      // Update notification count
-      const unreadCount = await Notification.countDocuments({
-        recipient: recipientId,
-        read: false
-      });
-
-      io.to(`user-${recipientId}`).emit('notificationCountUpdate', {
-        unreadCount
-      });
-    }
-
+    console.log('✅ SUCCESS - sending response');
     return res.status(201).json({
       success: true,
-      data: notification
+      message: 'Debug: Function reached end successfully',
+      data: { recipientId, messageContent, senderId }
     });
+    
   } catch (error) {
-    console.error('Error creating message notification:', error);
+    console.error('❌ Error in createMessageNotification:', error);
     return res.status(500).json({
       success: false,
       error: error.message || 'Failed to create message notification'
