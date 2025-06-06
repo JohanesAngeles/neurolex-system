@@ -213,9 +213,40 @@ exports.createMessageNotification = async (req, res) => {
     }
 
     console.log('🔥 About to find sender...');
+    
+    // 🔥 FIXED: Use tenant-aware models with schema definitions
+    let User, Notification;
+    
+    if (req.tenantConnection) {
+      // Use tenant connection with schema definitions
+      try {
+        const createUserSchema = require('../schemas/definitions/userSchema');
+        const createNotificationSchema = require('../schemas/definitions/notificationSchema');
+        
+        User = req.tenantConnection.model('User') || 
+               req.tenantConnection.model('User', createUserSchema());
+        
+        Notification = req.tenantConnection.model('Notification') || 
+                      req.tenantConnection.model('Notification', createNotificationSchema());
+        
+        console.log('🔥 Using tenant models with schemas');
+      } catch (schemaError) {
+        console.error('❌ Schema loading error:', schemaError);
+        // Fallback to global models
+        User = require('../models/User');
+        Notification = require('../models/Notification');
+      }
+    } else {
+      // Use global models
+      User = require('../models/User');
+      Notification = require('../models/Notification');
+    }
+    
+    console.log('🔥 Using tenant model:', !!req.tenantConnection);
+    
     // Get sender info
     const senderId = req.user.id;
-    const sender = await User.findById(senderId).select('name profilePicture');
+    const sender = await User.findById(senderId).select('firstName lastName profilePicture');
     
     console.log('🔥 Sender found:', sender);
     
@@ -227,11 +258,92 @@ exports.createMessageNotification = async (req, res) => {
       });
     }
 
+    // Get recipient info
+    const recipient = await User.findById(recipientId).select('firstName lastName fcmToken notificationSettings');
+    
+    console.log('🔥 Recipient found:', recipient ? 'YES' : 'NO');
+
+    // Create notification
+    const notification = await Notification.create({
+      recipient: recipientId,
+      sender: senderId,
+      title: 'New Message',
+      message: `${sender.firstName} ${sender.lastName}: ${messageContent.substring(0, 50)}${messageContent.length > 50 ? '...' : ''}`,
+      type: 'message',
+      data: {
+        conversationId,
+        messagePreview: messageContent.substring(0, 100),
+        senderInfo: {
+          id: senderId,
+          name: `${sender.firstName} ${sender.lastName}`,
+          profilePicture: sender.profilePicture
+        }
+      },
+      read: false
+    });
+
+    await notification.populate('sender', 'firstName lastName profilePicture');
+
+    console.log('🔥 Notification created:', notification._id);
+
+    // 🔥 NEW: Add FCM push notification
+    if (recipient && recipient.fcmToken) {
+      try {
+        console.log('🔥 Sending FCM notification...');
+        const { sendPushNotification } = require('../config/firebase');
+        
+        const fcmResult = await sendPushNotification({
+          fcmToken: recipient.fcmToken,
+          title: 'New Message',
+          body: `${sender.firstName} ${sender.lastName}: ${messageContent}`,
+          data: {
+            type: 'message',
+            senderId: senderId.toString(),
+            senderName: `${sender.firstName} ${sender.lastName}`,
+            conversationId: conversationId || '',
+            notificationId: notification._id.toString(),
+            clickAction: 'OPEN_CONVERSATION'
+          },
+          priority: 'normal'
+        });
+
+        if (fcmResult.success) {
+          console.log('✅ FCM notification sent successfully!');
+        } else {
+          console.error('❌ FCM notification failed:', fcmResult);
+        }
+      } catch (fcmError) {
+        console.error('❌ FCM error:', fcmError);
+      }
+    } else {
+      console.log('⚠️ No FCM token for recipient');
+    }
+
+    // Emit real-time notification via Socket.IO
+    const { getIo } = require('../utils/socket');
+    const io = getIo();
+    if (io) {
+      io.to(`user-${recipientId}`).emit('notification', {
+        notification: {
+          _id: notification._id,
+          title: notification.title,
+          message: notification.message,
+          type: notification.type,
+          data: notification.data,
+          sender: notification.sender,
+          createdAt: notification.createdAt,
+          read: false
+        }
+      });
+
+      console.log('🔥 Socket.IO notification sent');
+    }
+
     console.log('✅ SUCCESS - sending response');
     return res.status(201).json({
       success: true,
-      message: 'Debug: Function reached end successfully',
-      data: { recipientId, messageContent, senderId }
+      message: 'Message notification sent successfully!',
+      data: notification
     });
     
   } catch (error) {
