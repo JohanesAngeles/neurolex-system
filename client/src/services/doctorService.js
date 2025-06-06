@@ -83,31 +83,35 @@ const doctorService = {
   
   // Accept appointment
   acceptAppointment: async (appointmentId, responseMessage = '') => {
-    try {
-      console.log(`✅ Accepting appointment: ${appointmentId}`);
-      const response = await doctorApi.put(`/appointments/${appointmentId}/accept`, {
-        responseMessage
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error accepting appointment:', error);
-      throw error;
-    }
-  },
+  try {
+    console.log(`✅ Accepting appointment: ${appointmentId}`);
+    console.log(`🌐 Full URL will be: ${API_URL}/accept/${appointmentId}`);
+    
+    const response = await doctorApi.put(`/accept/${appointmentId}`, {
+      responseMessage
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error accepting appointment:', error);
+    throw error;
+  }
+},
   
   // Decline appointment
   declineAppointment: async (appointmentId, responseMessage = '') => {
-    try {
-      console.log(`❌ Declining appointment: ${appointmentId}`);
-      const response = await doctorApi.put(`/appointments/${appointmentId}/decline`, {
-        responseMessage
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error declining appointment:', error);
-      throw error;
-    }
-  },
+  try {
+    console.log(`❌ Declining appointment: ${appointmentId}`);
+    console.log(`🌐 Full URL will be: ${API_URL}/decline/${appointmentId}`);
+    
+    const response = await doctorApi.put(`/decline/${appointmentId}`, {
+      responseMessage
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error declining appointment:', error);
+    throw error;
+  }
+},
   
   // Update appointment status
   updateAppointmentStatus: async (appointmentId, status) => {
@@ -630,7 +634,7 @@ analyzeJournalEntry: async (id, analysis = {}) => {
     try {
       console.log('🔴 DoctorService: Ending care for patient:', patientId);
       console.log('🔍 Full URL being called:', `${API_URL}/patients/${patientId}/end-care`); // ADD THIS LINE
-      
+
       const response = await doctorApi.delete(`/patients/${patientId}/end-care`);
       
       console.log('✅ Care ended successfully:', response.data);
