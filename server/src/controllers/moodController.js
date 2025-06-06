@@ -1,5 +1,4 @@
 // server/src/controllers/moodController.js
-const Mood = require('../models/Mood');
 const { CloudinaryHelper } = require('../utils/cloudinaryHelper');
 
 /**
@@ -10,6 +9,10 @@ const { CloudinaryHelper } = require('../utils/cloudinaryHelper');
 const createMoodCheckIn = async (req, res) => {
   try {
     console.log('Mood check-in data received:', req.body);
+    console.log('Tenant Database:', req.tenantDbName);
+    
+    // ✅ FIXED: Use tenant connection instead of default
+    const Mood = req.tenantConnection.model('Mood');
     
     const { 
       moodRating,
@@ -30,11 +33,11 @@ const createMoodCheckIn = async (req, res) => {
     }
 
     // Check if user already has a mood entry within the last 2 hours
-    const recentMood = await Mood.findRecentMoodByUser(
-      req.user.tenantId, 
-      req.user.id, 
-      2
-    );
+    const recentMood = await Mood.findOne({
+      tenantId: req.user.tenantId,
+      userId: req.user.id,
+      timestamp: { $gte: new Date(Date.now() - (2 * 60 * 60 * 1000)) }
+    }).sort({ timestamp: -1 });
 
     if (recentMood) {
       return res.status(429).json({
@@ -69,7 +72,8 @@ const createMoodCheckIn = async (req, res) => {
       }
     });
     
-    console.log('Saving mood check-in to database:', moodEntry);
+    console.log('Saving mood check-in to tenant database:', req.tenantDbName);
+    console.log('Mood entry data:', moodEntry);
     
     const savedMood = await moodEntry.save();
     
@@ -104,6 +108,9 @@ const createMoodCheckIn = async (req, res) => {
  */
 const getMoodHistory = async (req, res) => {
   try {
+    // ✅ FIXED: Use tenant connection
+    const Mood = req.tenantConnection.model('Mood');
+    
     const { limit = 30, page = 1 } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
     
@@ -149,22 +156,12 @@ const getMoodHistory = async (req, res) => {
  */
 const getMoodAnalytics = async (req, res) => {
   try {
+    // ✅ FIXED: Use tenant connection
+    const Mood = req.tenantConnection.model('Mood');
+    
     const { days = 30 } = req.query;
     
-    const analytics = await Mood.getMoodAnalytics(
-      req.user.tenantId,
-      req.user.id,
-      parseInt(days)
-    );
-    
-    // Calculate mood trends
-    const trends = await Mood.getMoodTrends(
-      req.user.tenantId,
-      req.user.id,
-      parseInt(days)
-    );
-    
-    // Calculate mood score
+    // Get recent moods for calculation
     const recentMoods = await Mood.find({
       tenantId: req.user.tenantId,
       userId: req.user.id,
@@ -173,14 +170,29 @@ const getMoodAnalytics = async (req, res) => {
       }
     });
     
-    const moodScore = Mood.calculateMoodScore(recentMoods);
+    // Calculate basic analytics
+    const totalEntries = recentMoods.length;
+    const averageRating = totalEntries > 0 
+      ? recentMoods.reduce((sum, mood) => sum + mood.moodRating, 0) / totalEntries 
+      : 0;
+    
+    // Calculate mood distribution
+    const moodDistribution = recentMoods.reduce((dist, mood) => {
+      dist[mood.moodKey] = (dist[mood.moodKey] || 0) + 1;
+      return dist;
+    }, {});
+    
+    const moodScore = totalEntries > 0
+      ? Math.round(((averageRating - 1) / 4) * 100)
+      : 0;
     
     res.status(200).json({
       success: true,
       data: {
-        ...analytics,
+        totalEntries,
+        averageRating: Math.round(averageRating * 100) / 100,
         moodScore,
-        trends,
+        moodDistribution,
         period: `${days} days`
       }
     });
@@ -200,6 +212,9 @@ const getMoodAnalytics = async (req, res) => {
  */
 const getCurrentMood = async (req, res) => {
   try {
+    // ✅ FIXED: Use tenant connection
+    const Mood = req.tenantConnection.model('Mood');
+    
     const latestMood = await Mood.findOne({
       tenantId: req.user.tenantId,
       userId: req.user.id
@@ -235,11 +250,14 @@ const getCurrentMood = async (req, res) => {
  */
 const canCheckIn = async (req, res) => {
   try {
-    const recentMood = await Mood.findRecentMoodByUser(
-      req.user.tenantId,
-      req.user.id,
-      2
-    );
+    // ✅ FIXED: Use tenant connection
+    const Mood = req.tenantConnection.model('Mood');
+    
+    const recentMood = await Mood.findOne({
+      tenantId: req.user.tenantId,
+      userId: req.user.id,
+      timestamp: { $gte: new Date(Date.now() - (2 * 60 * 60 * 1000)) }
+    }).sort({ timestamp: -1 });
     
     if (recentMood) {
       const nextAllowedTime = new Date(recentMood.timestamp.getTime() + (2 * 60 * 60 * 1000));
@@ -279,6 +297,9 @@ const canCheckIn = async (req, res) => {
  */
 const getUserMoodHistory = async (req, res) => {
   try {
+    // ✅ FIXED: Use tenant connection
+    const Mood = req.tenantConnection.model('Mood');
+    
     const { userId } = req.params;
     const { limit = 30, page = 1 } = req.query;
     
