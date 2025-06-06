@@ -1,10 +1,9 @@
-/**
- * Journal Entry schema definition - Updated with title field
- */
+// server/src/schemas/definitions/journalEntrySchema.js - SIMPLIFIED VERSION (NO QUESTIONS!)
+
 const mongoose = require('mongoose');
 
 /**
- * Creates a Journal Entry schema
+ * Creates a simplified Journal Entry schema
  * @returns {Schema} Mongoose schema for JournalEntry model
  */
 function createJournalEntrySchema() {
@@ -14,94 +13,29 @@ function createJournalEntrySchema() {
       ref: 'User',
       required: [true, 'User reference is required']
     },
-    template: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'FormTemplate',
-      default: null
-    },
-    // New title field for the journal entry
-    title: {
-      type: String,
-      default: ''
-    },
-    // This will only show the journal to the doctor who has an appointment with the patient
+    
+    // REMOVED: template field (no more form templates)
+    // REMOVED: title field (no more titles)
+    // REMOVED: journalFields (all questions removed!)
+    // REMOVED: responses field (no more structured responses)
+    
+    // The assigned doctor for this journal entry
     assignedDoctor: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       default: null
     },
-    responses: {
-      type: Map,
-      of: mongoose.Schema.Types.Mixed,
-      default: {}
-    },
-    // Fields specific to the new journal structure
-    journalFields: {
-      // Gentle Reflections section
-      thoughtReflection: {
-        type: String,
-        default: ''
-      },
-      thoughtFeeling: {
-        type: String,
-        default: ''
-      },
-      selfKindness: {
-        type: String,
-        default: ''
-      },
-      
-      // Moments of Gratitude section
-      gratitude: {
-        type: String,
-        default: ''
-      },
-      
-      // Tender Moments section
-      challengeReflection: {
-        type: String,
-        default: ''
-      },
-      selfCareInChallenge: {
-        type: String,
-        default: ''
-      },
-      
-      // Self-Care Check-In section
-      selfCareActivities: {
-        type: [String],
-        default: []
-      },
-      otherSelfCare: {
-        type: String,
-        default: ''
-      },
-      
-      // Hopes for Tomorrow section
-      tomorrowIntention: {
-        type: String,
-        default: ''
-      },
-      
-      // A Loving Note section
-      lovingReminder: {
-        type: String,
-        default: ''
-      },
-      
-      // Mood tracking
-      quickMood: {
-        type: String,
-        enum: ['positive', 'neutral', 'negative'],
-        default: 'neutral'
-      }
-    },
     
+    // ONLY CONTENT FIELD - This is the main journal text
     rawText: {
       type: String,
-      default: ''
+      required: [true, 'Journal content is required'],
+      trim: true,
+      minlength: [1, 'Journal content cannot be empty'],
+      maxlength: [10000, 'Journal content cannot exceed 10,000 characters']
     },
     
+    // Keep sentiment analysis for mental health insights
     sentimentAnalysis: {
       sentiment: {
         type: {
@@ -110,46 +44,83 @@ function createJournalEntrySchema() {
           default: 'neutral'
         },
         emotions: [{
-          name: String,
-          score: Number
+          name: {
+            type: String,
+            required: true
+          },
+          score: {
+            type: Number,
+            min: 0,
+            max: 1
+          }
         }],
-        highlights: [{ // Add this new field
+        highlights: [{
           text: String,
           keyword: String,
-          type: String
+          type: {
+            type: String,
+            enum: ['emotion', 'concern', 'positive', 'negative']
+          }
         }],
         score: {
           type: Number,
-          default: 50
+          default: 50,
+          min: 0,
+          max: 100
         },
         confidence: {
           type: Number,
-          default: 0.5
+          default: 0.5,
+          min: 0,
+          max: 1
         },
-        flags: [String]
+        flags: [{
+          type: String,
+          enum: ['concern', 'urgent', 'positive', 'neutral']
+        }]
       },
       emotions: [{
-        name: String,
-        score: Number
+        name: {
+          type: String,
+          required: true
+        },
+        score: {
+          type: Number,
+          min: 0,
+          max: 1
+        }
       }],
-      summary: String,
-      flags: [String],
+      summary: {
+        type: String,
+        maxlength: [500, 'Summary cannot exceed 500 characters']
+      },
+      flags: [{
+        type: String,
+        enum: ['concern', 'urgent', 'positive', 'neutral', 'review_needed']
+      }],
       timestamp: {
         type: Date,
         default: Date.now
       },
-      source: String
+      source: {
+        type: String,
+        enum: ['ai', 'manual', 'automated'],
+        default: 'ai'
+      }
     },
     
+    // Doctor notes functionality
     doctorNotes: [{
       content: {
         type: String,
-        required: true
+        required: [true, 'Doctor note content is required'],
+        trim: true,
+        maxlength: [1000, 'Doctor note cannot exceed 1,000 characters']
       },
       createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true
+        required: [true, 'Doctor reference is required']
       },
       createdAt: {
         type: Date,
@@ -157,6 +128,7 @@ function createJournalEntrySchema() {
       }
     }],
     
+    // Privacy and sharing settings
     isPrivate: {
       type: Boolean,
       default: false
@@ -167,6 +139,7 @@ function createJournalEntrySchema() {
       default: true
     },
     
+    // Metadata
     createdAt: {
       type: Date,
       default: Date.now
@@ -177,7 +150,18 @@ function createJournalEntrySchema() {
       default: Date.now
     }
   }, {
-    timestamps: true
+    timestamps: true, // Automatically manage createdAt and updatedAt
+    versionKey: false, // Remove __v field
+    toJSON: { 
+      virtuals: true,
+      transform: function(doc, ret) {
+        // Remove sensitive fields from JSON output
+        delete ret._id;
+        ret.id = doc._id;
+        return ret;
+      }
+    },
+    toObject: { virtuals: true }
   });
 }
 

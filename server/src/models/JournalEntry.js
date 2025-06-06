@@ -1,4 +1,4 @@
-// server/src/models/JournalEntry.js
+// server/src/models/JournalEntry.js - SIMPLIFIED VERSION (NO QUESTIONS!)
 
 const mongoose = require('mongoose');
 
@@ -8,90 +8,25 @@ const JournalEntrySchema = new mongoose.Schema({
     ref: 'User',
     required: [true, 'User reference is required']
   },
-  template: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'FormTemplate',
-    default: null
-  },
-  // New field to store the specific doctor assigned to this journal entry
-  // This will only show the journal to the doctor who has an appointment with the patient
+  
+  // REMOVED: template field (no more templates needed)
+  // REMOVED: journalFields (all questions removed!)
+  
+  // The assigned doctor for this journal entry
   assignedDoctor: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     default: null
   },
-  responses: {
-    type: Map,
-    of: mongoose.Schema.Types.Mixed,
-    default: {}
-  },
-  // Fields specific to the new journal structure
-  journalFields: {
-    // Gentle Reflections section
-    thoughtReflection: {
-      type: String,
-      default: ''
-    },
-    thoughtFeeling: {
-      type: String,
-      default: ''
-    },
-    selfKindness: {
-      type: String,
-      default: ''
-    },
-    
-    // Moments of Gratitude section
-    gratitude: {
-      type: String,
-      default: ''
-    },
-    
-    // Tender Moments section
-    challengeReflection: {
-      type: String,
-      default: ''
-    },
-    selfCareInChallenge: {
-      type: String,
-      default: ''
-    },
-    
-    // Self-Care Check-In section
-    selfCareActivities: {
-      type: [String],
-      default: []
-    },
-    otherSelfCare: {
-      type: String,
-      default: ''
-    },
-    
-    // Hopes for Tomorrow section
-    tomorrowIntention: {
-      type: String,
-      default: ''
-    },
-    
-    // A Loving Note section
-    lovingReminder: {
-      type: String,
-      default: ''
-    },
-    
-    // Mood tracking
-    quickMood: {
-      type: String,
-      enum: ['positive', 'neutral', 'negative'],
-      default: 'neutral'
-    }
-  },
   
+  // ONLY CONTENT FIELD - This is the main journal text
   rawText: {
     type: String,
-    default: ''
+    required: [true, 'Journal content is required'],
+    trim: true
   },
   
+  // Keep sentiment analysis for analytics
   sentimentAnalysis: {
     sentiment: {
       type: {
@@ -103,7 +38,7 @@ const JournalEntrySchema = new mongoose.Schema({
         name: String,
         score: Number
       }],
-      highlights: [{ // Add this new field
+      highlights: [{
         text: String,
         keyword: String,
         type: String
@@ -131,6 +66,7 @@ const JournalEntrySchema = new mongoose.Schema({
     source: String
   },
   
+  // Keep doctor notes functionality
   doctorNotes: [{
     content: {
       type: String,
@@ -147,6 +83,7 @@ const JournalEntrySchema = new mongoose.Schema({
     }
   }],
   
+  // Privacy settings
   isPrivate: {
     type: Boolean,
     default: false
@@ -170,87 +107,94 @@ const JournalEntrySchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Method to extract a raw text version from all responses
+// SIMPLIFIED: Pre-save middleware (much simpler now)
 JournalEntrySchema.pre('save', function(next) {
   try {
-    // Extract text from journalFields if they exist
-    if (this.journalFields && (!this.rawText || this.rawText.trim() === '')) {
-      let extractedText = '';
-      
-      // Add text from each field
-      if (this.journalFields.thoughtReflection) {
-        extractedText += `Thought: ${this.journalFields.thoughtReflection} `;
-      }
-      
-      if (this.journalFields.thoughtFeeling) {
-        extractedText += `Feeling: ${this.journalFields.thoughtFeeling} `;
-      }
-      
-      if (this.journalFields.selfKindness) {
-        extractedText += `Self-kindness: ${this.journalFields.selfKindness} `;
-      }
-      
-      if (this.journalFields.gratitude) {
-        extractedText += `Gratitude: ${this.journalFields.gratitude} `;
-      }
-      
-      if (this.journalFields.challengeReflection) {
-        extractedText += `Challenge: ${this.journalFields.challengeReflection} `;
-      }
-      
-      if (this.journalFields.selfCareInChallenge) {
-        extractedText += `Self-care in challenge: ${this.journalFields.selfCareInChallenge} `;
-      }
-      
-      if (this.journalFields.selfCareActivities && this.journalFields.selfCareActivities.length > 0) {
-        extractedText += `Self-care activities: ${this.journalFields.selfCareActivities.join(', ')} `;
-      }
-      
-      if (this.journalFields.otherSelfCare) {
-        extractedText += `Other self-care: ${this.journalFields.otherSelfCare} `;
-      }
-      
-      if (this.journalFields.tomorrowIntention) {
-        extractedText += `Tomorrow's intention: ${this.journalFields.tomorrowIntention} `;
-      }
-      
-      if (this.journalFields.lovingReminder) {
-        extractedText += `Loving reminder: ${this.journalFields.lovingReminder} `;
-      }
-      
-      this.rawText = extractedText.trim();
+    // Ensure rawText is not empty
+    if (!this.rawText || this.rawText.trim() === '') {
+      const error = new Error('Journal content cannot be empty');
+      error.name = 'ValidationError';
+      return next(error);
     }
-    // If no journalFields but responses exist
-    else if (this.responses && (!this.rawText || this.rawText.trim() === '')) {
-      let extractedText = '';
-      
-      // Convert Map to object if necessary
-      const responsesObj = this.responses instanceof Map ? 
-        Object.fromEntries(this.responses) : this.responses;
-      
-      // Iterate through responses and extract text
-      for (const [key, value] of Object.entries(responsesObj)) {
-        if (typeof value === 'string') {
-          extractedText += value + ' ';
-        } else if (value && typeof value === 'object') {
-          if (Array.isArray(value)) {
-            extractedText += value.join(', ') + ' ';
-          } else if (value.text) {
-            extractedText += value.text + ' ';
-          } else if (value.answer) {
-            extractedText += value.answer + ' ';
-          }
-        }
-      }
-      
-      this.rawText = extractedText.trim();
-    }
+    
+    // Trim whitespace
+    this.rawText = this.rawText.trim();
     
     next();
   } catch (error) {
     next(error);
   }
 });
+
+// Add indexes for better performance
+JournalEntrySchema.index({ user: 1, createdAt: -1 });
+JournalEntrySchema.index({ assignedDoctor: 1, createdAt: -1 });
+JournalEntrySchema.index({ isSharedWithDoctor: 1 });
+
+// Instance method to get content preview
+JournalEntrySchema.methods.getContentPreview = function(maxLength = 100) {
+  if (!this.rawText) return '';
+  
+  if (this.rawText.length <= maxLength) {
+    return this.rawText;
+  }
+  
+  return this.rawText.substring(0, maxLength) + '...';
+};
+
+// Instance method to check if journal is accessible by doctor
+JournalEntrySchema.methods.isAccessibleByDoctor = function(doctorId) {
+  if (this.isPrivate) return false;
+  if (!this.isSharedWithDoctor) return false;
+  
+  // If assigned to specific doctor, only that doctor can access
+  if (this.assignedDoctor) {
+    return this.assignedDoctor.toString() === doctorId.toString();
+  }
+  
+  // Otherwise, any doctor with patient relationship can access
+  return true;
+};
+
+// Static method to find journals by user
+JournalEntrySchema.statics.findByUser = function(userId, options = {}) {
+  const {
+    limit = 10,
+    skip = 0,
+    sortBy = 'createdAt',
+    sortOrder = -1
+  } = options;
+  
+  return this.find({ user: userId })
+    .sort({ [sortBy]: sortOrder })
+    .limit(limit)
+    .skip(skip)
+    .select('-__v');
+};
+
+// Static method to find journals accessible by doctor
+JournalEntrySchema.statics.findAccessibleByDoctor = function(doctorId, options = {}) {
+  const {
+    limit = 10,
+    skip = 0,
+    sortBy = 'createdAt',
+    sortOrder = -1
+  } = options;
+  
+  return this.find({
+    isPrivate: false,
+    isSharedWithDoctor: true,
+    $or: [
+      { assignedDoctor: doctorId },
+      { assignedDoctor: null } // Not assigned to specific doctor
+    ]
+  })
+    .sort({ [sortBy]: sortOrder })
+    .limit(limit)
+    .skip(skip)
+    .populate('user', 'firstName lastName email')
+    .select('-__v');
+};
 
 const JournalEntry = mongoose.model('JournalEntry', JournalEntrySchema);
 
