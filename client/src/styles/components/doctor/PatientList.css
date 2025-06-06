@@ -616,3 +616,278 @@
     justify-content: flex-start;
   }
 }
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.end-care-modal {
+  background: white;
+  border-radius: 16px;
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  animation: modalSlideUp 0.3s ease-out;
+}
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-header {
+  text-align: center;
+  padding: 32px 32px 24px 32px;
+}
+
+.header-icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 24px;
+  background: linear-gradient(135deg, #6B8E7A 0%, #8BA68B 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.header-icon::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  background: linear-gradient(135deg, rgba(107, 142, 122, 0.2) 0%, rgba(139, 166, 139, 0.2) 100%);
+  border-radius: 50%;
+  z-index: -1;
+}
+
+.header-icon svg {
+  width: 36px;
+  height: 36px;
+  color: white;
+}
+
+.modal-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #6B8E7A;
+  margin: 0;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.patient-info-card {
+  margin: 0 32px 24px 32px;
+  background: #F0F8F4;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  border: 1px solid #E8F5E9;
+}
+
+.patient-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.patient-subtitle {
+  font-size: 14px;
+  color: #666;
+  font-style: italic;
+}
+
+.warning-message {
+  padding: 0 32px 24px 32px;
+  text-align: center;
+}
+
+.warning-message p {
+  margin: 0 0 12px 0;
+  color: #555;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.warning-message p:last-child {
+  margin-bottom: 0;
+}
+
+.understanding-section {
+  padding: 0 32px 32px 32px;
+}
+
+.checkbox-container {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+  padding: 16px;
+  background: #F8F9FA;
+  border-radius: 8px;
+  border: 1px solid #E9ECEF;
+  transition: all 0.2s ease;
+}
+
+.checkbox-container:hover {
+  background: #F1F3F4;
+}
+
+.understanding-checkbox {
+  width: 20px;
+  height: 20px;
+  accent-color: #4CAF50;
+  cursor: pointer;
+  margin: 0;
+}
+
+.checkmark {
+  /* You can customize this if you want a custom checkbox */
+}
+
+.checkbox-text {
+  font-size: 14px;
+  color: #333;
+  line-height: 1.4;
+  flex: 1;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  padding: 0 32px 32px 32px;
+}
+
+.cancel-button {
+  flex: 1;
+  padding: 12px 24px;
+  border: 1px solid #DDD;
+  background: white;
+  color: #666;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cancel-button:hover:not(:disabled) {
+  background: #F5F5F5;
+  border-color: #CCC;
+}
+
+.cancel-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.confirm-button {
+  flex: 1;
+  padding: 12px 24px;
+  background: #FF6B6B;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.confirm-button:hover:not(:disabled) {
+  background: #E55555;
+  transform: translateY(-1px);
+}
+
+.confirm-button.disabled,
+.confirm-button:disabled {
+  background: #CCC;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { 
+    transform: rotate(0deg); 
+  }
+  100% { 
+    transform: rotate(360deg); 
+  }
+}
+
+/* Responsive adjustments for modal */
+@media (max-width: 768px) {
+  .modal-overlay {
+    padding: 16px;
+  }
+  
+  .modal-header {
+    padding: 24px 24px 20px 24px;
+  }
+  
+  .header-icon {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 16px;
+  }
+  
+  .header-icon svg {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .modal-title {
+    font-size: 18px;
+  }
+  
+  .patient-info-card,
+  .warning-message,
+  .understanding-section,
+  .modal-actions {
+    margin-left: 24px;
+    margin-right: 24px;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  
+  .modal-actions {
+    flex-direction: column;
+  }
+  
+  .cancel-button,
+  .confirm-button {
+    width: 100%;
+  }
+}

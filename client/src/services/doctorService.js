@@ -625,6 +625,29 @@ analyzeJournalEntry: async (id, analysis = {}) => {
       throw error;
     }
   },
+
+   endPatientCare: async (patientId) => {
+    try {
+      console.log('🔴 DoctorService: Ending care for patient:', patientId);
+      console.log('🔍 Full URL being called:', `${API_URL}/patients/${patientId}/end-care`); // ADD THIS LINE
+      
+      const response = await doctorApi.delete(`/patients/${patientId}/end-care`);
+      
+      console.log('✅ Care ended successfully:', response.data);
+      return response.data;
+      
+    } catch (error) {
+      console.error('❌ Error ending patient care:', error);
+      
+      // Provide better error messages
+      if (error.response) {
+        const errorMessage = error.response.data?.message || `HTTP error! status: ${error.response.status}`;
+        throw new Error(errorMessage);
+      }
+      
+      throw error;
+    }
+  },
   
   // Patient Groups
   getPatientGroups: async () => {

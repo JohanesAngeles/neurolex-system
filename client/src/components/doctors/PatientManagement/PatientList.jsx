@@ -17,6 +17,12 @@ const PatientList = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage] = useState(10);
   
+  // End Care Modal States
+  const [showEndCareModal, setShowEndCareModal] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [endCareLoading, setEndCareLoading] = useState(false);
+  const [understanding, setUnderstanding] = useState(false);
+  
   // Fetch patients
   useEffect(() => {
     const fetchPatients = async () => {
@@ -138,12 +144,53 @@ const PatientList = () => {
     navigate(`/doctor/patients/${patientId}/edit`);
   };
   
-  const handleDeletePatient = (patientId) => {
-    // Add confirmation dialog
-    if (window.confirm('Are you sure you want to delete this patient? This action cannot be undone.')) {
-      // TODO: Implement delete functionality
-      console.log('Delete patient:', patientId);
-      // You can add the actual delete API call here
+  // NEW: Handle End Care Modal
+  const handleEndCare = (patient) => {
+    console.log('Opening end care modal for patient:', patient);
+    setSelectedPatient(patient);
+    setShowEndCareModal(true);
+    setUnderstanding(false); // Reset checkbox
+  };
+  
+  const closeEndCareModal = () => {
+    setShowEndCareModal(false);
+    setSelectedPatient(null);
+    setUnderstanding(false);
+    setEndCareLoading(false);
+  };
+  
+  // NEW: Confirm End Care
+  const confirmEndCare = async () => {
+    if (!understanding || !selectedPatient) {
+      return;
+    }
+    
+    try {
+      setEndCareLoading(true);
+      
+      // Call the API to end care
+      const response = await doctorService.endPatientCare(selectedPatient._id);
+      
+      if (response.success) {
+        // Remove the patient from the local state
+        setPatients(prev => prev.filter(p => p._id !== selectedPatient._id));
+        setFilteredPatients(prev => prev.filter(p => p._id !== selectedPatient._id));
+        
+        // Show success message (you can add a toast notification here)
+        console.log('Care ended successfully:', response.message);
+        
+        // Close modal
+        closeEndCareModal();
+        
+        // Optional: Show success toast
+        // toast.success('Care relationship ended successfully');
+      } else {
+        throw new Error(response.message || 'Failed to end care');
+      }
+    } catch (error) {
+      console.error('Error ending care:', error);
+      setError(error.message || 'Failed to end care relationship');
+      setEndCareLoading(false);
     }
   };
   
@@ -155,6 +202,11 @@ const PatientList = () => {
     // TODO: Implement PDF export functionality
     console.log('Export PDF functionality');
     alert('PDF export functionality coming soon!');
+  };
+  
+  const formatPatientName = (patient) => {
+    if (!patient) return 'Unknown Patient';
+    return `${patient.firstName || ''} ${patient.lastName || ''}`.trim() || patient.email || 'Unknown Patient';
   };
   
   if (loading) {
@@ -323,11 +375,11 @@ const PatientList = () => {
                       </svg>
                     </button>
                     
-                    {/* Delete Button */}
+                    {/* End Care Button (was Delete) */}
                     <button
                       className="btn-icon delete"
-                      onClick={() => handleDeletePatient(patient._id)}
-                      title="Delete patient"
+                      onClick={() => handleEndCare(patient)}
+                      title="End care relationship"
                     >
                       <svg className="icon-delete" viewBox="0 0 24 24">
                         <path d="M18 6L6 18"/>
@@ -374,6 +426,77 @@ const PatientList = () => {
           </div>
         )}
       </div>
+      
+      {/* END CARE MODAL */}
+      {showEndCareModal && (
+        <div className="modal-overlay">
+          <div className="modal-container end-care-modal">
+            {/* Header */}
+            <div className="modal-header">
+              <div className="header-icon">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" 
+                        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <h2 className="modal-title">END CARE FOR THIS PATIENT?</h2>
+            </div>
+
+            {/* Patient Info */}
+            <div className="patient-info-card">
+              <div className="patient-name">{formatPatientName(selectedPatient)}</div>
+              <div className="patient-subtitle">Mood Check-In Log - April 19, 2025</div>
+            </div>
+
+            {/* Warning Message */}
+            <div className="warning-message">
+              <p>Are you sure you want to remove this patient from your care?</p>
+              <p>This will end your access to their records and session history.</p>
+            </div>
+
+            {/* Understanding Checkbox */}
+            <div className="understanding-section">
+              <label className="checkbox-container">
+                <input
+                  type="checkbox"
+                  checked={understanding}
+                  onChange={(e) => setUnderstanding(e.target.checked)}
+                  className="understanding-checkbox"
+                />
+                <span className="checkmark"></span>
+                <span className="checkbox-text">
+                  I understand that ending care will terminate my professional relationship with this patient
+                </span>
+              </label>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="modal-actions">
+              <button
+                className="cancel-button"
+                onClick={closeEndCareModal}
+                disabled={endCareLoading}
+              >
+                Cancel
+              </button>
+              <button
+                className={`confirm-button ${!understanding ? 'disabled' : ''}`}
+                onClick={confirmEndCare}
+                disabled={!understanding || endCareLoading}
+              >
+                {endCareLoading ? (
+                  <>
+                    <div className="loading-spinner"></div>
+                    Ending Care...
+                  </>
+                ) : (
+                  'Yes, Remove'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
