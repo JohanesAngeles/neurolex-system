@@ -1,4 +1,4 @@
-// ADD THIS TO YOUR chatRoutes.js file:
+// server/src/routes/chatRoutes.js - COMPLETE VERSION WITH FCM TOKEN FIX
 
 const express = require('express');
 const router = express.Router();
@@ -139,7 +139,7 @@ router.post('/webhook', async (req, res) => {
   }
 });
 
-// 🔥 NEW: Endpoint to update user FCM token
+// 🔥 FIXED: Endpoint to update user FCM token
 /**
  * @route   POST /api/chat/fcm-token
  * @desc    Update user's FCM token for push notifications
@@ -158,10 +158,23 @@ router.post('/fcm-token', protect, async (req, res) => {
     
     console.log(`🔥 Updating FCM token for user: ${req.user.id}`);
     
-    // Get user model (with tenant support)
-    const User = req.tenantConnection ? 
-      req.tenantConnection.model('User') : 
-      require('../models/User');
+    // 🔥 FIXED: Use tenant-aware models with schema definitions
+    let User;
+    
+    if (req.tenantConnection) {
+      // Use tenant connection with schema definitions
+      try {
+        const createUserSchema = require('../schemas/definitions/userSchema');
+        User = req.tenantConnection.model('User') || 
+               req.tenantConnection.model('User', createUserSchema());
+        console.log('🔥 Using tenant User model');
+      } catch (schemaError) {
+        console.error('❌ Schema loading error:', schemaError);
+        User = require('../models/User');
+      }
+    } else {
+      User = require('../models/User');
+    }
     
     const user = await User.findById(req.user.id);
     
@@ -172,21 +185,31 @@ router.post('/fcm-token', protect, async (req, res) => {
       });
     }
     
-    // Update FCM token and device info
-    const updateSuccess = await user.updateFCMToken(fcmToken, deviceInfo);
+    // 🔥 FIXED: Direct property assignment instead of method call
+    user.fcmToken = fcmToken;
     
-    if (updateSuccess) {
-      console.log(`✅ FCM token updated successfully for user: ${user.fullName}`);
-      return res.status(200).json({
-        success: true,
-        message: 'FCM token updated successfully'
-      });
-    } else {
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to update FCM token'
-      });
+    // Optional: Store device info if your schema supports it
+    if (deviceInfo) {
+      user.deviceInfo = {
+        platform: deviceInfo.platform || 'unknown',
+        deviceType: deviceInfo.deviceType || 'mobile',
+        lastUpdated: new Date()
+      };
     }
+    
+    // Save the user
+    await user.save();
+    
+    console.log(`✅ FCM token updated successfully for user: ${user.firstName} ${user.lastName}`);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'FCM token updated successfully',
+      data: {
+        userId: user._id,
+        fcmTokenStored: !!user.fcmToken
+      }
+    });
     
   } catch (error) {
     console.error('❌ Error updating FCM token:', error);
@@ -207,10 +230,23 @@ router.delete('/fcm-token', protect, async (req, res) => {
   try {
     console.log(`🔥 Removing FCM token for user: ${req.user.id}`);
     
-    // Get user model (with tenant support)
-    const User = req.tenantConnection ? 
-      req.tenantConnection.model('User') : 
-      require('../models/User');
+    // 🔥 Use tenant-aware models with schema definitions
+    let User;
+    
+    if (req.tenantConnection) {
+      // Use tenant connection with schema definitions
+      try {
+        const createUserSchema = require('../schemas/definitions/userSchema');
+        User = req.tenantConnection.model('User') || 
+               req.tenantConnection.model('User', createUserSchema());
+        console.log('🔥 Using tenant User model for FCM removal');
+      } catch (schemaError) {
+        console.error('❌ Schema loading error:', schemaError);
+        User = require('../models/User');
+      }
+    } else {
+      User = require('../models/User');
+    }
     
     const user = await User.findById(req.user.id);
     
@@ -221,21 +257,19 @@ router.delete('/fcm-token', protect, async (req, res) => {
       });
     }
     
-    // Remove FCM token
-    const removeSuccess = await user.removeFCMToken();
+    // 🔥 FIXED: Direct property removal instead of method call
+    user.fcmToken = null;
+    user.deviceInfo = null;
     
-    if (removeSuccess) {
-      console.log(`✅ FCM token removed successfully for user: ${user.fullName}`);
-      return res.status(200).json({
-        success: true,
-        message: 'FCM token removed successfully'
-      });
-    } else {
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to remove FCM token'
-      });
-    }
+    // Save the user
+    await user.save();
+    
+    console.log(`✅ FCM token removed successfully for user: ${user.firstName} ${user.lastName}`);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'FCM token removed successfully'
+    });
     
   } catch (error) {
     console.error('❌ Error removing FCM token:', error);
