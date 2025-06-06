@@ -265,22 +265,23 @@ exports.createMessageNotification = async (req, res) => {
 
     // Create notification
     const notification = await Notification.create({
-      recipient: recipientId,
-      sender: senderId,
-      title: 'New Message',
-      message: `${sender.firstName} ${sender.lastName}: ${messageContent.substring(0, 50)}${messageContent.length > 50 ? '...' : ''}`,
-      type: 'message',
-      data: {
-        conversationId,
-        messagePreview: messageContent.substring(0, 100),
-        senderInfo: {
-          id: senderId,
-          name: `${sender.firstName} ${sender.lastName}`,
-          profilePicture: sender.profilePicture
-        }
-      },
-      read: false
-    });
+  recipient: recipientId,
+  sender: senderId,
+  title: 'New Message',
+  message: `${sender.firstName} ${sender.lastName}: ${messageContent.substring(0, 50)}${messageContent.length > 50 ? '...' : ''}`,
+  type: 'message',
+  tenantId: req.user.tenantId || req.tenantId, // 🔥 ADD THIS LINE
+  data: {
+    conversationId,
+    messagePreview: messageContent.substring(0, 100),
+    senderInfo: {
+      id: senderId,
+      name: `${sender.firstName} ${sender.lastName}`,
+      profilePicture: sender.profilePicture
+    }
+  },
+  read: false
+});
 
     await notification.populate('sender', 'firstName lastName profilePicture');
 
