@@ -217,8 +217,18 @@ const PatientList = () => {
   
   return (
     <>
-      <h1 className="dashboard-title">My Patients</h1>
-      <p className="dashboard-subtitle">Compassionate care begins here. View and manage the individuals you're supporting.</p>
+      {/* Header with Profile Box */}
+      <div className="page-header">
+        <div className="header-content">
+          <div className="header-text">
+            <h1 className="dashboard-title">My Patients</h1>
+            <p className="dashboard-subtitle">Compassionate care begins here. View and manage the individuals you're supporting.</p>
+          </div>
+          <div className="profile-box">
+            <img src="/src/assets/images/patienticon.png" alt="Patient Icon" className="profile-icon" />
+          </div>
+        </div>
+      </div>
       
       <div className="section-divider"></div>
       

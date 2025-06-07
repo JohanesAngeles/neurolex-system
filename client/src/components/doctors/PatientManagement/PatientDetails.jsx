@@ -1,4 +1,6 @@
 // client/src/components/doctors/PatientManagement/PatientDetails.jsx
+// FINAL FIXED VERSION
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import doctorService from '../../../services/doctorService';
@@ -46,15 +48,12 @@ const PatientDetails = () => {
     if (value === null || value === undefined || value === '' || value === 'null') {
       return 'Not provided';
     }
-    // Handle boolean values
     if (typeof value === 'boolean') {
       return value ? 'Yes' : 'No';
     }
-    // Handle numbers (including 0)
     if (typeof value === 'number') {
       return value.toString();
     }
-    // Handle strings
     return value.toString().trim() || 'Not provided';
   };
 
@@ -66,20 +65,12 @@ const PatientDetails = () => {
         const response = await doctorService.getPatient(id);
         
         console.log('🔍 FULL API RESPONSE:', response);
-        console.log('🔍 RESPONSE TYPE:', typeof response);
-        console.log('🔍 RESPONSE KEYS:', Object.keys(response || {}));
         
         if (response.success && response.data) {
-          console.log('✅ Using response.data:', response.data);
-          console.log('🔍 PATIENT DATA KEYS:', Object.keys(response.data || {}));
           setPatient(response.data);
         } else if (response.patient) {
-          console.log('✅ Using response.patient:', response.patient);
-          console.log('🔍 PATIENT KEYS:', Object.keys(response.patient || {}));
           setPatient(response.patient);
         } else if (response._id) {
-          console.log('✅ Using response directly:', response);
-          console.log('🔍 DIRECT RESPONSE KEYS:', Object.keys(response || {}));
           setPatient(response);
         } else {
           console.error('❌ Unexpected response structure:', response);
@@ -99,25 +90,103 @@ const PatientDetails = () => {
     }
   }, [id]);
 
-  // Fetch patient journal data
+  // 🔥 FIXED: Use the working endpoint from debug results
   const fetchPatientJournalData = async () => {
     try {
       setJournalLoading(true);
       setJournalError(null);
       
-      // Use the NEW individual patient journals method
-      const response = await doctorService.getIndividualPatientJournals(id);
+      console.log('🔍 Fetching journal data for patient ID:', id);
       
-      if (response.success && response.data) {
+      // ✅ Use the exact working endpoint from debug results
+      const response = await doctorService.getJournalEntries({ 
+        patient: id  // This parameter works as confirmed by debug
+      });
+      
+      console.log('📊 Journal response:', response);
+      console.log('📊 Response type:', typeof response);
+      console.log('📊 Response structure:', {
+        hasSuccess: !!response?.success,
+        hasData: !!response?.data,
+        dataType: typeof response?.data,
+        isDataArray: Array.isArray(response?.data),
+        dataLength: response?.data?.length || 0
+      });
+      
+      // Handle the response exactly as debug showed it works
+      if (response && response.success && Array.isArray(response.data)) {
+        console.log(`✅ SUCCESS: Found ${response.data.length} journal entries`);
         setJournalData(response.data);
       } else if (Array.isArray(response)) {
+        console.log(`✅ SUCCESS: Found ${response.length} journal entries (direct array)`);
         setJournalData(response);
+      } else if (response && response.data && Array.isArray(response.data)) {
+        console.log(`✅ SUCCESS: Found ${response.data.length} journal entries (nested)`);
+        setJournalData(response.data);
       } else {
+        console.log('📝 No journal entries found in response');
+        console.log('📝 Full response for debugging:', response);
         setJournalData([]);
       }
+      
     } catch (error) {
-      console.error('Error fetching patient journal data:', error);
+      console.error('❌ Error fetching patient journal data:', error);
       setJournalError('Failed to load journal entries');
+      setJournalData([]);
+    } finally {
+      setJournalLoading(false);
+    }
+  };
+
+  // 🔥 NEW: Fallback method that manually calls the working endpoint
+  const fetchPatientJournalDataDirect = async () => {
+    try {
+      setJournalLoading(true);
+      setJournalError(null);
+      
+      console.log('🔍 Using direct API call (working endpoint)');
+      
+      const token = localStorage.getItem('token');
+      const tenantStr = localStorage.getItem('tenant');
+      let tenantId = null;
+      if (tenantStr) {
+        const tenant = JSON.parse(tenantStr);
+        tenantId = tenant._id;
+      }
+
+      // Use the exact URL that worked in debug
+      const baseURL = process.env.REACT_APP_API_URL || 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com/api';
+      const url = `${baseURL}/journal/doctor?patient=${id}`;
+      
+      console.log('🌐 Direct API URL:', url);
+      
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+      
+      if (tenantId) {
+        headers['x-tenant-id'] = tenantId;
+        headers['X-Tenant-ID'] = tenantId;
+      }
+      
+      const response = await fetch(url, { headers });
+      const data = await response.json();
+      
+      console.log('📊 Direct API response:', data);
+      console.log('📊 Status:', response.status);
+      
+      if (response.status === 200 && data.success && Array.isArray(data.data)) {
+        console.log(`✅ DIRECT SUCCESS: Found ${data.data.length} journal entries`);
+        setJournalData(data.data);
+      } else {
+        console.log('📝 Direct call: No entries found');
+        setJournalData([]);
+      }
+      
+    } catch (error) {
+      console.error('❌ Direct API call failed:', error);
+      setJournalError('Failed to load journal entries via direct API call');
       setJournalData([]);
     } finally {
       setJournalLoading(false);
@@ -130,7 +199,6 @@ const PatientDetails = () => {
       setMoodLoading(true);
       setMoodError(null);
       
-      // Use the NEW individual patient mood analytics method
       const response = await doctorService.getIndividualPatientMoodAnalytics(id, selectedDays);
       
       if (response.success && response.data) {
@@ -146,6 +214,13 @@ const PatientDetails = () => {
       setMoodLoading(false);
     }
   };
+
+  // Fetch journal data when tab becomes active
+  useEffect(() => {
+    if (activeTab === 'journals' && patient) {
+      fetchPatientJournalData();
+    }
+  }, [activeTab, patient]);
 
   // Fetch mood data when tab becomes active or days filter changes
   useEffect(() => {
@@ -196,7 +271,6 @@ const PatientDetails = () => {
 
   return (
     <div className="patient-details-container">
-
       {/* Header */}
       <div className="patient-header">
         <div className="header-left">
@@ -288,6 +362,7 @@ const PatientDetails = () => {
             journalLoading={journalLoading}
             journalError={journalError}
             fetchPatientJournalData={fetchPatientJournalData}
+            fetchPatientJournalDataDirect={fetchPatientJournalDataDirect}
           />
         )}
         {activeTab === 'appointments' && (
@@ -301,7 +376,287 @@ const PatientDetails = () => {
   );
 };
 
-// Registration Tab Component
+// 🔥 UPDATED: JournalsTab with working functionality
+const JournalsTab = ({ 
+  patient, 
+  displayValue, 
+  journalData, 
+  journalLoading, 
+  journalError, 
+  fetchPatientJournalData,
+  fetchPatientJournalDataDirect
+}) => {
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const formatTime = (dateString) => {
+    return new Date(dateString).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getSentimentColor = (sentiment) => {
+    let sentimentValue = '';
+    
+    if (typeof sentiment === 'string') {
+      sentimentValue = sentiment.toLowerCase();
+    } else if (sentiment && typeof sentiment === 'object') {
+      sentimentValue = (sentiment.type || sentiment.sentiment || '').toString().toLowerCase();
+    } else {
+      sentimentValue = '';
+    }
+    
+    switch (sentimentValue) {
+      case 'positive':
+        return '#4CAF50';
+      case 'negative':
+        return '#F44336';
+      case 'neutral':
+        return '#FFD700';
+      default:
+        return '#9E9E9E';
+    }
+  };
+
+  const truncateText = (text, maxLength = 100) => {
+    if (!text) return 'No content';
+    return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
+  };
+
+  if (journalLoading) {
+    return (
+      <div className="tab-panel">
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Loading journal entries for {patient.firstName}...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (journalError) {
+    return (
+      <div className="tab-panel">
+        <div className="error-container">
+          <div className="error-alert">
+            <span className="error-icon">⚠️</span>
+            <span className="error-message">{journalError}</span>
+          </div>
+          <div className="error-actions">
+            <button className="retry-button" onClick={fetchPatientJournalData}>
+              🔄 Try Again
+            </button>
+            <button className="retry-button secondary" onClick={fetchPatientJournalDataDirect}>
+              🔧 Try Direct API Call
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="tab-panel">
+      <div className="journal-content">
+        <div className="journal-management-header">
+          <h1>Journal Entries</h1>
+          <p>View and track {patient.firstName}'s personal journal entries and emotional insights</p>
+          
+          {/* Quick Action Buttons */}
+          <div style={{ 
+            display: 'flex', 
+            gap: '12px', 
+            marginTop: '12px',
+            padding: '12px',
+            background: '#f8f9fa',
+            borderRadius: '8px',
+            border: '1px solid #dee2e6'
+          }}>
+            <button 
+              onClick={fetchPatientJournalData}
+              style={{
+                padding: '6px 12px',
+                background: '#007bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '13px'
+              }}
+            >
+              🔄 Refresh Journals
+            </button>
+            <button 
+              onClick={fetchPatientJournalDataDirect}
+              style={{
+                padding: '6px 12px',
+                background: '#28a745',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '13px'
+              }}
+            >
+              🔧 Force Reload (Direct API)
+            </button>
+            <span style={{ 
+              fontSize: '13px', 
+              color: '#666',
+              display: 'flex',
+              alignItems: 'center'
+            }}>
+              📊 Found: {journalData.length} entries
+            </span>
+          </div>
+        </div>
+
+        {journalData.length === 0 ? (
+          <div className="empty-state">
+            <h3>No Journal Entries Found</h3>
+            <p>{patient.firstName} hasn't created any journal entries yet.</p>
+            <p style={{ fontSize: '14px', color: '#666', marginTop: '8px' }}>
+              Try the "Force Reload" button above if you believe there should be entries.
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Success message */}
+            <div style={{
+              background: '#d4edda',
+              border: '1px solid #c3e6cb',
+              color: '#155724',
+              padding: '12px',
+              borderRadius: '4px',
+              marginBottom: '16px'
+            }}>
+              ✅ Successfully loaded {journalData.length} journal entries for {patient.firstName}
+            </div>
+
+            {/* Journal Entries Table */}
+            <div className="appointments-table">
+              {/* Table Header */}
+              <div className="table-header">
+                <div className="header-cell">Date</div>
+                <div className="header-cell">Time</div>
+                <div className="header-cell">Journal Entry</div>
+                <div className="header-cell">Sentiment</div>
+                <div className="header-cell">Emotions Detected</div>
+                <div className="header-cell">Actions</div>
+              </div>
+
+              {/* Table Rows */}
+              {journalData.map((entry, index) => (
+                <div key={entry._id || index} className="table-row">
+                  <div className="table-cell">
+                    {formatDate(entry.createdAt || entry.timestamp)}
+                  </div>
+                  <div className="table-cell">
+                    {formatTime(entry.createdAt || entry.timestamp)}
+                  </div>
+                  <div className="table-cell">
+                    <div className="journal-entry-preview">
+                      <div style={{ 
+                        fontWeight: '600', 
+                        marginBottom: '4px',
+                        fontSize: '14px'
+                      }}>
+                        {entry.title || entry.templateName || 'Untitled Entry'}
+                      </div>
+                      <div style={{ 
+                        fontSize: '13px', 
+                        color: '#666',
+                        lineHeight: '1.4'
+                      }}>
+                        {truncateText(entry.content || entry.text)}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="table-cell">
+                    <div className="sentiment-indicator">
+                      <div 
+                        className="sentiment-dot"
+                        style={{ 
+                          backgroundColor: getSentimentColor(entry.sentiment || entry.sentimentAnalysis?.sentiment),
+                          width: '10px',
+                          height: '10px',
+                          borderRadius: '50%',
+                          marginRight: '8px'
+                        }}
+                      ></div>
+                      <span className="sentiment-text">
+                        {(() => {
+                          if (typeof entry.sentiment === 'string') {
+                            return entry.sentiment;
+                          } else if (entry.sentiment && typeof entry.sentiment === 'object') {
+                            return entry.sentiment.type || entry.sentiment.sentiment || 'Unknown';
+                          } else if (entry.sentimentAnalysis?.sentiment) {
+                            return entry.sentimentAnalysis.sentiment;
+                          } else {
+                            return 'Unknown';
+                          }
+                        })()}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="table-cell">
+                    <div className="emotion-tags">
+                      {entry.emotions || entry.sentimentAnalysis?.emotions ? (
+                        (entry.emotions || entry.sentimentAnalysis.emotions).slice(0, 3).map((emotion, idx) => (
+                          <span key={idx} className="emotion-tag">
+                            {emotion}
+                          </span>
+                        ))
+                      ) : (
+                        <span style={{ fontSize: '12px', color: '#999' }}>
+                          No emotions detected
+                        </span>
+                      )}
+                      {(entry.emotions || entry.sentimentAnalysis?.emotions)?.length > 3 && (
+                        <span className="emotion-tag" style={{ background: '#f0f0f0' }}>
+                          +{(entry.emotions || entry.sentimentAnalysis.emotions).length - 3}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="table-cell">
+                    <div className="actions-cell">
+                      <button
+                        className="action-btn view-btn"
+                        onClick={() => {
+                          console.log('View full journal entry:', entry);
+                        }}
+                      >
+                        👁️ View
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Pagination (if needed) */}
+            {journalData.length > 10 && (
+              <div className="pagination">
+                <div className="pagination-info">
+                  Showing {journalData.length} entries
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Registration Tab Component (unchanged)
 const RegistrationTab = ({ patient, displayValue }) => {
   return (
     <div className="tab-panel">
@@ -357,7 +712,7 @@ const RegistrationTab = ({ patient, displayValue }) => {
   );
 };
 
-// Onboarding Tab Component
+// Onboarding Tab Component (unchanged)
 const OnboardingTab = ({ patient, displayValue }) => {
   return (
     <div className="tab-panel">
@@ -552,244 +907,6 @@ const OnboardingTab = ({ patient, displayValue }) => {
             <div className="detail-value">{displayValue(patient.emergencyAware)}</div>
           </div>
         </div>
-      </div>
-    </div>
-  );
-};
-
-// Journals Tab Component
-const JournalsTab = ({ 
-  patient, 
-  displayValue, 
-  journalData, 
-  journalLoading, 
-  journalError, 
-  fetchPatientJournalData 
-}) => {
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
-
-  const formatTime = (dateString) => {
-    return new Date(dateString).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const getSentimentColor = (sentiment) => {
-    // Handle different sentiment data structures
-    let sentimentValue = '';
-    
-    if (typeof sentiment === 'string') {
-      sentimentValue = sentiment.toLowerCase();
-    } else if (sentiment && typeof sentiment === 'object') {
-      sentimentValue = (sentiment.type || sentiment.sentiment || '').toString().toLowerCase();
-    } else {
-      sentimentValue = '';
-    }
-    
-    switch (sentimentValue) {
-      case 'positive':
-        return '#4CAF50';
-      case 'negative':
-        return '#F44336';
-      case 'neutral':
-        return '#FFD700';
-      default:
-        return '#9E9E9E';
-    }
-  };
-
-  const getSentimentIcon = (sentiment) => {
-    // Handle different sentiment data structures
-    let sentimentValue = '';
-    
-    if (typeof sentiment === 'string') {
-      sentimentValue = sentiment.toLowerCase();
-    } else if (sentiment && typeof sentiment === 'object') {
-      sentimentValue = (sentiment.type || sentiment.sentiment || '').toString().toLowerCase();
-    } else {
-      sentimentValue = '';
-    }
-    
-    switch (sentimentValue) {
-      case 'positive':
-        return '😊';
-      case 'negative':
-        return '😔';
-      case 'neutral':
-        return '😐';
-      default:
-        return '😐';
-    }
-  };
-
-  const truncateText = (text, maxLength = 100) => {
-    if (!text) return 'No content';
-    return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
-  };
-
-  if (journalLoading) {
-    return (
-      <div className="tab-panel">
-        <div className="loading-container">
-          <div className="loading-spinner"></div>
-          <p>Loading journal entries...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (journalError) {
-    return (
-      <div className="tab-panel">
-        <div className="error-container">
-          <div className="error-alert">
-            <span className="error-icon">⚠️</span>
-            <span className="error-message">{journalError}</span>
-          </div>
-          <button className="retry-button" onClick={fetchPatientJournalData}>
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="tab-panel">
-      <div className="journal-content">
-        <div className="journal-management-header">
-          <h1>Journal Entries</h1>
-          <p>View and track {patient.firstName}'s personal journal entries and emotional insights</p>
-        </div>
-
-        {journalData.length === 0 ? (
-          <div className="empty-state">
-            <h3>No Journal Entries Found</h3>
-            <p>{patient.firstName} hasn't created any journal entries yet.</p>
-          </div>
-        ) : (
-          <>
-            {/* Journal Entries Table - Using Appointments Design */}
-            <div className="appointments-table">
-              {/* Table Header */}
-              <div className="table-header">
-                <div className="header-cell">Date</div>
-                <div className="header-cell">Time</div>
-                <div className="header-cell">Journal Entry</div>
-                <div className="header-cell">Sentiment</div>
-                <div className="header-cell">Emotions Detected</div>
-                <div className="header-cell">Actions</div>
-              </div>
-
-              {/* Table Rows */}
-              {journalData.map((entry, index) => (
-                <div key={entry._id || index} className="table-row">
-                  <div className="table-cell">
-                    {formatDate(entry.createdAt || entry.timestamp)}
-                  </div>
-                  <div className="table-cell">
-                    {formatTime(entry.createdAt || entry.timestamp)}
-                  </div>
-                  <div className="table-cell">
-                    <div className="journal-entry-preview">
-                      <div style={{ 
-                        fontWeight: '600', 
-                        marginBottom: '4px',
-                        fontSize: '14px'
-                      }}>
-                        {entry.title || 'Untitled Entry'}
-                      </div>
-                      <div style={{ 
-                        fontSize: '13px', 
-                        color: '#666',
-                        lineHeight: '1.4'
-                      }}>
-                        {truncateText(entry.content || entry.text)}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="table-cell">
-                    <div className="sentiment-indicator">
-                      <div 
-                        className="sentiment-dot"
-                        style={{ 
-                          backgroundColor: getSentimentColor(entry.sentiment || entry.sentimentAnalysis?.sentiment),
-                          width: '10px',
-                          height: '10px',
-                          borderRadius: '50%',
-                          marginRight: '8px'
-                        }}
-                      ></div>
-                      <span className="sentiment-text">
-                        {(() => {
-                          // Handle different sentiment structures
-                          if (typeof entry.sentiment === 'string') {
-                            return entry.sentiment;
-                          } else if (entry.sentiment && typeof entry.sentiment === 'object') {
-                            return entry.sentiment.type || entry.sentiment.sentiment || 'Unknown';
-                          } else if (entry.sentimentAnalysis?.sentiment) {
-                            return entry.sentimentAnalysis.sentiment;
-                          } else {
-                            return 'Unknown';
-                          }
-                        })()}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="table-cell">
-                    <div className="emotion-tags">
-                      {entry.emotions || entry.sentimentAnalysis?.emotions ? (
-                        (entry.emotions || entry.sentimentAnalysis.emotions).slice(0, 3).map((emotion, idx) => (
-                          <span key={idx} className="emotion-tag">
-                            {emotion}
-                          </span>
-                        ))
-                      ) : (
-                        <span style={{ fontSize: '12px', color: '#999' }}>
-                          No emotions detected
-                        </span>
-                      )}
-                      {(entry.emotions || entry.sentimentAnalysis?.emotions)?.length > 3 && (
-                        <span className="emotion-tag" style={{ background: '#f0f0f0' }}>
-                          +{(entry.emotions || entry.sentimentAnalysis.emotions).length - 3}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="table-cell">
-                    <div className="actions-cell">
-                      <button
-                        className="action-btn view-btn"
-                        onClick={() => {
-                          // You can implement a modal to view full journal entry
-                          console.log('View full journal entry:', entry);
-                        }}
-                      >
-                        👁️ View
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Pagination (if needed) */}
-            {journalData.length > 10 && (
-              <div className="pagination">
-                <div className="pagination-info">
-                  Showing {journalData.length} entries
-                </div>
-              </div>
-            )}
-          </>
-        )}
       </div>
     </div>
   );
