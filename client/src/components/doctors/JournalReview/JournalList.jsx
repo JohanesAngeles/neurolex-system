@@ -423,7 +423,7 @@ const JournalList = () => {
   heartIcon: {
     position: 'absolute',
     top: '40px',
-    right: '150px',  // Moved the entire icon container to the left
+    right: '85px',  // Moved the entire icon container to the left
     width: '85px',
     height: '85px',
     backgroundColor: 'rgba(167, 215, 197, 0.1)',

@@ -2722,3 +2722,218 @@ exports.updateDoctorProfile = async (req, res) => {
     });
   }
 };
+
+/**
+ * Change doctor's email address
+ * @authenticated - Doctor only
+ */
+exports.changeDoctorEmail = async (req, res) => {
+  try {
+    console.log('🔄 Doctor changing email address');
+    
+    const doctorId = req.user._id || req.user.id;
+    const { currentEmail, newEmail, password } = req.body;
+    
+    // Validation
+    if (!currentEmail || !newEmail || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current email, new email, and password are required'
+      });
+    }
+    
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a valid email address'
+      });
+    }
+    
+    // Get current doctor using tenant-aware approach
+    let UserModel;
+    if (req.tenantConnection) {
+      try {
+        UserModel = req.tenantConnection.model('User');
+      } catch (err) {
+        UserModel = require('../models/User');
+      }
+    } else {
+      UserModel = require('../models/User');
+    }
+    
+    const doctor = await UserModel.findById(doctorId);
+    if (!doctor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Doctor not found'
+      });
+    }
+    
+    // Verify current email matches
+    if (doctor.email !== currentEmail) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current email does not match'
+      });
+    }
+    
+    // Verify password
+    const isPasswordValid = await doctor.comparePassword(password);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Current password is incorrect'
+      });
+    }
+    
+    // Check if new email is already in use
+    const existingUser = await UserModel.findOne({ 
+      email: newEmail,
+      _id: { $ne: doctorId }
+    });
+    
+    if (existingUser) {
+      return res.status(409).json({
+        success: false,
+        message: 'Email address is already in use'
+      });
+    }
+    
+    // Update email
+    doctor.email = newEmail;
+    doctor.updatedAt = new Date();
+    await doctor.save();
+    
+    console.log(`✅ Email updated successfully for doctor ${doctorId}`);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Email address updated successfully',
+      data: {
+        email: newEmail
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error changing email:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to change email address',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Change doctor's password
+ * @authenticated - Doctor only
+ */
+exports.changeDoctorPassword = async (req, res) => {
+  try {
+    console.log('🔄 Doctor changing password');
+    
+    const doctorId = req.user._id || req.user.id;
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+    
+    // Validation
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password, new password, and confirmation are required'
+      });
+    }
+    
+    // Check password confirmation
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'New passwords do not match'
+      });
+    }
+    
+    // Password strength validation
+    const passwordValidation = {
+      minLength: newPassword.length >= 8,
+      hasUpperCase: /[A-Z]/.test(newPassword),
+      hasLowerCase: /[a-z]/.test(newPassword),
+      hasNumbers: /\d/.test(newPassword),
+      hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(newPassword)
+    };
+    
+    const isPasswordValid = Object.values(passwordValidation).every(Boolean);
+    
+    if (!isPasswordValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password does not meet requirements',
+        requirements: {
+          'At least 8 characters': passwordValidation.minLength,
+          'Uppercase letter': passwordValidation.hasUpperCase,
+          'Lowercase letter': passwordValidation.hasLowerCase,
+          'Number': passwordValidation.hasNumbers,
+          'Special character': passwordValidation.hasSpecialChar
+        }
+      });
+    }
+    
+    // Get current doctor using tenant-aware approach
+    let UserModel;
+    if (req.tenantConnection) {
+      try {
+        UserModel = req.tenantConnection.model('User');
+      } catch (err) {
+        UserModel = require('../models/User');
+      }
+    } else {
+      UserModel = require('../models/User');
+    }
+    
+    const doctor = await UserModel.findById(doctorId);
+    if (!doctor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Doctor not found'
+      });
+    }
+    
+    // Verify current password
+    const isCurrentPasswordValid = await doctor.comparePassword(currentPassword);
+    if (!isCurrentPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Current password is incorrect'
+      });
+    }
+    
+    // Check if new password is different from current
+    const isSamePassword = await doctor.comparePassword(newPassword);
+    if (isSamePassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be different from current password'
+      });
+    }
+    
+    // Update password (will be hashed by User model's pre-save hook)
+    doctor.password = newPassword;
+    doctor.updatedAt = new Date();
+    await doctor.save();
+    
+    console.log(`✅ Password updated successfully for doctor ${doctorId}`);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Password updated successfully'
+    });
+    
+  } catch (error) {
+    console.error('❌ Error changing password:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to change password',
+      error: error.message
+    });
+  }
+};

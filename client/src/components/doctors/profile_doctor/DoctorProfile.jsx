@@ -1,4 +1,4 @@
-// src/pages/doctors/DoctorProfile.jsx
+// src/pages/doctors/DoctorProfile.jsx - COMPLETE FIXED VERSION
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -19,7 +19,7 @@ const DoctorProfile = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
-  // 🆕 NEW: Profile picture upload states
+  // Profile picture upload states
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   
@@ -27,15 +27,7 @@ const DoctorProfile = () => {
     firstName: '',
     lastName: '',
     title: '',
-    specialization: '',
     email: '',
-    phoneNumber: '',
-    licenseNumber: '',
-    yearsOfExperience: '',
-    practiceAddress: '',
-    bio: '',
-    languages: [],
-    availableForEmergency: false,
     profilePicture: null
   });
 
@@ -47,6 +39,30 @@ const DoctorProfile = () => {
   });
 
   const [profileImagePreview, setProfileImagePreview] = useState(null);
+
+  // 🆕 NEW: Change Email/Password states - moved to component level
+  const [emailData, setEmailData] = useState({
+    currentEmail: '',
+    newEmail: '',
+    password: ''
+  });
+
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false,
+    emailPassword: false
+  });
+
+  const [changingEmail, setChangingEmail] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [activeTab, setActiveTab] = useState('email'); // 'email' or 'password'
 
   // Load doctor profile on component mount
   useEffect(() => {
@@ -72,11 +88,12 @@ const DoctorProfile = () => {
         profileData = response;
       }
       
-      // Set default values if missing - Only essential fields
+      // Set default values if missing
       const processedProfile = {
         firstName: profileData.firstName || '',
         lastName: profileData.lastName || '',
         title: profileData.title || '',
+        email: profileData.email || '',
         profilePicture: profileData.profilePicture || null
       };
       
@@ -86,6 +103,12 @@ const DoctorProfile = () => {
         lastName: processedProfile.lastName,
         title: processedProfile.title
       });
+      
+      // 🆕 NEW: Set current email for change email form
+      setEmailData(prev => ({
+        ...prev,
+        currentEmail: processedProfile.email || ''
+      }));
       
       if (processedProfile.profilePicture) {
         setProfileImagePreview(processedProfile.profilePicture);
@@ -108,18 +131,7 @@ const DoctorProfile = () => {
     }));
   };
 
-  const handleLanguageChange = (e) => {
-    const { value, checked } = e.target;
-    
-    setFormData(prev => ({
-      ...prev,
-      languages: checked 
-        ? [...prev.languages, value]
-        : prev.languages.filter(lang => lang !== value)
-    }));
-  };
-
-  // 🆕 UPDATED: Profile picture change handler with automatic upload
+  // Profile picture change handler with automatic upload
   const handleProfileImageChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -145,12 +157,12 @@ const DoctorProfile = () => {
       // Store the file for upload
       setSelectedFile(file);
       
-      // 🆕 NEW: Automatically upload the profile picture
+      // Automatically upload the profile picture
       await uploadProfilePicture(file);
     }
   };
 
-  // 🆕 NEW: Upload profile picture function
+  // Upload profile picture function
   const uploadProfilePicture = async (file) => {
     try {
       setUploading(true);
@@ -196,7 +208,7 @@ const DoctorProfile = () => {
     }
   };
 
-  // 🆕 NEW: Delete profile picture function
+  // Delete profile picture function
   const deleteProfilePicture = async () => {
     try {
       setUploading(true);
@@ -273,6 +285,386 @@ const DoctorProfile = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  // Password validation function
+  const validatePassword = (password) => {
+    const minLength = 8;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumbers = /\d/.test(password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+    const errors = [];
+    if (password.length < minLength) {
+      errors.push(`Password must be at least ${minLength} characters long`);
+    }
+    if (!hasUpperCase) {
+      errors.push('Password must contain at least one uppercase letter');
+    }
+    if (!hasLowerCase) {
+      errors.push('Password must contain at least one lowercase letter');
+    }
+    if (!hasNumbers) {
+      errors.push('Password must contain at least one number');
+    }
+    if (!hasSpecialChar) {
+      errors.push('Password must contain at least one special character');
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  };
+
+  // Email validation
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  // Handle email change
+  const handleEmailChange = async (e) => {
+    e.preventDefault();
+    
+    try {
+      setChangingEmail(true);
+
+      // Validate email format
+      if (!validateEmail(emailData.newEmail)) {
+        toast.error('Please enter a valid email address');
+        return;
+      }
+
+      // Check if new email is different
+      if (emailData.newEmail === emailData.currentEmail) {
+        toast.error('New email must be different from current email');
+        return;
+      }
+
+      // Validate current password is provided
+      if (!emailData.password) {
+        toast.error('Please enter your current password to confirm the change');
+        return;
+      }
+
+      console.log('🔄 Changing email...');
+      
+      const response = await doctorService.changeEmail(
+        emailData.currentEmail,
+        emailData.newEmail,
+        emailData.password
+      );
+
+      if (response.success) {
+        // Update local state
+        setDoctorProfile(prev => ({
+          ...prev,
+          email: emailData.newEmail
+        }));
+        
+        setEmailData(prev => ({
+          ...prev,
+          currentEmail: emailData.newEmail,
+          newEmail: '',
+          password: ''
+        }));
+
+        toast.success('Email address updated successfully!');
+      }
+
+    } catch (error) {
+      console.error('❌ Error changing email:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to change email';
+      toast.error(errorMessage);
+    } finally {
+      setChangingEmail(false);
+    }
+  };
+
+  // Handle password change
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    
+    try {
+      setChangingPassword(true);
+
+      // Validate current password is provided
+      if (!passwordData.currentPassword) {
+        toast.error('Please enter your current password');
+        return;
+      }
+
+      // Validate new password
+      const passwordValidation = validatePassword(passwordData.newPassword);
+      if (!passwordValidation.isValid) {
+        toast.error(passwordValidation.errors[0]);
+        return;
+      }
+
+      // Check password confirmation
+      if (passwordData.newPassword !== passwordData.confirmPassword) {
+        toast.error('New passwords do not match');
+        return;
+      }
+
+      // Check if new password is different from current
+      if (passwordData.currentPassword === passwordData.newPassword) {
+        toast.error('New password must be different from current password');
+        return;
+      }
+
+      console.log('🔄 Changing password...');
+      
+      const response = await doctorService.changePassword(
+        passwordData.currentPassword,
+        passwordData.newPassword,
+        passwordData.confirmPassword
+      );
+
+      if (response.success) {
+        // Clear form
+        setPasswordData({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+
+        toast.success('Password updated successfully!');
+      }
+
+    } catch (error) {
+      console.error('❌ Error changing password:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to change password';
+      toast.error(errorMessage);
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  // 🆕 FIXED: Change Email or Password Component (no useState hooks)
+  const renderChangeEmailPassword = () => {
+    return (
+      <div className="profile-content">
+        <div className="content-header">
+          <h2>Change Email or Password</h2>
+          <div className="tools-section">
+            <button className="tools-button">
+              <img src={settingsIcon} alt="Tools" />
+            </button>
+          </div>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="change-tabs">
+          <button 
+            className={`tab-button ${activeTab === 'email' ? 'active' : ''}`}
+            onClick={() => setActiveTab('email')}
+          >
+            Change Email
+          </button>
+          <button 
+            className={`tab-button ${activeTab === 'password' ? 'active' : ''}`}
+            onClick={() => setActiveTab('password')}
+          >
+            Change Password
+          </button>
+        </div>
+
+        {/* Email Change Form */}
+        {activeTab === 'email' && (
+          <form onSubmit={handleEmailChange} className="change-form">
+            <div className="form-section">
+              <h3>Change Email Address</h3>
+              
+              <div className="form-group">
+                <label htmlFor="currentEmail">Current Email Address</label>
+                <input
+                  type="email"
+                  id="currentEmail"
+                  value={emailData.currentEmail}
+                  readOnly
+                  className="form-input readonly"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="newEmail">New Email Address *</label>
+                <input
+                  type="email"
+                  id="newEmail"
+                  value={emailData.newEmail}
+                  onChange={(e) => setEmailData(prev => ({ ...prev, newEmail: e.target.value }))}
+                  required
+                  className="form-input"
+                  placeholder="Enter your new email address"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="emailPassword">Current Password *</label>
+                <div className="password-input-container">
+                  <input
+                    type={showPasswords.emailPassword ? 'text' : 'password'}
+                    id="emailPassword"
+                    value={emailData.password}
+                    onChange={(e) => setEmailData(prev => ({ ...prev, password: e.target.value }))}
+                    required
+                    className="form-input"
+                    placeholder="Enter your current password to confirm"
+                  />
+                  <button 
+                    type="button"
+                    className="password-toggle"
+                    onClick={() => setShowPasswords(prev => ({ ...prev, emailPassword: !prev.emailPassword }))}
+                  >
+                    {showPasswords.emailPassword ? '👁️' : '👁️‍🗨️'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="form-actions">
+                <button 
+                  type="submit" 
+                  className="save-button"
+                  disabled={changingEmail || !emailData.newEmail || !emailData.password}
+                >
+                  {changingEmail ? 'Updating Email...' : 'Update Email'}
+                </button>
+              </div>
+            </div>
+          </form>
+        )}
+
+        {/* Password Change Form */}
+        {activeTab === 'password' && (
+          <form onSubmit={handlePasswordChange} className="change-form">
+            <div className="form-section">
+              <h3>Change Password</h3>
+              
+              <div className="form-group">
+                <label htmlFor="currentPassword">Current Password *</label>
+                <div className="password-input-container">
+                  <input
+                    type={showPasswords.current ? 'text' : 'password'}
+                    id="currentPassword"
+                    value={passwordData.currentPassword}
+                    onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+                    required
+                    className="form-input"
+                    placeholder="Enter your current password"
+                  />
+                  <button 
+                    type="button"
+                    className="password-toggle"
+                    onClick={() => setShowPasswords(prev => ({ ...prev, current: !prev.current }))}
+                  >
+                    {showPasswords.current ? '👁️' : '👁️‍🗨️'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="newPassword">New Password *</label>
+                <div className="password-input-container">
+                  <input
+                    type={showPasswords.new ? 'text' : 'password'}
+                    id="newPassword"
+                    value={passwordData.newPassword}
+                    onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                    required
+                    className="form-input"
+                    placeholder="Enter your new password"
+                  />
+                  <button 
+                    type="button"
+                    className="password-toggle"
+                    onClick={() => setShowPasswords(prev => ({ ...prev, new: !prev.new }))}
+                  >
+                    {showPasswords.new ? '👁️' : '👁️‍🗨️'}
+                  </button>
+                </div>
+                {passwordData.newPassword && (
+                  <div className="password-requirements">
+                    <p className="requirements-title">Password Requirements:</p>
+                    <ul className="requirements-list">
+                      <li className={passwordData.newPassword.length >= 8 ? 'valid' : 'invalid'}>
+                        At least 8 characters long
+                      </li>
+                      <li className={/[A-Z]/.test(passwordData.newPassword) ? 'valid' : 'invalid'}>
+                        One uppercase letter
+                      </li>
+                      <li className={/[a-z]/.test(passwordData.newPassword) ? 'valid' : 'invalid'}>
+                        One lowercase letter
+                      </li>
+                      <li className={/\d/.test(passwordData.newPassword) ? 'valid' : 'invalid'}>
+                        One number
+                      </li>
+                      <li className={/[!@#$%^&*(),.?":{}|<>]/.test(passwordData.newPassword) ? 'valid' : 'invalid'}>
+                        One special character
+                      </li>
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="confirmPassword">Confirm New Password *</label>
+                <div className="password-input-container">
+                  <input
+                    type={showPasswords.confirm ? 'text' : 'password'}
+                    id="confirmPassword"
+                    value={passwordData.confirmPassword}
+                    onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                    required
+                    className="form-input"
+                    placeholder="Confirm your new password"
+                  />
+                  <button 
+                    type="button"
+                    className="password-toggle"
+                    onClick={() => setShowPasswords(prev => ({ ...prev, confirm: !prev.confirm }))}
+                  >
+                    {showPasswords.confirm ? '👁️' : '👁️‍🗨️'}
+                  </button>
+                </div>
+                {passwordData.confirmPassword && passwordData.newPassword && (
+                  <div className={`password-match ${passwordData.newPassword === passwordData.confirmPassword ? 'valid' : 'invalid'}`}>
+                    {passwordData.newPassword === passwordData.confirmPassword ? 
+                      '✓ Passwords match' : 
+                      '✗ Passwords do not match'}
+                  </div>
+                )}
+              </div>
+
+              <div className="form-actions">
+                <button 
+                  type="submit" 
+                  className="save-button"
+                  disabled={
+                    changingPassword || 
+                    !passwordData.currentPassword || 
+                    !passwordData.newPassword || 
+                    !passwordData.confirmPassword ||
+                    passwordData.newPassword !== passwordData.confirmPassword ||
+                    !validatePassword(passwordData.newPassword).isValid
+                  }
+                >
+                  {changingPassword ? 'Updating Password...' : 'Update Password'}
+                </button>
+              </div>
+            </div>
+          </form>
+        )}
+
+        {/* Security Notice */}
+        <div className="security-notice">
+          <h4>🔒 Security Notice</h4>
+          <p>For your security, you will be logged out after changing your email or password and will need to log in again with your new credentials.</p>
+        </div>
+      </div>
+    );
   };
 
   const renderSidebarMenu = () => {
@@ -357,7 +749,7 @@ const DoctorProfile = () => {
         </div>
 
         <form onSubmit={handleSaveProfile} className="profile-form">
-          {/* 🆕 UPDATED: Profile Photo Section with upload status */}
+          {/* Profile Photo Section with upload status */}
           <div className="form-section profile-photo-section">
             <h3>Profile Photo</h3>
             <div className="photo-upload-area">
@@ -387,7 +779,6 @@ const DoctorProfile = () => {
                   disabled={uploading}
                   style={{ display: 'none' }}
                 />
-                {/* 🆕 NEW: Delete photo button */}
                 {profileImagePreview && !uploading && (
                   <button 
                     type="button" 
@@ -494,7 +885,7 @@ const DoctorProfile = () => {
       case 'edit-profile':
         return renderEditProfile();
       case 'change-password':
-        return renderPlaceholderSection('Change Email or Password');
+        return renderChangeEmailPassword(); // 🆕 NEW: Use the change password component
       case 'doctor-application':
         return renderPlaceholderSection('My Doctor Application');
       case 'public-profile':

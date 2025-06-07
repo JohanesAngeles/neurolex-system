@@ -1213,6 +1213,35 @@ deleteProfilePicture: async () => {
     console.error('❌ Error deleting profile picture:', error);
     throw error;
   }
+},
+
+changeEmail: async (emailData) => {
+  try {
+    console.log('🔄 Changing doctor email via service...');
+    
+    const response = await doctorApi.put('/profile/change-email', emailData);
+    
+    console.log('✅ Email changed successfully:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('❌ Error changing email:', error);
+    throw error;
+  }
+},
+
+// Change password
+changePassword: async (passwordData) => {
+  try {
+    console.log('🔄 Changing doctor password via service...');
+    
+    const response = await doctorApi.put('/profile/change-password', passwordData);
+    
+    console.log('✅ Password changed successfully:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('❌ Error changing password:', error);
+    throw error;
+  }
 }
 
 };

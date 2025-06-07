@@ -1,4 +1,4 @@
-// server/src/routes/doctorRoutes.js - COMPLETE VERSION WITH PROFILE PICTURE UPLOAD
+// server/src/routes/doctorRoutes.js - COMPLETE VERSION WITH ALL FUNCTIONALITY
 const express = require('express');
 const router = express.Router();
 const doctorController = require('../controllers/doctorController');
@@ -8,10 +8,10 @@ const { protect, restrictTo } = require('../middleware/auth');
 const tenantMiddleware = require('../middleware/tenantMiddleware');
 const multer = require('multer');
 
-// 🆕 NEW: Import Cloudinary functions for profile picture upload
+// 🆕 Import Cloudinary functions for profile picture upload
 const { uploadToCloudinary, deleteCloudinaryImage, extractPublicId } = require('../services/cloudinary');
 
-console.log('Loading complete doctor routes with billing functionality...');
+console.log('Loading complete doctor routes with all functionality...');
 
 // Configure multer for file uploads
 const storage = multer.memoryStorage();
@@ -39,7 +39,7 @@ const qrUpload = multer({
   }
 });
 
-// 🆕 NEW: Configure multer for profile picture uploads
+// Configure multer for profile picture uploads
 const profilePictureUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
@@ -115,11 +115,232 @@ router.get('/patients/:id', doctorController.getPatient);
 // Apply doctor role restriction for routes below
 router.use(restrictTo('doctor'));
 
-// 🆕 NEW: Doctor profile management routes (added before other doctor-only routes)
+// ============================================================================
+// DOCTOR PROFILE MANAGEMENT ROUTES
+// ============================================================================
+console.log('Adding doctor profile management routes...');
+
+// Get current doctor profile
 router.get('/profile', doctorController.getCurrentDoctorProfile);
+
+// Update doctor profile
 router.put('/profile', doctorController.updateDoctorProfile);
 
-// 🆕 NEW: Profile picture upload routes
+// 🆕 NEW: Change email address
+router.put('/profile/change-email', async (req, res) => {
+  try {
+    console.log('🔄 Doctor changing email address');
+    
+    const doctorId = req.user._id || req.user.id;
+    const { currentEmail, newEmail, password } = req.body;
+    
+    // Validation
+    if (!currentEmail || !newEmail || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current email, new email, and password are required'
+      });
+    }
+    
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a valid email address'
+      });
+    }
+    
+    // Get current doctor
+    let UserModel;
+    if (req.tenantConnection) {
+      try {
+        UserModel = req.tenantConnection.model('User');
+      } catch (err) {
+        UserModel = require('../models/User');
+      }
+    } else {
+      UserModel = require('../models/User');
+    }
+    
+    const doctor = await UserModel.findById(doctorId);
+    if (!doctor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Doctor not found'
+      });
+    }
+    
+    // Verify current email matches
+    if (doctor.email !== currentEmail) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current email does not match'
+      });
+    }
+    
+    // Verify password
+    const isPasswordValid = await doctor.comparePassword(password);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Current password is incorrect'
+      });
+    }
+    
+    // Check if new email is already in use
+    const existingUser = await UserModel.findOne({ 
+      email: newEmail,
+      _id: { $ne: doctorId }
+    });
+    
+    if (existingUser) {
+      return res.status(409).json({
+        success: false,
+        message: 'Email address is already in use'
+      });
+    }
+    
+    // Update email
+    doctor.email = newEmail;
+    doctor.updatedAt = new Date();
+    await doctor.save();
+    
+    console.log(`✅ Email updated successfully for doctor ${doctorId}`);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Email address updated successfully',
+      data: {
+        email: newEmail
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error changing email:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to change email address',
+      error: error.message
+    });
+  }
+});
+
+// 🆕 NEW: Change password
+router.put('/profile/change-password', async (req, res) => {
+  try {
+    console.log('🔄 Doctor changing password');
+    
+    const doctorId = req.user._id || req.user.id;
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+    
+    // Validation
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password, new password, and confirmation are required'
+      });
+    }
+    
+    // Check password confirmation
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'New passwords do not match'
+      });
+    }
+    
+    // Password strength validation (matching your existing patterns)
+    const passwordValidation = {
+      minLength: newPassword.length >= 8,
+      hasUpperCase: /[A-Z]/.test(newPassword),
+      hasLowerCase: /[a-z]/.test(newPassword),
+      hasNumbers: /\d/.test(newPassword),
+      hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(newPassword)
+    };
+    
+    const isPasswordValid = Object.values(passwordValidation).every(Boolean);
+    
+    if (!isPasswordValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password does not meet requirements',
+        requirements: {
+          'At least 8 characters': passwordValidation.minLength,
+          'Uppercase letter': passwordValidation.hasUpperCase,
+          'Lowercase letter': passwordValidation.hasLowerCase,
+          'Number': passwordValidation.hasNumbers,
+          'Special character': passwordValidation.hasSpecialChar
+        }
+      });
+    }
+    
+    // Get current doctor
+    let UserModel;
+    if (req.tenantConnection) {
+      try {
+        UserModel = req.tenantConnection.model('User');
+      } catch (err) {
+        UserModel = require('../models/User');
+      }
+    } else {
+      UserModel = require('../models/User');
+    }
+    
+    const doctor = await UserModel.findById(doctorId);
+    if (!doctor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Doctor not found'
+      });
+    }
+    
+    // Verify current password
+    const isCurrentPasswordValid = await doctor.comparePassword(currentPassword);
+    if (!isCurrentPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Current password is incorrect'
+      });
+    }
+    
+    // Check if new password is different from current
+    const isSamePassword = await doctor.comparePassword(newPassword);
+    if (isSamePassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be different from current password'
+      });
+    }
+    
+    // Update password
+    doctor.password = newPassword; // This will be hashed by the User model's pre-save hook
+    doctor.updatedAt = new Date();
+    await doctor.save();
+    
+    console.log(`✅ Password updated successfully for doctor ${doctorId}`);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Password updated successfully'
+    });
+    
+  } catch (error) {
+    console.error('❌ Error changing password:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to change password',
+      error: error.message
+    });
+  }
+});
+
+// ============================================================================
+// PROFILE PICTURE UPLOAD ROUTES
+// ============================================================================
+console.log('Adding profile picture upload routes...');
+
+// Profile picture upload
 router.post('/profile/upload-picture', profilePictureUpload.single('profilePicture'), async (req, res) => {
   try {
     console.log('=== DOCTOR PROFILE PICTURE UPLOAD ===');
@@ -317,7 +538,7 @@ router.post('/profile/upload-picture', profilePictureUpload.single('profilePictu
   }
 });
 
-// 🆕 NEW: Delete profile picture route
+// Delete profile picture
 router.delete('/profile/delete-picture', async (req, res) => {
   try {
     console.log('=== DELETE DOCTOR PROFILE PICTURE ===');
@@ -482,7 +703,11 @@ router.delete('/profile/delete-picture', async (req, res) => {
   }
 });
 
-// Other doctor-only routes (EXISTING - unchanged)
+// ============================================================================
+// OTHER DOCTOR-ONLY ROUTES (EXISTING - unchanged)
+// ============================================================================
+console.log('Adding other doctor-only routes...');
+
 router.get('/dashboard/stats', doctorController.getDashboardStats);
 router.get('/patients', doctorController.getPatients);
 router.delete('/patients/:patientId/end-care', doctorController.endPatientCare);
@@ -500,7 +725,7 @@ router.post('/templates/assign/:id', doctorController.assignTemplate);
 router.get('/journal-entries', journalController.getDoctorJournalEntries || doctorController.getJournalEntries);
 router.get('/journal-entries/:id', journalController.getDoctorJournalEntry || doctorController.getJournalEntry);
 
-// ✅ FIXED: AI Analysis and Notes routes (corrected URL structure)
+// AI Analysis and Notes routes
 router.post('/journal-entries/:id/analyze', journalController.analyzeJournalEntry || doctorController.analyzeJournalEntry);
 router.post('/journal-entries/:id/notes', journalController.addDoctorNoteToJournalEntry || doctorController.addNoteToJournalEntry);
 
@@ -835,7 +1060,10 @@ router.put('/billing/:billingId/mark-paid', billingController.markAsPaid);
 
 console.log('Billing routes added successfully');
 
-// 🆕 NEW: Add error handling middleware for multer errors (profile picture uploads)
+// ============================================================================
+// ERROR HANDLING MIDDLEWARE
+// ============================================================================
+// Error handling middleware for multer errors (profile picture uploads)
 router.use((error, req, res, next) => {
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
@@ -856,6 +1084,6 @@ router.use((error, req, res, next) => {
   next(error);
 });
 
-console.log('Complete doctor routes with billing functionality, appointment management, and profile picture upload loaded successfully');
+console.log('Complete doctor routes with all functionality loaded successfully');
 
 module.exports = router;
