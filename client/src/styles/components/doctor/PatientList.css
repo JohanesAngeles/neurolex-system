@@ -236,27 +236,21 @@
   margin-bottom: 30px;
 }
 
-/* UPDATED TABLE LAYOUT - Fixed double container issue */
+/* FIXED TABLE LAYOUT - Single container, no gaps */
 .custom-table {
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 0; /* Remove gap between rows to prevent double border effect */
-  margin-bottom: 20px;
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid #A7D7C5;
+  margin-bottom: 20px;
 }
 
 .table-row {
   display: grid;
   grid-template-columns: 2fr 2.5fr 1fr 0.8fr 2fr; /* Patient, Email, Gender, Age, Actions */
   grid-gap: 0;
-  border-radius: 0; /* Remove individual row border radius */
-  overflow: hidden;
-  padding: 0;
-  border: none; /* Remove individual row borders */
-  border-bottom: 1px solid #E8F5E9; /* Add only bottom border for separation */
+  border: none;
+  border-bottom: 1px solid #E8F5E9;
   background-color: #fff;
   min-height: 54px;
   transition: background-color 0.2s ease;
@@ -272,7 +266,7 @@
   font-size: 14px;
   color: #333;
   font-weight: 600;
-  border-bottom: 1px solid #A7D7C5; /* Stronger border for header */
+  border-bottom: 1px solid #A7D7C5;
 }
 
 /* Header Row Styling to Match Figma */
@@ -293,7 +287,6 @@
   background-color: #ffffff;
 }
 
-/* Subtle alternating row colors */
 .table-row:nth-child(even):not(.header-row) {
   background-color: rgba(167, 215, 197, 0.02);
 }
@@ -389,14 +382,14 @@
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  border: 1.19518px solid #A7D7C5;
+  border: none;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
   position: relative;
-  flex-shrink: 0; /* Prevent buttons from shrinking */
+  flex-shrink: 0;
 }
 
 /* View Button - Light Green Background with Green Icon */
@@ -420,7 +413,7 @@
 /* Delete Button - Red Background with White Icon */
 .btn-icon.delete {
   background: #FF7676;
-  border: 1.19518px solid #A7D7C5;
+  border: none;
 }
 
 .btn-icon.delete:hover {
@@ -786,9 +779,6 @@
   margin: 0;
 }
 
-.checkmark {
-  /* You can customize this if you want a custom checkbox */
-}
 
 .checkbox-text {
   font-size: 14px;

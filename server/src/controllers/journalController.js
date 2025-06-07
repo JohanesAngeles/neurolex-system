@@ -7,6 +7,8 @@ const Appointment = require('../models/Appointment');
 const nlpService = require('../services/nlpService');
 const dbManager = require('../utils/dbManager');
 
+const mongoose = require('mongoose');
+
 // ✅ FIXED: Helper function to find patient's assigned doctor
 async function findPatientAssignedDoctor(userId, tenantConnection = null) {
   try {
@@ -221,6 +223,7 @@ exports.getDoctorJournalEntries = async (req, res) => {
 
     const doctorId = req.user._id;
     console.log(`🩺 Doctor ${doctorId} requesting journal entries`);
+    console.log(`🔍 Doctor ID type: ${typeof doctorId}`);
 
     // Get the correct model first
     let JournalEntry;
@@ -232,10 +235,15 @@ exports.getDoctorJournalEntries = async (req, res) => {
       console.log('Using default database for doctor journal entries');
     }
 
-    // ✅ SIMPLE QUERY - Let MongoDB handle the ObjectId comparison naturally
+    // 🔥 CRITICAL FIX: Convert doctorId to proper ObjectId format
+    const doctorObjectId = mongoose.Types.ObjectId(doctorId.toString());
+    console.log(`🔧 Original doctor ID: ${doctorId}`);
+    console.log(`🔧 Converted doctor ID: ${doctorObjectId}`);
+
+    // 🔥 FIXED QUERY: Use ObjectId for proper comparison
     const baseQuery = {
       $or: [
-        { assignedDoctor: doctorId }, // MongoDB will handle ObjectId comparison
+        { assignedDoctor: doctorObjectId }, // Use ObjectId for comparison
         { 
           isSharedWithDoctor: true,
           assignedDoctor: null
@@ -253,7 +261,7 @@ exports.getDoctorJournalEntries = async (req, res) => {
     
     // Add additional filters
     if (patient) {
-      baseQuery.user = patient;
+      baseQuery.user = mongoose.Types.ObjectId(patient);
       console.log(`📋 Filtering by patient: ${patient}`);
     }
     
@@ -279,13 +287,16 @@ exports.getDoctorJournalEntries = async (req, res) => {
     
     console.log('🔍 Final query:', JSON.stringify(baseQuery, null, 2));
     
-    // ✅ SIMPLE DEBUG - Safe operations only
+    // 🔥 DEBUG: Test the query
     try {
       const totalEntries = await JournalEntry.countDocuments({});
       console.log(`🔍 Total entries in database: ${totalEntries}`);
       
-      const doctorEntries = await JournalEntry.countDocuments({ assignedDoctor: doctorId });
-      console.log(`🔍 Entries assigned to this doctor: ${doctorEntries}`);
+      const doctorEntries = await JournalEntry.countDocuments({ assignedDoctor: doctorObjectId });
+      console.log(`🔍 Entries assigned to this doctor (ObjectId): ${doctorEntries}`);
+      
+      const doctorEntriesString = await JournalEntry.countDocuments({ assignedDoctor: doctorId.toString() });
+      console.log(`🔍 Entries assigned to this doctor (String): ${doctorEntriesString}`);
       
       const sharedEntries = await JournalEntry.countDocuments({ isSharedWithDoctor: true });
       console.log(`🔍 Entries shared with doctors: ${sharedEntries}`);
@@ -320,6 +331,17 @@ exports.getDoctorJournalEntries = async (req, res) => {
       });
     } else {
       console.log('❌ No entries matched the query');
+      
+      // Additional debugging for empty results
+      const simpleQuery = { assignedDoctor: doctorObjectId };
+      const simpleCount = await JournalEntry.countDocuments(simpleQuery);
+      console.log(`🧪 Simple query count: ${simpleCount}`);
+      
+      if (simpleCount > 0) {
+        console.log('✅ Simple query found entries - issue is with additional filters');
+      } else {
+        console.log('❌ No entries found even with simple query - check doctor assignment');
+      }
     }
 
     // Transform entries for frontend
