@@ -1,4 +1,4 @@
-// server/src/routes/journalRoutes.js - COMPLETE FILE WITH ALL ANALYSIS ROUTES
+// server/src/routes/journalRoutes.js - UPDATED WITH DIRECT DELETE ROUTE
 const express = require('express');
 const router = express.Router();
 const journalController = require('../controllers/journalController');
@@ -73,7 +73,19 @@ router.get('/users/:userId/entries', async (req, res) => {
   }
 });
 
-// Individual journal entry routes
+// ✅ NEW: Direct delete route that matches Flutter app expectations
+// This allows DELETE /journal/{id} instead of DELETE /journal/entry/{id}
+router.delete('/:id', journalController.deleteJournalEntry);
+
+// ✅ NEW: Direct get route for individual entries
+// This allows GET /journal/{id} instead of GET /journal/entry/{id}
+router.get('/:id', journalController.getJournalEntry);
+
+// ✅ NEW: Direct put route for updates
+// This allows PUT /journal/{id} instead of PUT /journal/entry/{id}
+router.put('/:id', journalController.updateJournalEntry);
+
+// Individual journal entry routes (keep these for backward compatibility)
 router.get('/entry/:id', journalController.getJournalEntry);
 router.put('/entry/:id', journalController.updateJournalEntry);
 router.delete('/entry/:id', journalController.deleteJournalEntry);
