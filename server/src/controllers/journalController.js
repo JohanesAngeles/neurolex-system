@@ -415,10 +415,26 @@ exports.getDoctorJournalEntries = async (req, res) => {
 // ✅ IMPROVED: Get specific doctor journal entry
 exports.getDoctorJournalEntry = async (req, res) => {
   try {
-    const doctorId = req.user._id;
+    // 🔥 CRITICAL FIX: Handle different user ID formats
+    const doctorId = req.user._id || req.user.id || req.userId;
     const { id } = req.params;
     
     console.log(`🩺 Doctor ${doctorId} requesting journal entry ${id}`);
+    console.log(`🔍 User object:`, {
+      _id: req.user._id,
+      id: req.user.id,
+      userId: req.userId,
+      userObject: req.user
+    });
+
+    // Check if we have a valid doctor ID
+    if (!doctorId) {
+      console.error('❌ No doctor ID found in request');
+      return res.status(401).json({
+        success: false,
+        message: 'Doctor ID not found in request'
+      });
+    }
     
     // Get the correct model
     let JournalEntry;
@@ -428,13 +444,27 @@ exports.getDoctorJournalEntry = async (req, res) => {
       JournalEntry = require('../models/JournalEntry');
     }
     
-    // ✅ IMPROVED: Better query for single entry
+    // 🔥 CRITICAL FIX: Safe ObjectId conversion
+    let doctorObjectId;
+    try {
+      doctorObjectId = new mongoose.Types.ObjectId(doctorId.toString());
+      console.log(`🔧 Converted doctor ID: ${doctorObjectId}`);
+    } catch (conversionError) {
+      console.error('❌ Error converting doctor ID to ObjectId:', conversionError);
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid doctor ID format',
+        error: conversionError.message
+      });
+    }
+    
+    // 🔥 IMPROVED: Better query for single entry with ObjectId
     const entry = await JournalEntry.findOne({
       _id: id,
       $and: [
         {
           $or: [
-            { assignedDoctor: doctorId },
+            { assignedDoctor: doctorObjectId }, // Use ObjectId for comparison
             { 
               isSharedWithDoctor: true,
               assignedDoctor: null
