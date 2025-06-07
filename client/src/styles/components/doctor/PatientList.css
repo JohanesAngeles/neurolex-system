@@ -236,25 +236,35 @@
   margin-bottom: 30px;
 }
 
-/* Updated Table Layout - 5 columns now */
+/* UPDATED TABLE LAYOUT - Fixed double container issue */
 .custom-table {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0; /* Remove gap between rows to prevent double border effect */
   margin-bottom: 20px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #A7D7C5;
 }
 
 .table-row {
   display: grid;
   grid-template-columns: 2fr 2.5fr 1fr 0.8fr 2fr; /* Patient, Email, Gender, Age, Actions */
   grid-gap: 0;
-  border-radius: 12px;
+  border-radius: 0; /* Remove individual row border radius */
   overflow: hidden;
   padding: 0;
-  border: 1px solid #A7D7C5;
+  border: none; /* Remove individual row borders */
+  border-bottom: 1px solid #E8F5E9; /* Add only bottom border for separation */
   background-color: #fff;
   min-height: 54px;
+  transition: background-color 0.2s ease;
+}
+
+/* Remove bottom border from last row */
+.table-row:last-child {
+  border-bottom: none;
 }
 
 .header-row {
@@ -262,6 +272,7 @@
   font-size: 14px;
   color: #333;
   font-weight: 600;
+  border-bottom: 1px solid #A7D7C5; /* Stronger border for header */
 }
 
 /* Header Row Styling to Match Figma */
@@ -282,8 +293,14 @@
   background-color: #ffffff;
 }
 
+/* Subtle alternating row colors */
 .table-row:nth-child(even):not(.header-row) {
   background-color: rgba(167, 215, 197, 0.02);
+}
+
+/* Hover effect for data rows only */
+.table-row:not(.header-row):hover {
+  background-color: rgba(167, 215, 197, 0.05);
 }
 
 .table-cell {
@@ -579,10 +596,19 @@
     justify-content: center;
   }
   
+  .custom-table {
+    border: none;
+    border-radius: 0;
+    overflow: visible;
+  }
+  
   .table-row {
     grid-template-columns: 1fr;
     gap: 8px;
     padding: 16px;
+    border: 1px solid #A7D7C5;
+    border-radius: 12px;
+    margin-bottom: 10px;
   }
   
   .header-row {

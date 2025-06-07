@@ -140,9 +140,7 @@ const PatientList = () => {
     navigate(`/doctor/patients/${patientId}`);
   };
   
-  const handleEditPatient = (patientId) => {
-    navigate(`/doctor/patients/${patientId}/edit`);
-  };
+  // REMOVED: handleEditPatient function since we're removing the edit button
   
   // NEW: Handle End Care Modal
   const handleEndCare = (patient) => {
@@ -342,16 +340,10 @@ const PatientList = () => {
                 <div className="table-cell">{patient.gender || 'Not specified'}</div>
                 <div className="table-cell">{patient.age || 'Unknown'}</div>
                 
+                {/* UPDATED ACTIONS CELL - REMOVED VIEW JOURNALS BUTTON AND EDIT BUTTON */}
                 <div className="table-cell actions-cell">
-                  <button 
-                    className="view-journals-button"
-                    onClick={() => navigate(`/doctor/patients/${patient._id}/journals`)}
-                  >
-                    View Journals
-                  </button>
-                  
                   <div className="action-buttons">
-                    {/* View Button */}
+                    {/* View Button (Eye Icon) */}
                     <button 
                       className="btn-icon view"
                       onClick={() => handleViewPatient(patient._id)}
@@ -363,19 +355,9 @@ const PatientList = () => {
                       </svg>
                     </button>
                     
-                    {/* Edit Button */}
-                    <button 
-                      className="btn-icon edit"
-                      onClick={() => handleEditPatient(patient._id)}
-                      title="Edit patient"
-                    >
-                      <svg className="icon-edit" viewBox="0 0 24 24">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                        <path d="m18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                      </svg>
-                    </button>
+                    {/* REMOVED: Edit Button */}
                     
-                    {/* End Care Button (was Delete) */}
+                    {/* End Care Button (Delete/X Icon) */}
                     <button
                       className="btn-icon delete"
                       onClick={() => handleEndCare(patient)}

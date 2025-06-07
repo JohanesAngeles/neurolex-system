@@ -268,25 +268,49 @@ const doctorService = {
   
   // Journal Entries
   getJournalEntries: async (filters = {}) => {
-    try {
-      // Convert filters to query string
-      const params = new URLSearchParams();
-      
-      if (filters.patient) params.append('patient', filters.patient);
-      if (filters.dateFrom) params.append('dateFrom', filters.dateFrom);
-      if (filters.dateTo) params.append('dateTo', filters.dateTo);
-      if (filters.sentiment) params.append('sentiment', filters.sentiment);
-      if (filters.analyzed !== 'all') params.append('analyzed', filters.analyzed);
-      if (filters.page) params.append('page', filters.page);
-      if (filters.limit) params.append('limit', filters.limit);
-      
-      const response = await doctorApi.get(`/journal-entries?${params.toString()}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching journal entries:', error);
-      throw error;
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('No token');
+    
+    const tenant = localStorage.getItem('tenant');
+    const tenantId = tenant ? JSON.parse(tenant)._id : null;
+    
+    // Build query params
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value && value !== 'all') params.append(key, value);
+    });
+    
+    // FIXED: Use correct endpoint
+    const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+    const url = `${baseURL}/journal/doctor?${params.toString()}`;
+    
+    const headers = {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    };
+    
+    if (tenantId) {
+      headers['x-tenant-id'] = tenantId;
     }
-  },
+    
+    const response = await axios.get(url, { headers });
+    
+    return {
+      success: true,
+      data: response.data.data || response.data || [],
+      pagination: response.data.pagination || { total: 0 }
+    };
+    
+  } catch (error) {
+    console.error('Error fetching journal entries:', error);
+    return {
+      success: false,
+      data: [],
+      pagination: { total: 0 }
+    };
+  }
+},
   
   getJournalEntry: async (id) => {
     try {
