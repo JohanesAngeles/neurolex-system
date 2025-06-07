@@ -800,42 +800,39 @@ exports.analyzeJournalEntry = async (req, res) => {
           // ✅ DEBUGGING: Let's see what the NLP service actually returns
           console.log('🔍 RAW AI Analysis Response:', JSON.stringify(aiAnalysis, null, 2));
           
-          // ✅ Save the analysis results with CORRECT SCHEMA STRUCTURE
           if (applyChanges && aiAnalysis) {
-            if (!entry.sentimentAnalysis) {
-              entry.sentimentAnalysis = {};
-            }
-            
-            // ✅ DEBUGGING: Check what emotions we have
-            console.log('🔍 Emotions from AI:', aiAnalysis.emotions);
-            console.log('🔍 Emotions type:', typeof aiAnalysis.emotions);
-            console.log('🔍 Is emotions array?', Array.isArray(aiAnalysis.emotions));
-            
-            // ✅ FIXED: Structure sentiment as object with type property (not string)
-            entry.sentimentAnalysis.sentiment = {
-              type: aiAnalysis.sentiment?.type || aiAnalysis.sentiment || 'neutral',
-              score: aiAnalysis.sentiment?.score || 50,
-              confidence: aiAnalysis.sentiment?.confidence || 0.5,
-              emotions: aiAnalysis.emotions || [],
-              highlights: aiAnalysis.highlights || [],
-              flags: aiAnalysis.flags || []
-            };
-            
-            // ✅ FIX: Save emotions at both levels to match schema
-            entry.sentimentAnalysis.emotions = aiAnalysis.emotions || [];
-            entry.sentimentAnalysis.summary = aiAnalysis.summary || '';
-            entry.sentimentAnalysis.flags = aiAnalysis.flags || [];
-            entry.sentimentAnalysis.timestamp = new Date();
-            
-            // ✅ FIX 2: Use 'ai' instead of 'doctor' (valid enum value)
-            entry.sentimentAnalysis.source = 'ai';
-            
-            // ✅ FINAL DEBUG: What are we actually saving?
-            console.log('💾 SAVING emotions:', JSON.stringify(entry.sentimentAnalysis.emotions, null, 2));
-            
-            await entry.save();
-            console.log('💾 Analysis results saved to database');
-          }
+  if (!entry.sentimentAnalysis) {
+    entry.sentimentAnalysis = {};
+  }
+  
+  // ✅ DEBUGGING: Check what emotions we have
+  console.log('🔍 Emotions from AI:', aiAnalysis.emotions);
+  console.log('🔍 Emotions type:', typeof aiAnalysis.emotions);
+  console.log('🔍 Is emotions array?', Array.isArray(aiAnalysis.emotions));
+  
+  // ✅ FIXED: Save sentiment according to schema structure
+  entry.sentimentAnalysis.sentiment = {
+    type: aiAnalysis.sentiment?.type || aiAnalysis.sentiment || 'neutral',
+    // Remove nested fields - they should be at root level
+    score: aiAnalysis.sentiment?.score || 50,
+    confidence: aiAnalysis.sentiment?.confidence || 0.5,
+    flags: aiAnalysis.sentiment?.flags || aiAnalysis.flags || []
+  };
+  
+  // ✅ FIXED: Save emotions, highlights, etc. at ROOT level of sentimentAnalysis
+  entry.sentimentAnalysis.emotions = aiAnalysis.emotions || [];
+  entry.sentimentAnalysis.summary = aiAnalysis.summary || '';
+  entry.sentimentAnalysis.flags = aiAnalysis.flags || [];
+  entry.sentimentAnalysis.timestamp = new Date();
+  entry.sentimentAnalysis.source = 'ai';
+  
+  // ✅ FINAL DEBUG: What are we actually saving?
+  console.log('💾 SAVING emotions:', JSON.stringify(entry.sentimentAnalysis.emotions, null, 2));
+  console.log('💾 SAVING sentiment:', JSON.stringify(entry.sentimentAnalysis.sentiment, null, 2));
+  
+  await entry.save();
+  console.log('💾 Analysis results saved to database');
+}
         }
       } catch (error) {
         console.error('❌ Error in AI analysis:', error);
