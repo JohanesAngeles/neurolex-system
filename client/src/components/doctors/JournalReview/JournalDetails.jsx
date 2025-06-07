@@ -181,11 +181,11 @@ const JournalEntryDetail = () => {
       
       console.log(`Starting AI analysis for entry ID: ${id}`);
       
-      const response = await axios.post(
+            const response = await axios.post(
         `/api/doctor/journal-entries/${id}/analyze`,
         { 
           useAI: true, 
-          applyChanges: false,
+          applyChanges: true,  // ← SAVE IMMEDIATELY
           includeHighlights: true
         },
         {
