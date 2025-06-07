@@ -257,11 +257,11 @@ exports.getDoctorJournalEntries = async (req, res) => {
       console.log('Using default database for doctor journal entries');
     }
 
-    // 🔥 CRITICAL FIX: Safe ObjectId conversion
+    // 🔥 CRITICAL FIX: Safe ObjectId conversion with 'new' keyword
     let doctorObjectId;
     
     try {
-      doctorObjectId = mongoose.Types.ObjectId(doctorId.toString());
+      doctorObjectId = new mongoose.Types.ObjectId(doctorId.toString());
       console.log(`🔧 Converted doctor ID: ${doctorObjectId}`);
     } catch (conversionError) {
       console.error('❌ Error converting doctor ID to ObjectId:', conversionError);
@@ -293,7 +293,7 @@ exports.getDoctorJournalEntries = async (req, res) => {
     
     // Add additional filters
     if (patient) {
-      baseQuery.user = mongoose.Types.ObjectId(patient);
+      baseQuery.user = new mongoose.Types.ObjectId(patient); // 🔥 FIXED: Added 'new'
       console.log(`📋 Filtering by patient: ${patient}`);
     }
     
