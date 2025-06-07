@@ -300,43 +300,44 @@ class NLPService {
 
   // ============= MEMORY-OPTIMIZED ANALYSIS METHODS =============
   async analyzeSentiment(text) {
-    try {
-      // Ensure model is loaded if using lazy loading
-      await this.ensureModelLoaded();
-      
-      // Check if the API key is set
-      if (!this.API_KEY) {
-        console.error('HUGGING_FACE_API_KEY not found or is empty. Check your .env file.');
-        throw new Error('Hugging Face API key is not configured');
-      }
+  try {
+    // Ensure model is loaded if using lazy loading
+    await this.ensureModelLoaded();
+    
+    // Check if the API key is set
+    if (!this.API_KEY) {
+      console.error('HUGGING_FACE_API_KEY not found or is empty. Check your .env file.');
+      throw new Error('Hugging Face API key is not configured');
+    }
 
-      // Check for explicit mood indicators first
-      if (text.toLowerCase().includes('quick mood: positive') || 
-          text.toLowerCase().includes('mood: positive')) {
-        console.log('Explicit positive mood detected in text, overriding sentiment analysis');
-        return {
-          sentiment: { 
-            type: 'positive', 
-            score: 90, 
-            confidence: 0.9
-          },
-          source: 'explicit-mood-indicator'
-        };
-      }
+    // Check for explicit mood indicators first
+    if (text.toLowerCase().includes('quick mood: positive') || 
+        text.toLowerCase().includes('mood: positive')) {
+      console.log('Explicit positive mood detected in text, overriding sentiment analysis');
+      return {
+        sentiment: { 
+          type: 'positive', 
+          score: 90, 
+          confidence: 0.9
+        },
+        source: 'explicit-mood-indicator'
+      };
+    }
       
       // Try Hugging Face API first
       console.log('Trying Hugging Face sentiment model as primary analysis method');
-      
-      const response = await axios({
-        url: "https://api-inference.huggingface.co/models/cardiffnlp/twitter-roberta-base-sentiment",
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${this.API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        data: { inputs: text },
-        timeout: 10000
-      });
+    
+    const response = await axios({
+      // FIX: Use the same model as defined in your models object
+      url: this.API_URL + this.models.sentiment, // This points to cardiffnlp/twitter-roberta-base-sentiment-latest
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${this.API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      data: { inputs: text },
+      timeout: 10000
+    });
 
       console.log('Hugging Face sentiment API response received:', response.status);
       
@@ -352,47 +353,47 @@ class NLPService {
       console.error('Error with Hugging Face sentiment API:', error.message);
       
       // Fall back to custom model if available
-      if (this.mentalHealthModel.trained) {
-        console.log('Falling back to custom dataset model for sentiment analysis');
-        const customSentiment = this._analyzeWithCustomModel(text);
-        return {
-          sentiment: customSentiment,
-          source: 'custom-dataset-fallback'
-        };
-      }
+       if (this.mentalHealthModel.trained) {
+      console.log('Falling back to custom dataset model for sentiment analysis');
+      const customSentiment = this._analyzeWithCustomModel(text);
+      return {
+        sentiment: customSentiment,
+        source: 'custom-dataset-fallback'
+      };
+    }
       
       // Ultimate fallback with varied sentiments
-      console.log('Using basic rule-based fallback sentiment analysis');
-      
-      const lowercaseText = text.toLowerCase();
-      if (lowercaseText.includes('sad') || 
-          lowercaseText.includes('unhappy') || 
-          lowercaseText.includes('depressed') ||
-          lowercaseText.includes('anxious') ||
-          lowercaseText.includes('worried')) {
-        return {
-          sentiment: { type: 'negative', score: 70, confidence: 0.7 },
-          error: error.message,
-          source: 'rule-based-fallback'
-        };
-      } else if (lowercaseText.includes('happy') || 
-                lowercaseText.includes('great') ||
-                lowercaseText.includes('joy') ||
-                lowercaseText.includes('excited')) {
-        return {
-          sentiment: { type: 'positive', score: 75, confidence: 0.75 },
-          error: error.message,
-          source: 'rule-based-fallback'
-        };
-      } else {
-        return {
-          sentiment: { type: 'neutral', score: 50, confidence: 0.5 },
-          error: error.message,
-          source: 'rule-based-fallback'
-        };
-      }
+    console.log('Using basic rule-based fallback sentiment analysis');
+    
+    const lowercaseText = text.toLowerCase();
+    if (lowercaseText.includes('sad') || 
+        lowercaseText.includes('unhappy') || 
+        lowercaseText.includes('depressed') ||
+        lowercaseText.includes('anxious') ||
+        lowercaseText.includes('worried')) {
+      return {
+        sentiment: { type: 'negative', score: 70, confidence: 0.7 },
+        error: error.message,
+        source: 'rule-based-fallback'
+      };
+    } else if (lowercaseText.includes('happy') || 
+              lowercaseText.includes('great') ||
+              lowercaseText.includes('joy') ||
+              lowercaseText.includes('excited')) {
+      return {
+        sentiment: { type: 'positive', score: 75, confidence: 0.75 },
+        error: error.message,
+        source: 'rule-based-fallback'
+      };
+    } else {
+      return {
+        sentiment: { type: 'neutral', score: 50, confidence: 0.5 },
+        error: error.message,
+        source: 'rule-based-fallback'
+      };
     }
   }
+}
 
   _analyzeWithCustomModel(text) {
     if (!this.mentalHealthModel.trained) {
@@ -1080,14 +1081,22 @@ class NLPService {
   }
 
   _extractSentiment(data) {
-    console.log('Extracting sentiment from Hugging Face response:', JSON.stringify(data).substring(0, 300));
+  console.log('Extracting sentiment from Hugging Face response:', JSON.stringify(data).substring(0, 300));
+  
+  // Handle the response format properly
+  if (Array.isArray(data) && Array.isArray(data[0])) {
+    const sentiments = data[0];
     
-    // Handle CardiffNLP/twitter-roberta-base-sentiment format
-    if (Array.isArray(data) && Array.isArray(data[0])) {
-      // LABEL_0 = Negative, LABEL_1 = Neutral, LABEL_2 = Positive
-      const negativeItem = data[0].find(item => item.label === 'LABEL_0');
-      const neutralItem = data[0].find(item => item.label === 'LABEL_1');
-      const positiveItem = data[0].find(item => item.label === 'LABEL_2');
+    // Check if using the -latest model (NEGATIVE, NEUTRAL, POSITIVE labels)
+    const hasNamedLabels = sentiments.some(item => 
+      ['NEGATIVE', 'NEUTRAL', 'POSITIVE'].includes(item.label)
+    );
+    
+    if (hasNamedLabels) {
+      // Handle cardiffnlp/twitter-roberta-base-sentiment-latest format
+      const negativeItem = sentiments.find(item => item.label === 'NEGATIVE');
+      const neutralItem = sentiments.find(item => item.label === 'NEUTRAL');
+      const positiveItem = sentiments.find(item => item.label === 'POSITIVE');
       
       const negativeScore = negativeItem?.score || 0;
       const neutralScore = neutralItem?.score || 0;
@@ -1095,91 +1104,84 @@ class NLPService {
       
       console.log(`Extracted scores - Positive: ${positiveScore}, Neutral: ${neutralScore}, Negative: ${negativeScore}`);
       
-      if (positiveScore > neutralScore && positiveScore > negativeScore) {
-        return {
-          type: 'positive',
-          score: Math.round(positiveScore * 100),
-          confidence: positiveScore
-        };
-      } else if (negativeScore > neutralScore && negativeScore > positiveScore) {
-        return {
-          type: 'negative',
-          score: Math.round(negativeScore * 100),
-          confidence: negativeScore
-        };
-      } else {
-        return {
-          type: 'neutral',
-          score: Math.round(neutralScore * 100),
-          confidence: neutralScore
-        };
-      }
+      // Find the highest scoring sentiment
+      const scores = [
+        { type: 'positive', score: positiveScore },
+        { type: 'neutral', score: neutralScore },
+        { type: 'negative', score: negativeScore }
+      ];
+      
+      const topSentiment = scores.reduce((prev, current) => 
+        current.score > prev.score ? current : prev
+      );
+      
+      return {
+        type: topSentiment.type,
+        score: Math.round(topSentiment.score * 100),
+        confidence: topSentiment.score
+      };
+    } else {
+      // Handle cardiffnlp/twitter-roberta-base-sentiment format (LABEL_0, LABEL_1, LABEL_2)
+      // LABEL_0 = Negative, LABEL_1 = Neutral, LABEL_2 = Positive
+      const negativeItem = sentiments.find(item => item.label === 'LABEL_0');
+      const neutralItem = sentiments.find(item => item.label === 'LABEL_1');
+      const positiveItem = sentiments.find(item => item.label === 'LABEL_2');
+      
+      const negativeScore = negativeItem?.score || 0;
+      const neutralScore = neutralItem?.score || 0;
+      const positiveScore = positiveItem?.score || 0;
+      
+      console.log(`Extracted LABEL scores - Positive: ${positiveScore}, Neutral: ${neutralScore}, Negative: ${negativeScore}`);
+      
+      // Find the highest scoring sentiment
+      const scores = [
+        { type: 'positive', score: positiveScore },
+        { type: 'neutral', score: neutralScore },
+        { type: 'negative', score: negativeScore }
+      ];
+      
+      const topSentiment = scores.reduce((prev, current) => 
+        current.score > prev.score ? current : prev
+      );
+      
+      return {
+        type: topSentiment.type,
+        score: Math.round(topSentiment.score * 100),
+        confidence: topSentiment.score
+      };
     }
-    
-    // Handle different response formats
-    if (Array.isArray(data)) {
-      if (data[0] && Array.isArray(data[0])) {
-        const positiveItem = data[0].find(item => item.label === 'POSITIVE');
-        const negativeItem = data[0].find(item => item.label === 'NEGATIVE');
-        
-        const positiveScore = positiveItem?.score || 0;
-        const negativeScore = negativeItem?.score || 0;
-        
-        console.log(`Extracted scores - Positive: ${positiveScore}, Negative: ${negativeScore}`);
-        
-        if (positiveScore > negativeScore) {
-          return {
-            type: 'positive',
-            score: Math.round(positiveScore * 100),
-            confidence: positiveScore
-          };
-        } else if (negativeScore > positiveScore) {
-          return {
-            type: 'negative',
-            score: Math.round(negativeScore * 100),
-            confidence: negativeScore
-          };
-        } else {
-          return {
-            type: 'neutral',
-            score: 50,
-            confidence: 0.5
-          };
-        }
-      } else if (data.length > 0) {
-        const sentiments = data.map(item => ({
-          label: item.label,
-          score: item.score || 0
-        }));
-        
-        const topSentiment = sentiments.reduce((prev, current) => 
-          (current.score > prev.score) ? current : prev, { score: 0 });
-        
-        if (topSentiment.label === 'POSITIVE') {
-          return {
-            type: 'positive',
-            score: Math.round(topSentiment.score * 100),
-            confidence: topSentiment.score
-          };
-        } else if (topSentiment.label === 'NEGATIVE') {
-          return {
-            type: 'negative',
-            score: Math.round(topSentiment.score * 100),
-            confidence: topSentiment.score
-          };
-        } else {
-          return {
-            type: 'neutral',
-            score: 50,
-            confidence: 0.5
-          };
-        }
-      }
-    }
-    
-    console.log('Using default sentiment extraction due to unexpected data format');
-    return { type: 'neutral', score: 50, confidence: 0.5 };
   }
+  
+  // Handle single array format
+  if (Array.isArray(data) && data.length > 0 && !Array.isArray(data[0])) {
+    const sentiments = data.map(item => ({
+      label: item.label,
+      score: item.score || 0
+    }));
+    
+    const topSentiment = sentiments.reduce((prev, current) => 
+      (current.score > prev.score) ? current : prev, { score: 0 });
+    
+    // Map labels to sentiment types
+    let type = 'neutral';
+    if (topSentiment.label === 'POSITIVE' || topSentiment.label === 'LABEL_2') {
+      type = 'positive';
+    } else if (topSentiment.label === 'NEGATIVE' || topSentiment.label === 'LABEL_0') {
+      type = 'negative';
+    } else if (topSentiment.label === 'NEUTRAL' || topSentiment.label === 'LABEL_1') {
+      type = 'neutral';
+    }
+    
+    return {
+      type: type,
+      score: Math.round(topSentiment.score * 100),
+      confidence: topSentiment.score
+    };
+  }
+  
+  console.log('Using default sentiment extraction due to unexpected data format');
+  return { type: 'neutral', score: 50, confidence: 0.5 };
+} 
 }
 
 module.exports = new NLPService();
