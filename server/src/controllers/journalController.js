@@ -623,12 +623,46 @@ exports.getUserJournalEntries = async (req, res) => {
   }
 };
 
-// Keep all other existing methods unchanged...
 exports.getJournalEntry = async (req, res) => {
   try {
-    const userId = req.user._id;
+    console.log('👁️ GET REQUEST: Fetching single journal entry');
+    
+    // ✅ FIXED: Use robust user ID extraction
+    const userId = req.user?._id || req.user?.id || req.userId;
     const { id } = req.params;
     
+    console.log(`👁️ GET REQUEST: User ${userId} requesting entry ${id}`);
+    
+    if (!userId) {
+      console.error('❌ No user ID found in request');
+      return res.status(401).json({
+        success: false,
+        message: 'User ID not found in request'
+      });
+    }
+    
+    // ✅ FIXED: Handle tenant connection like other functions
+    let JournalEntry;
+    let databaseUsed = 'default';
+    
+    if (req.tenantConnection) {
+      try {
+        console.log('👁️ Using tenant connection for journal fetch');
+        JournalEntry = req.tenantConnection.model('JournalEntry');
+        databaseUsed = req.tenantConnection.db.databaseName;
+        console.log(`👁️ JournalEntry model will fetch from database: ${databaseUsed}`);
+      } catch (modelError) {
+        console.error('❌ Error getting JournalEntry model from tenant connection:', modelError);
+      }
+    }
+    
+    if (!JournalEntry) {
+      console.log('👁️ Using default database model for journal fetch');
+      JournalEntry = require('../models/JournalEntry');
+      databaseUsed = 'default (required)';
+    }
+    
+    // ✅ FIXED: Find entry with proper permissions and tenant connection
     const entry = await JournalEntry.findOne({
       _id: id,
       $or: [
@@ -645,18 +679,25 @@ exports.getJournalEntry = async (req, res) => {
     });
     
     if (!entry) {
+      console.log(`❌ Journal entry ${id} not found or not accessible by user ${userId}`);
       return res.status(404).json({
         success: false,
         message: 'Journal entry not found or you do not have permission to view it'
       });
     }
     
+    console.log(`✅ Found journal entry ${id} in database ${databaseUsed}`);
+    
     return res.status(200).json({
       success: true,
-      data: entry
+      data: entry,
+      databaseInfo: {
+        name: databaseUsed
+      }
     });
+    
   } catch (error) {
-    console.error('Error fetching journal entry:', error);
+    console.error('❌ Error fetching journal entry:', error);
     return res.status(500).json({
       success: false,
       message: 'Error fetching journal entry',
@@ -667,34 +708,80 @@ exports.getJournalEntry = async (req, res) => {
 
 exports.updateJournalEntry = async (req, res) => {
   try {
-    const userId = req.user._id;
+    console.log('✏️ UPDATE REQUEST: Starting journal entry update');
+    
+    // ✅ FIXED: Use robust user ID extraction
+    const userId = req.user?._id || req.user?.id || req.userId;
     const { id } = req.params;
     const { rawText, isPrivate, isSharedWithDoctor } = req.body;
     
+    console.log(`✏️ UPDATE REQUEST: User ${userId} updating entry ${id}`);
+    
+    if (!userId) {
+      console.error('❌ No user ID found in request');
+      return res.status(401).json({
+        success: false,
+        message: 'User ID not found in request'
+      });
+    }
+    
+    // ✅ FIXED: Handle tenant connection like other functions
+    let JournalEntry;
+    let databaseUsed = 'default';
+    
+    if (req.tenantConnection) {
+      try {
+        console.log('✏️ Using tenant connection for journal update');
+        JournalEntry = req.tenantConnection.model('JournalEntry');
+        databaseUsed = req.tenantConnection.db.databaseName;
+        console.log(`✏️ JournalEntry model will update in database: ${databaseUsed}`);
+      } catch (modelError) {
+        console.error('❌ Error getting JournalEntry model from tenant connection:', modelError);
+      }
+    }
+    
+    if (!JournalEntry) {
+      console.log('✏️ Using default database model for journal update');
+      JournalEntry = require('../models/JournalEntry');
+      databaseUsed = 'default (required)';
+    }
+    
+    // ✅ FIXED: Find entry with proper tenant connection
     const entry = await JournalEntry.findOne({
       _id: id,
       user: userId
     });
     
     if (!entry) {
+      console.log(`❌ Journal entry ${id} not found or not owned by user ${userId}`);
       return res.status(404).json({
         success: false,
         message: 'Journal entry not found'
       });
     }
     
+    console.log(`✅ Found entry to update: ${entry._id}`);
+    
+    // ✅ Update fields
     if (rawText !== undefined) entry.rawText = rawText;
     if (isPrivate !== undefined) entry.isPrivate = isPrivate;
     if (isSharedWithDoctor !== undefined) entry.isSharedWithDoctor = isSharedWithDoctor;
     
     await entry.save();
     
+    console.log(`🎉 Successfully updated journal entry ${id} in database ${databaseUsed}`);
+    
     return res.status(200).json({
       success: true,
-      data: entry
+      data: entry,
+      message: 'Journal entry updated successfully',
+      databaseInfo: {
+        name: databaseUsed
+      }
     });
+    
   } catch (error) {
-    console.error('Error updating journal entry:', error);
+    console.error('❌ Error updating journal entry:', error);
     return res.status(500).json({
       success: false,
       message: 'Error updating journal entry',
@@ -705,27 +792,103 @@ exports.updateJournalEntry = async (req, res) => {
 
 exports.deleteJournalEntry = async (req, res) => {
   try {
-    const userId = req.user._id;
+    console.log('🗑️ DELETE REQUEST: Starting journal entry deletion');
+    
+    // ✅ FIXED: Use robust user ID extraction like other functions
+    const userId = req.user?._id || req.user?.id || req.userId;
     const { id } = req.params;
     
-    const entry = await JournalEntry.findOneAndDelete({
+    console.log(`🗑️ DELETE REQUEST: User ${userId} attempting to delete entry ${id}`);
+    
+    if (!userId) {
+      console.error('❌ No user ID found in request');
+      return res.status(401).json({
+        success: false,
+        message: 'User ID not found in request'
+      });
+    }
+    
+    // ✅ FIXED: Handle tenant connection like all other functions
+    let JournalEntry;
+    let databaseUsed = 'default';
+    
+    if (req.tenantConnection) {
+      try {
+        console.log('🗑️ Using tenant connection for journal deletion');
+        JournalEntry = req.tenantConnection.model('JournalEntry');
+        databaseUsed = req.tenantConnection.db.databaseName;
+        console.log(`🗑️ JournalEntry model will delete from database: ${databaseUsed}`);
+      } catch (modelError) {
+        console.error('❌ Error getting JournalEntry model from tenant connection:', modelError);
+      }
+    }
+    
+    if (!JournalEntry) {
+      console.log('🗑️ Using default database model for journal deletion');
+      JournalEntry = require('../models/JournalEntry');
+      databaseUsed = 'default (required)';
+    }
+    
+    console.log(`🗑️ Looking for entry ${id} owned by user ${userId} in database: ${databaseUsed}`);
+    
+    // ✅ FIXED: First check if entry exists and belongs to user
+    const entryToDelete = await JournalEntry.findOne({
       _id: id,
       user: userId
     });
     
-    if (!entry) {
-      return res.status(404).json({
+    if (!entryToDelete) {
+      console.log(`❌ Journal entry ${id} not found or not owned by user ${userId}`);
+      
+      // ✅ Enhanced debugging: Check if entry exists at all
+      const entryExists = await JournalEntry.findById(id);
+      if (entryExists) {
+        console.log(`🔍 Entry exists but belongs to user ${entryExists.user}, not ${userId}`);
+        return res.status(403).json({
+          success: false,
+          message: 'You do not have permission to delete this journal entry'
+        });
+      } else {
+        console.log(`🔍 Entry ${id} does not exist in database ${databaseUsed}`);
+        return res.status(404).json({
+          success: false,
+          message: 'Journal entry not found'
+        });
+      }
+    }
+    
+    console.log(`✅ Found entry to delete: ${entryToDelete._id}`);
+    console.log(`📄 Entry content preview: ${entryToDelete.rawText?.substring(0, 50) || 'No content'}...`);
+    
+    // ✅ FIXED: Now delete the entry
+    const deletedEntry = await JournalEntry.findOneAndDelete({
+      _id: id,
+      user: userId
+    });
+    
+    if (!deletedEntry) {
+      console.error(`❌ Failed to delete entry ${id} - concurrent modification?`);
+      return res.status(500).json({
         success: false,
-        message: 'Journal entry not found'
+        message: 'Failed to delete journal entry - please try again'
       });
     }
     
+    console.log(`🎉 Successfully deleted journal entry ${id} from database ${databaseUsed}`);
+    
     return res.status(200).json({
       success: true,
-      message: 'Journal entry deleted successfully'
+      message: 'Journal entry deleted successfully',
+      deletedId: id,
+      databaseInfo: {
+        name: databaseUsed
+      }
     });
+    
   } catch (error) {
-    console.error('Error deleting journal entry:', error);
+    console.error('❌ Error deleting journal entry:', error);
+    console.error('❌ Error stack:', error.stack);
+    
     return res.status(500).json({
       success: false,
       message: 'Error deleting journal entry',

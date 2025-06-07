@@ -721,14 +721,98 @@ analyzeJournalEntry: async (id, analysis = {}) => {
   },
   
   getPatientJournals: async (patientId) => {
-    try {
-      const response = await doctorApi.get(`/patients/${patientId}/journals`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error fetching journals for patient ${patientId}:`, error);
-      throw error;
+  try {
+    console.log(`🔍 Fetching journals for patient: ${patientId}`);
+    
+    // Get authentication token
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('Authentication required');
     }
-  },
+    
+    // Get tenant info
+    const tenantStr = localStorage.getItem('tenant');
+    let tenantId = null;
+    if (tenantStr) {
+      const tenant = JSON.parse(tenantStr);
+      tenantId = tenant._id;
+    }
+    
+    // Build query parameters to filter by patient
+    const params = new URLSearchParams();
+    params.append('patient', patientId); // Filter by specific patient
+    
+    // Use the existing journal endpoint with patient filter
+    const baseURL = process.env.REACT_APP_API_URL || 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com/api';
+    const url = `${baseURL}/journal/doctor?${params.toString()}`;
+    
+    console.log('🌐 API URL:', url);
+    
+    // Set up headers
+    const headers = {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    };
+    
+    // Add tenant ID to headers
+    if (tenantId) {
+      headers['x-tenant-id'] = tenantId;
+      headers['X-Tenant-ID'] = tenantId;
+    }
+    
+    // Make the API request using axios directly
+    const response = await axios.get(url, { 
+      headers,
+      timeout: 15000
+    });
+    
+    console.log('✅ Patient journals response:', response.data);
+    
+    // Handle the response structure
+    if (response.data && response.data.success) {
+      const entries = response.data.data || [];
+      console.log(`✅ Found ${entries.length} journal entries for patient ${patientId}`);
+      
+      return {
+        success: true,
+        data: entries,
+        pagination: response.data.pagination || { total: entries.length }
+      };
+    } else if (Array.isArray(response.data)) {
+      console.log(`✅ Found ${response.data.length} journal entries (array format)`);
+      return {
+        success: true,
+        data: response.data,
+        pagination: { total: response.data.length }
+      };
+    } else {
+      console.warn('⚠️ Unexpected response format:', response.data);
+      return {
+        success: false,
+        data: [],
+        pagination: { total: 0 }
+      };
+    }
+    
+  } catch (error) {
+    console.error(`❌ Error fetching journals for patient ${patientId}:`, error);
+    
+    if (error.response) {
+      console.error('❌ Server error details:');
+      console.error('   Status:', error.response.status);
+      console.error('   Data:', error.response.data);
+      console.error('   URL:', error.config?.url);
+    }
+    
+    // Return empty result instead of throwing to prevent UI crash
+    return {
+      success: false,
+      data: [],
+      pagination: { total: 0 },
+      error: error.message
+    };
+  }
+},
 
    endPatientCare: async (patientId) => {
     try {

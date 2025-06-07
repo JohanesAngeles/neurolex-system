@@ -13,6 +13,11 @@ const PatientDetails = () => {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('registration');
 
+  // Journal-related states
+  const [journalData, setJournalData] = useState([]);
+  const [journalLoading, setJournalLoading] = useState(false);
+  const [journalError, setJournalError] = useState(null);
+
   // Helper function to safely display values
   const displayValue = (value) => {
     if (value === null || value === undefined || value === '' || value === 'null') {
@@ -70,6 +75,37 @@ const PatientDetails = () => {
       fetchPatientDetails();
     }
   }, [id]);
+
+  // Fetch patient journal data
+  const fetchPatientJournalData = async () => {
+    try {
+      setJournalLoading(true);
+      setJournalError(null);
+      
+      const response = await doctorService.getPatientJournals(id);
+      
+      if (response.success && response.data) {
+        setJournalData(response.data);
+      } else if (Array.isArray(response)) {
+        setJournalData(response);
+      } else {
+        setJournalData([]);
+      }
+    } catch (error) {
+      console.error('Error fetching patient journal data:', error);
+      setJournalError('Failed to load journal entries');
+      setJournalData([]);
+    } finally {
+      setJournalLoading(false);
+    }
+  };
+
+  // Fetch journal data when tab becomes active
+  useEffect(() => {
+    if (activeTab === 'journals' && patient) {
+      fetchPatientJournalData();
+    }
+  }, [activeTab, patient]);
 
   const handleBack = () => {
     navigate('/doctor/patients');
@@ -163,9 +199,8 @@ const PatientDetails = () => {
           Mood Check-ins
         </button>
         <button 
-          className={`tab-button ${activeTab === 'journals' ? 'active' : ''} disabled`}
+          className={`tab-button ${activeTab === 'journals' ? 'active' : ''}`}
           onClick={() => setActiveTab('journals')}
-          disabled
         >
           Journals
         </button>
@@ -193,10 +228,14 @@ const PatientDetails = () => {
           </div>
         )}
         {activeTab === 'journals' && (
-          <div className="coming-soon">
-            <h3>Journals</h3>
-            <p>This section will be implemented later.</p>
-          </div>
+          <JournalsTab 
+            patient={patient} 
+            displayValue={displayValue}
+            journalData={journalData}
+            journalLoading={journalLoading}
+            journalError={journalError}
+            fetchPatientJournalData={fetchPatientJournalData}
+          />
         )}
         {activeTab === 'appointments' && (
           <div className="coming-soon">
@@ -460,6 +499,244 @@ const OnboardingTab = ({ patient, displayValue }) => {
             <div className="detail-value">{displayValue(patient.emergencyAware)}</div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+};
+
+// Journals Tab Component
+const JournalsTab = ({ 
+  patient, 
+  displayValue, 
+  journalData, 
+  journalLoading, 
+  journalError, 
+  fetchPatientJournalData 
+}) => {
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const formatTime = (dateString) => {
+    return new Date(dateString).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getSentimentColor = (sentiment) => {
+    // Handle different sentiment data structures
+    let sentimentValue = '';
+    
+    if (typeof sentiment === 'string') {
+      sentimentValue = sentiment.toLowerCase();
+    } else if (sentiment && typeof sentiment === 'object') {
+      sentimentValue = (sentiment.type || sentiment.sentiment || '').toString().toLowerCase();
+    } else {
+      sentimentValue = '';
+    }
+    
+    switch (sentimentValue) {
+      case 'positive':
+        return '#4CAF50';
+      case 'negative':
+        return '#F44336';
+      case 'neutral':
+        return '#FFD700';
+      default:
+        return '#9E9E9E';
+    }
+  };
+
+  const getSentimentIcon = (sentiment) => {
+    // Handle different sentiment data structures
+    let sentimentValue = '';
+    
+    if (typeof sentiment === 'string') {
+      sentimentValue = sentiment.toLowerCase();
+    } else if (sentiment && typeof sentiment === 'object') {
+      sentimentValue = (sentiment.type || sentiment.sentiment || '').toString().toLowerCase();
+    } else {
+      sentimentValue = '';
+    }
+    
+    switch (sentimentValue) {
+      case 'positive':
+        return '😊';
+      case 'negative':
+        return '😔';
+      case 'neutral':
+        return '😐';
+      default:
+        return '😐';
+    }
+  };
+
+  const truncateText = (text, maxLength = 100) => {
+    if (!text) return 'No content';
+    return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
+  };
+
+  if (journalLoading) {
+    return (
+      <div className="tab-panel">
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Loading journal entries...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (journalError) {
+    return (
+      <div className="tab-panel">
+        <div className="error-container">
+          <div className="error-alert">
+            <span className="error-icon">⚠️</span>
+            <span className="error-message">{journalError}</span>
+          </div>
+          <button className="retry-button" onClick={fetchPatientJournalData}>
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="tab-panel">
+      <div className="journal-content">
+        <div className="journal-management-header">
+          <h1>Journal Entries</h1>
+          <p>View and track {patient.firstName}'s personal journal entries and emotional insights</p>
+        </div>
+
+        {journalData.length === 0 ? (
+          <div className="empty-state">
+            <h3>No Journal Entries Found</h3>
+            <p>{patient.firstName} hasn't created any journal entries yet.</p>
+          </div>
+        ) : (
+          <>
+            {/* Journal Entries Table - Using Appointments Design */}
+            <div className="appointments-table">
+              {/* Table Header */}
+              <div className="table-header">
+                <div className="header-cell">Date</div>
+                <div className="header-cell">Time</div>
+                <div className="header-cell">Journal Entry</div>
+                <div className="header-cell">Sentiment</div>
+                <div className="header-cell">Emotions Detected</div>
+                <div className="header-cell">Actions</div>
+              </div>
+
+              {/* Table Rows */}
+              {journalData.map((entry, index) => (
+                <div key={entry._id || index} className="table-row">
+                  <div className="table-cell">
+                    {formatDate(entry.createdAt || entry.timestamp)}
+                  </div>
+                  <div className="table-cell">
+                    {formatTime(entry.createdAt || entry.timestamp)}
+                  </div>
+                  <div className="table-cell">
+                    <div className="journal-entry-preview">
+                      <div style={{ 
+                        fontWeight: '600', 
+                        marginBottom: '4px',
+                        fontSize: '14px'
+                      }}>
+                        {entry.title || 'Untitled Entry'}
+                      </div>
+                      <div style={{ 
+                        fontSize: '13px', 
+                        color: '#666',
+                        lineHeight: '1.4'
+                      }}>
+                        {truncateText(entry.content || entry.text)}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="table-cell">
+                    <div className="sentiment-indicator">
+                      <div 
+                        className="sentiment-dot"
+                        style={{ 
+                          backgroundColor: getSentimentColor(entry.sentiment || entry.sentimentAnalysis?.sentiment),
+                          width: '10px',
+                          height: '10px',
+                          borderRadius: '50%',
+                          marginRight: '8px'
+                        }}
+                      ></div>
+                      <span className="sentiment-text">
+                        {(() => {
+                          // Handle different sentiment structures
+                          if (typeof entry.sentiment === 'string') {
+                            return entry.sentiment;
+                          } else if (entry.sentiment && typeof entry.sentiment === 'object') {
+                            return entry.sentiment.type || entry.sentiment.sentiment || 'Unknown';
+                          } else if (entry.sentimentAnalysis?.sentiment) {
+                            return entry.sentimentAnalysis.sentiment;
+                          } else {
+                            return 'Unknown';
+                          }
+                        })()}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="table-cell">
+                    <div className="emotion-tags">
+                      {entry.emotions || entry.sentimentAnalysis?.emotions ? (
+                        (entry.emotions || entry.sentimentAnalysis.emotions).slice(0, 3).map((emotion, idx) => (
+                          <span key={idx} className="emotion-tag">
+                            {emotion}
+                          </span>
+                        ))
+                      ) : (
+                        <span style={{ fontSize: '12px', color: '#999' }}>
+                          No emotions detected
+                        </span>
+                      )}
+                      {(entry.emotions || entry.sentimentAnalysis?.emotions)?.length > 3 && (
+                        <span className="emotion-tag" style={{ background: '#f0f0f0' }}>
+                          +{(entry.emotions || entry.sentimentAnalysis.emotions).length - 3}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="table-cell">
+                    <div className="actions-cell">
+                      <button
+                        className="action-btn view-btn"
+                        onClick={() => {
+                          // You can implement a modal to view full journal entry
+                          console.log('View full journal entry:', entry);
+                        }}
+                      >
+                        👁️ View
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Pagination (if needed) */}
+            {journalData.length > 10 && (
+              <div className="pagination">
+                <div className="pagination-info">
+                  Showing {journalData.length} entries
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
