@@ -263,7 +263,13 @@ exports.getDoctorJournalEntries = async (req, res) => {
 
     const skip = (page - 1) * limit;
     
-    console.log('🔍 Final query:', JSON.stringify(query, null, 2));
+    // ✅ ENHANCED DEBUG: Check doctor ID and query details
+    console.log('🔍 Debug Info:', {
+      doctorId: doctorId,
+      doctorIdType: typeof doctorId,
+      doctorIdString: doctorId.toString(),
+      query: JSON.stringify(query, null, 2)
+    });
     
     // Get the correct model
     let JournalEntry;
@@ -275,7 +281,50 @@ exports.getDoctorJournalEntries = async (req, res) => {
       console.log('Using default database for doctor journal entries');
     }
     
-    // Fetch entries
+    // ✅ DEBUG: Check what journal entries exist in the database
+    console.log('🔍 Checking sample journal entries in database...');
+    const allEntries = await JournalEntry.find({})
+      .select('_id assignedDoctor isSharedWithDoctor isPrivate user createdAt')
+      .sort({ createdAt: -1 })
+      .limit(10);
+    
+    console.log('🔍 Sample journal entries in database:');
+    allEntries.forEach((entry, index) => {
+      console.log(`Entry ${index + 1}:`, {
+        id: entry._id.toString(),
+        assignedDoctor: entry.assignedDoctor ? entry.assignedDoctor.toString() : 'null',
+        assignedDoctorType: typeof entry.assignedDoctor,
+        isShared: entry.isSharedWithDoctor,
+        isPrivate: entry.isPrivate,
+        user: entry.user ? entry.user.toString() : 'null',
+        date: entry.createdAt,
+        matchesDoctor: entry.assignedDoctor ? (entry.assignedDoctor.toString() === doctorId.toString()) : false
+      });
+    });
+    
+    // ✅ DEBUG: Test the query parts separately
+    console.log('🔍 Testing query parts separately...');
+    
+    // Test 1: Entries assigned to this doctor
+    const assignedEntries = await JournalEntry.find({ assignedDoctor: doctorId }).limit(5);
+    console.log(`🔍 Entries directly assigned to doctor ${doctorId}: ${assignedEntries.length}`);
+    
+    // Test 2: Entries shared with doctors (unassigned)
+    const sharedEntries = await JournalEntry.find({ 
+      isSharedWithDoctor: true,
+      assignedDoctor: null 
+    }).limit(5);
+    console.log(`🔍 Entries shared with doctors (unassigned): ${sharedEntries.length}`);
+    
+    // Test 3: Non-private entries
+    const nonPrivateEntries = await JournalEntry.find({ 
+      isPrivate: { $ne: true }
+    }).limit(5);
+    console.log(`🔍 Non-private entries: ${nonPrivateEntries.length}`);
+    
+    console.log('🔍 Final query:', JSON.stringify(query, null, 2));
+    
+    // Fetch entries with the actual query
     const entries = await JournalEntry.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -294,16 +343,49 @@ exports.getDoctorJournalEntries = async (req, res) => {
     console.log(`📊 Found ${entries.length} journal entries out of ${total} total for doctor ${doctorId}`);
     
     // Enhanced debugging: Log each entry details
-    entries.forEach((entry, index) => {
-      console.log(`Entry ${index + 1}:`, {
-        id: entry._id,
-        patient: entry.user ? `${entry.user.firstName} ${entry.user.lastName}` : 'Unknown',
-        assignedDoctor: entry.assignedDoctor || 'Unassigned',
-        isShared: entry.isSharedWithDoctor,
-        isPrivate: entry.isPrivate,
-        date: entry.createdAt
+    if (entries.length > 0) {
+      console.log('🔍 Retrieved entries details:');
+      entries.forEach((entry, index) => {
+        console.log(`Retrieved Entry ${index + 1}:`, {
+          id: entry._id.toString(),
+          patient: entry.user ? `${entry.user.firstName} ${entry.user.lastName}` : 'Unknown',
+          patientId: entry.user ? entry.user._id.toString() : 'null',
+          assignedDoctor: entry.assignedDoctor ? entry.assignedDoctor._id.toString() : 'Unassigned',
+          assignedDoctorName: entry.assignedDoctor ? `${entry.assignedDoctor.firstName} ${entry.assignedDoctor.lastName}` : 'None',
+          isShared: entry.isSharedWithDoctor,
+          isPrivate: entry.isPrivate,
+          date: entry.createdAt,
+          hasContent: !!entry.rawText,
+          contentLength: entry.rawText ? entry.rawText.length : 0
+        });
       });
-    });
+    } else {
+      console.log('❌ No entries found! This means:');
+      console.log('   1. No journal entries are assigned to this doctor');
+      console.log('   2. No journal entries are shared with doctors');
+      console.log('   3. All entries might be private');
+      console.log('   4. Database/tenant connection issue');
+      
+      // ✅ Additional debug: Check if there are ANY entries for this doctor with looser criteria
+      const looseQuery = {
+        $or: [
+          { assignedDoctor: doctorId },
+          { isSharedWithDoctor: true }
+        ]
+      };
+      
+      const looseEntries = await JournalEntry.find(looseQuery).limit(5);
+      console.log(`🔍 Loose query found ${looseEntries.length} entries`);
+      
+      if (looseEntries.length > 0) {
+        console.log('🔍 Loose query entries:', looseEntries.map(e => ({
+          id: e._id.toString(),
+          assignedDoctor: e.assignedDoctor ? e.assignedDoctor.toString() : 'null',
+          isShared: e.isSharedWithDoctor,
+          isPrivate: e.isPrivate
+        })));
+      }
+    }
 
     // Transform entries for doctor view
     const transformedEntries = entries.map(entry => ({
@@ -318,6 +400,14 @@ exports.getDoctorJournalEntries = async (req, res) => {
       assignedDoctor: entry.assignedDoctor
     }));
 
+    // ✅ FINAL DEBUG: Log the response being sent
+    console.log('🔍 Response being sent:', {
+      entriesCount: transformedEntries.length,
+      totalInDb: total,
+      doctorId: doctorId.toString(),
+      queryUsed: query
+    });
+
     return res.status(200).json({
       success: true,
       data: transformedEntries,
@@ -328,9 +418,13 @@ exports.getDoctorJournalEntries = async (req, res) => {
         pages: Math.ceil(total / Number(limit))
       },
       debug: {
-        doctorId,
+        doctorId: doctorId.toString(),
         queryUsed: query,
-        totalFound: total
+        totalFound: total,
+        sampleEntriesInDb: allEntries.length,
+        assignedToDoctor: assignedEntries.length,
+        sharedUnassigned: sharedEntries.length,
+        nonPrivate: nonPrivateEntries.length
       }
     });
   } catch (error) {
@@ -338,7 +432,12 @@ exports.getDoctorJournalEntries = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Error fetching journal entries',
-      error: error.message
+      error: error.message,
+      debug: {
+        doctorId: req.user?._id?.toString() || 'unknown',
+        hastenantConnection: !!req.tenantConnection,
+        errorDetails: error.stack
+      }
     });
   }
 };
