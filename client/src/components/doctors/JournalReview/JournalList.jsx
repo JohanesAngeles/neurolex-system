@@ -423,7 +423,7 @@ const JournalList = () => {
   heartIcon: {
     position: 'absolute',
     top: '40px',
-    right: '24px',
+    right: '150px',  // Moved the entire icon container to the left
     width: '85px',
     height: '85px',
     backgroundColor: 'rgba(167, 215, 197, 0.1)',
@@ -608,77 +608,98 @@ const JournalList = () => {
 };
   
   return (
-    <div style={styles.container}>
-      {/* Header */}
-      <div style={styles.header}>
-        <h1 style={styles.headerTitle}>Patient Journal Entries</h1>
-        <p style={styles.headerSubtitle}>Thoughtful entries and emotional check-ins from those you are helping heal.</p>
+  <div style={styles.container}>
+    {/* Heart Icon */}
+    <div style={styles.heartIcon}>
+      ❤️‍🩹
+    </div>
+    
+    {/* Header */}
+    <div style={styles.header}>
+      <h1 style={styles.headerTitle}>Patient Journal Entries</h1>
+      <p style={styles.headerSubtitle}>Thoughtful entries and emotional check-ins from those you are helping heal.</p>
+    </div>
+    
+    {/* Divider Line */}
+    <hr style={styles.dividerLine} />
+    
+    {/* Error Alert */}
+    {error && (
+      <div style={{ 
+        backgroundColor: '#FFEBEE', 
+        borderLeft: '4px solid #F44336', 
+        color: '#D32F2F', 
+        padding: '16px', 
+        borderRadius: '4px', 
+        marginBottom: '24px' 
+      }}>
+        <span style={{ fontWeight: 600, marginRight: '8px' }}>Error:</span> {error}
       </div>
-      
-      {/* Error Alert */}
-      {error && (
-        <div style={{ 
-          backgroundColor: '#FFEBEE', 
-          borderLeft: '4px solid #F44336', 
-          color: '#D32F2F', 
-          padding: '16px', 
-          borderRadius: '4px', 
-          marginBottom: '24px' 
-        }}>
-          <span style={{ fontWeight: 600, marginRight: '8px' }}>Error:</span> {error}
-        </div>
-      )}
-      
-      {/* Search Bar */}
-      <div style={styles.searchBar}>
-        <div style={styles.searchBox}>
-          <input
-            style={styles.searchInput}
-            type="text"
-            placeholder="Search journal entries"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+    )}
+    
+    {/* Search and Controls Section */}
+    <div style={styles.searchAndControlsSection}>
+      {/* Top Row - Search and Export */}
+      <div style={styles.topControlsRow}>
+        <div style={styles.searchContainer}>
+          <div style={styles.searchBox}>
+            {/* Search Icon */}
+            <svg style={styles.searchIcon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m21 21-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              style={styles.searchInput}
+              type="text"
+              placeholder="Search"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
         </div>
         
         <button style={styles.exportButton} onClick={exportToPDF}>
+          <svg width="16" height="24" viewBox="0 0 16 24" fill="none">
+            <path d="M0.84 0.73H15.16V21.81H0.84V0.73Z" fill="white"/>
+          </svg>
           Export PDF
         </button>
       </div>
       
-      {/* Filters */}
-      <div style={styles.filtersContainer}>
-        <div style={styles.filterItem}>
-          <label style={styles.filterLabel}>From Date:</label>
+      {/* Filters Row */}
+      <div style={styles.filtersRow}>
+        <div style={styles.filterGroup}>
+          <label style={styles.filterLabel}>From Date</label>
           <input
-            style={styles.filterDate}
+            style={styles.dateInput}
             type="date"
             name="dateFrom"
             value={filters.dateFrom}
             onChange={handleFilterChange}
+            placeholder="Select Birthdate"
           />
         </div>
         
-        <div style={styles.filterItem}>
-          <label style={styles.filterLabel}>To Date:</label>
+        <div style={styles.filterGroup}>
+          <label style={styles.filterLabel}>To Date</label>
           <input
-            style={styles.filterDate}
+            style={styles.dateInput}
             type="date"
             name="dateTo"
             value={filters.dateTo}
             onChange={handleFilterChange}
+            placeholder="Select Birthdate"
           />
         </div>
         
-        <div style={styles.filterItem}>
-          <label style={styles.filterLabel}>Patient:</label>
+        <div style={styles.filterGroup}>
+          <label style={styles.filterLabel}>Patient</label>
           <select
-            style={styles.filterSelect}
+            style={styles.patientSelect}
             name="patient"
             value={filters.patient}
             onChange={handleFilterChange}
           >
-            <option value="">All Patients</option>
+            <option value="">All</option>
             {Array.isArray(patients) && patients.map(patient => (
               <option
                 key={patient._id || `patient-${Math.random()}`}
@@ -690,26 +711,10 @@ const JournalList = () => {
           </select>
         </div>
         
-        <div style={styles.filterItem}>
-          <label style={styles.filterLabel}>Mood:</label>
+        <div style={styles.filterGroup}>
+          <label style={styles.filterLabel}>Sentiment</label>
           <select
-            style={styles.filterSelect}
-            name="mood"
-            value={filters.mood}
-            onChange={handleFilterChange}
-          >
-            <option value="">All</option>
-            <option value="positive">Good</option>
-            <option value="neutral">Okay</option>
-            <option value="negative">Upset</option>
-            <option value="struggling">Struggling</option>
-          </select>
-        </div>
-        
-        <div style={styles.filterItem}>
-          <label style={styles.filterLabel}>Sentiment:</label>
-          <select
-            style={styles.filterSelect}
+            style={styles.sentimentSelect}
             name="sentiment"
             value={filters.sentiment}
             onChange={handleFilterChange}
@@ -721,10 +726,14 @@ const JournalList = () => {
           </select>
         </div>
         
-        <button style={styles.resetButton} onClick={resetFilters}>
-          Reset
-        </button>
+        <div style={styles.showControl}>
+          <div style={styles.showBox}>
+            <span style={styles.showNumber}>{rowsPerPage}</span>
+          </div>
+          <span style={styles.showLabel}>Show</span>
+        </div>
       </div>
+    </div>
       
       {/* Table */}
       {loading ? (

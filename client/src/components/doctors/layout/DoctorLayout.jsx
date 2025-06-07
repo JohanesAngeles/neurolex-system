@@ -1,7 +1,8 @@
-// client/src/components/doctor/layout/DoctorLayout.jsx - UPDATED WITH PROFILE BUTTON
+// client/src/components/doctor/layout/DoctorLayout.jsx - UPDATED WITH PROFILE BUTTON AND FRESH DATA LOADING
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useTenant } from '../../../context/TenantContext';
+import doctorService from '../../../services/doctorService'; // 🆕 NEW: Import doctor service
 import '../../../styles/components/doctor/DoctorLayout.css';
 
 // Import original icons
@@ -31,33 +32,114 @@ const DoctorLayout = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [logoError, setLogoError] = useState(false);
   const [logoKey, setLogoKey] = useState(Date.now());
+  const [profileLoading, setProfileLoading] = useState(false); // 🆕 NEW: Profile loading state
 
   // Get tenant theme styles
   const theme = getThemeStyles();
 
-  // Load current doctor info and listen for profile updates
-  useEffect(() => {
-    const loadDoctorInfo = () => {
+  // 🆕 UPDATED: Load current doctor info with fresh data from server
+  const loadDoctorInfo = async () => {
+    try {
+      setProfileLoading(true);
+      
+      // First, try to get basic user info from localStorage for immediate display
+      const userData = localStorage.getItem('user') || sessionStorage.getItem('user');
+      if (userData) {
+        const user = JSON.parse(userData);
+        setCurrentUser(user); // Set initial data for immediate display
+        console.log('📦 Loaded cached user data for immediate display');
+      }
+      
+      // Then fetch fresh profile data from server
       try {
-        const userData = localStorage.getItem('user') || sessionStorage.getItem('user');
+        console.log('🔄 Fetching fresh doctor profile for sidebar...');
+        const response = await doctorService.getProfile();
+        
+        let profileData = {};
+        if (response.success && response.data) {
+          profileData = response.data;
+        } else if (response.data) {
+          profileData = response.data;
+        } else {
+          profileData = response;
+        }
+        
+        console.log('✅ Fresh profile data received:', profileData);
+        
+        // Update currentUser with fresh data from server
+        setCurrentUser(prev => ({
+          ...prev,
+          ...profileData,
+          // Ensure we keep essential fields from localStorage if not in API response
+          id: prev?.id || prev?._id || profileData._id,
+          role: prev?.role || profileData.role || 'doctor'
+        }));
+        
+        // 🆕 NEW: Update localStorage with fresh profile data
         if (userData) {
           const user = JSON.parse(userData);
-          setCurrentUser(user);
+          const updatedUser = {
+            ...user,
+            ...profileData,
+            // Keep existing ID and role from localStorage
+            id: user.id || user._id || profileData._id,
+            _id: user._id || user.id || profileData._id,
+            role: user.role || 'doctor'
+          };
+          
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+          
+          // Also update sessionStorage if it exists
+          if (sessionStorage.getItem('user')) {
+            sessionStorage.setItem('user', JSON.stringify(updatedUser));
+          }
+          
+          console.log('💾 Updated localStorage with fresh profile data');
         }
-      } catch (error) {
-        console.error('Error loading doctor info:', error);
+        
+        console.log('✅ Sidebar profile updated with fresh data');
+        
+      } catch (apiError) {
+        console.warn('⚠️ Could not fetch fresh profile data, using cached data:', apiError.message);
+        // Continue with localStorage data if API fails
       }
-    };
-    
-    loadDoctorInfo();
+      
+    } catch (error) {
+      console.error('❌ Error loading doctor info:', error);
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  // Load current doctor info and listen for profile updates
+  useEffect(() => {
+    loadDoctorInfo(); // 🆕 UPDATED: Now an async function that fetches fresh data
     
     // Listen for profile picture updates
     const handleProfilePictureUpdate = (event) => {
-      console.log('🖼️ Profile picture updated:', event.detail);
+      console.log('🖼️ Profile picture updated via event:', event.detail);
       setCurrentUser(prev => ({
         ...prev,
         profilePicture: event.detail.profilePicture
       }));
+      
+      // 🆕 NEW: Also update localStorage when profile picture changes
+      const userData = localStorage.getItem('user') || sessionStorage.getItem('user');
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          user.profilePicture = event.detail.profilePicture;
+          localStorage.setItem('user', JSON.stringify(user));
+          
+          if (sessionStorage.getItem('user')) {
+            sessionStorage.setItem('user', JSON.stringify(user));
+          }
+          
+          console.log('💾 Updated localStorage with new profile picture');
+        } catch (storageError) {
+          console.error('Error updating localStorage:', storageError);
+        }
+      }
     };
     
     window.addEventListener('profilePictureUpdated', handleProfilePictureUpdate);
@@ -228,7 +310,7 @@ const DoctorLayout = () => {
   
   console.log('🔍 [DoctorLayout] Final filtered menu items:', menuItems.map(i => i.label));
 
-  // 🆕 NEW: Navigate to profile instead of logout
+  // Navigate to profile instead of logout
   const handleProfileClick = () => {
     navigate('/doctor/profile');
   };
@@ -260,14 +342,31 @@ const DoctorLayout = () => {
     setLogoError(false);
   };
 
-  // 🆕 NEW: Get doctor's profile picture or create initials
+  // 🆕 UPDATED: Get doctor's profile picture or create initials with loading state
   const getDoctorProfileDisplay = () => {
+    if (profileLoading) {
+      return (
+        <div className="doctor-profile-loading">
+          <div className="profile-loading-spinner"></div>
+        </div>
+      );
+    }
+    
     if (currentUser?.profilePicture) {
       return (
         <img 
           src={currentUser.profilePicture} 
           alt="Profile" 
           className="doctor-profile-image"
+          onError={(e) => {
+            console.warn('Profile image failed to load:', currentUser.profilePicture);
+            // Hide the broken image and show initials instead
+            e.target.style.display = 'none';
+            const initialsDiv = e.target.parentNode.querySelector('.doctor-profile-initials-fallback');
+            if (initialsDiv) {
+              initialsDiv.style.display = 'flex';
+            }
+          }}
         />
       );
     } else {
@@ -402,19 +501,25 @@ const DoctorLayout = () => {
           )}
         </div>
         
-        {/* 🆕 UPDATED: Profile Button instead of Logout */}
+        {/* 🆕 UPDATED: Profile Button with loading state */}
         <div className="sidebar-footer">
           <div 
-            className="doctor-profile-button" 
+            className={`doctor-profile-button ${profileLoading ? 'loading' : ''}`}
             onClick={handleProfileClick}
             title={`${currentUser?.firstName} ${currentUser?.lastName} - View Profile`}
           >
             <div className="profile-picture-container">
               {getDoctorProfileDisplay()}
+              {/* 🆕 NEW: Fallback initials for broken images */}
+              {currentUser?.profilePicture && (
+                <div className="doctor-profile-initials-fallback" style={{ display: 'none' }}>
+                  {(currentUser?.firstName || 'D').charAt(0)}{(currentUser?.lastName || 'R').charAt(0)}
+                </div>
+              )}
             </div>
             <div className="doctor-info">
               <div className="doctor-name">
-                {currentUser?.firstName} {currentUser?.lastName}
+                {profileLoading ? 'Loading...' : `${currentUser?.firstName || 'Doctor'} ${currentUser?.lastName || ''}`}
               </div>
               <div className="doctor-role">Mental Health Professional</div>
             </div>
