@@ -812,6 +812,7 @@ exports.analyzeJournalEntry = async (req, res) => {
               flags: aiAnalysis.flags || []
             };
             
+            // ✅ FIX: Save emotions at both levels to match schema
             entry.sentimentAnalysis.emotions = aiAnalysis.emotions || [];
             entry.sentimentAnalysis.summary = aiAnalysis.summary || '';
             entry.sentimentAnalysis.flags = aiAnalysis.flags || [];
@@ -819,6 +820,9 @@ exports.analyzeJournalEntry = async (req, res) => {
             
             // ✅ FIX 2: Use 'ai' instead of 'doctor' (valid enum value)
             entry.sentimentAnalysis.source = 'ai';
+            
+            // ✅ DEBUG: Log what emotions we're trying to save
+            console.log('💭 Emotions being saved:', JSON.stringify(aiAnalysis.emotions, null, 2));
             
             await entry.save();
             console.log('💾 Analysis results saved to database');
@@ -845,6 +849,11 @@ exports.analyzeJournalEntry = async (req, res) => {
         highlights: sentiment.highlights || [],
         flags: sentiment.flags || []
       };
+      
+      // ✅ FIX: Also save emotions at root level
+      if (sentiment.emotions) {
+        entry.sentimentAnalysis.emotions = sentiment.emotions;
+      }
       
       entry.sentimentAnalysis.timestamp = new Date();
       
@@ -1025,7 +1034,7 @@ function createIntelligentFallback(text) {
       highlights: highlights,
       flags: negativeScore > 2 ? ['review_needed'] : []
     },
-    emotions: detectedEmotions.slice(0, 5),
+    emotions: detectedEmotions.slice(0, 5), // ✅ ENSURE: Emotions at root level too
     highlights: highlights,
     flags: negativeScore > 2 ? ['review_needed'] : [],
     summary: summary,
