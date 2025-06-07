@@ -1,4 +1,4 @@
-// client/src/components/doctor/layout/DoctorLayout.jsx - FIXED VERSION
+// client/src/components/doctor/layout/DoctorLayout.jsx - UPDATED WITH PROFILE BUTTON
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useTenant } from '../../../context/TenantContext';
@@ -24,8 +24,8 @@ const DoctorLayout = () => {
     isLoading,
     refreshTenantSettings,
     lastRefresh,
-    isFeatureEnabled,  // 🚨 FIXED: Get this from useTenant
-    tenantSettings     // 🚨 FIXED: Get this from useTenant
+    isFeatureEnabled,
+    tenantSettings
   } = useTenant();
   
   const [currentUser, setCurrentUser] = useState(null);
@@ -63,7 +63,7 @@ const DoctorLayout = () => {
     }
   }, [theme?.primaryColor, theme?.secondaryColor]);
 
-  // 🔄 NEW: Listen for tenant settings updates and refresh logo
+  // Listen for tenant settings updates and refresh logo
   useEffect(() => {
     const handleSettingsUpdate = (event) => {
       console.log('🔔 [DoctorLayout] Received tenant settings update:', event.detail);
@@ -119,15 +119,15 @@ const DoctorLayout = () => {
       : '76, 175, 80';
   };
 
-  // 🚨 UPDATED: Menu items with Patient Mood Check-Ins added
-   const allItems = [
+  // Menu items (removed logout from here)
+  const allItems = [
     { 
       id: 'dashboard', 
       label: 'Dashboard', 
       path: '/doctor', 
       icon: dashboardIcon,
       feature: 'Dashboard',
-      alwaysShow: true, // Dashboard should always be available
+      alwaysShow: true,
       implemented: true
     },
     { 
@@ -176,17 +176,17 @@ const DoctorLayout = () => {
       path: '/doctor/messages', 
       icon: messageIcon,
       feature: 'Messages',
-      implemented: false // Not yet implemented
+      implemented: false
     }
   ];
   
-  // 🔍 DEBUG: Add comprehensive logging
+  // DEBUG: Add comprehensive logging
   console.log('🔍 [DoctorLayout] Building menu items...');
   console.log('🔍 [DoctorLayout] tenantSettings:', tenantSettings);
   console.log('🔍 [DoctorLayout] hirsSettings:', tenantSettings?.hirsSettings);
   console.log('🔍 [DoctorLayout] lastRefresh:', lastRefresh);
   
-  // 🚨 SIMPLIFIED: Direct filtering without useMemo
+  // SIMPLIFIED: Direct filtering without useMemo
   const menuItems = allItems.filter(item => {
     // Always show dashboard
     if (item.alwaysShow) {
@@ -212,15 +212,9 @@ const DoctorLayout = () => {
   
   console.log('🔍 [DoctorLayout] Final filtered menu items:', menuItems.map(i => i.label));
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('tenant');
-    sessionStorage.removeItem('token');
-    sessionStorage.removeItem('user');
-    sessionStorage.removeItem('tenant');
-    
-    navigate('/login');
+  // 🆕 NEW: Navigate to profile instead of logout
+  const handleProfileClick = () => {
+    navigate('/doctor/profile');
   };
 
   // Enhanced logo source with fallback and cache busting
@@ -248,6 +242,28 @@ const DoctorLayout = () => {
   const handleLogoLoad = () => {
     console.log('✅ [DoctorLayout] Logo loaded successfully');
     setLogoError(false);
+  };
+
+  // 🆕 NEW: Get doctor's profile picture or create initials
+  const getDoctorProfileDisplay = () => {
+    if (currentUser?.profilePicture) {
+      return (
+        <img 
+          src={currentUser.profilePicture} 
+          alt="Profile" 
+          className="doctor-profile-image"
+        />
+      );
+    } else {
+      // Create initials from first and last name
+      const firstName = currentUser?.firstName || 'D';
+      const lastName = currentUser?.lastName || 'R';
+      return (
+        <div className="doctor-profile-initials">
+          {firstName.charAt(0)}{lastName.charAt(0)}
+        </div>
+      );
+    }
   };
 
   // Show loading state if tenant data is still loading
@@ -335,7 +351,7 @@ const DoctorLayout = () => {
             ))}
           </ul>
           
-          {/* 🔄 NEW: Feature Status Panel (Development Only) */}
+          {/* Feature Status Panel (Development Only) */}
           {process.env.NODE_ENV === 'development' && (
             <div className="dev-feature-status">
               <strong className="dev-title">🔧 Dev: Menu Control</strong>
@@ -370,10 +386,23 @@ const DoctorLayout = () => {
           )}
         </div>
         
+        {/* 🆕 UPDATED: Profile Button instead of Logout */}
         <div className="sidebar-footer">
-          <button className="logout-button" onClick={handleLogout}>
-            <span>Logout</span>
-          </button>
+          <div 
+            className="doctor-profile-button" 
+            onClick={handleProfileClick}
+            title={`${currentUser?.firstName} ${currentUser?.lastName} - View Profile`}
+          >
+            <div className="profile-picture-container">
+              {getDoctorProfileDisplay()}
+            </div>
+            <div className="doctor-info">
+              <div className="doctor-name">
+                {currentUser?.firstName} {currentUser?.lastName}
+              </div>
+              <div className="doctor-role">Mental Health Professional</div>
+            </div>
+          </div>
         </div>
       </div>
       

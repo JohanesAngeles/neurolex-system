@@ -48,6 +48,9 @@ import JournalEntries from './pages/doctors/JournalEntries';
 import JournalEntryDetail from './pages/doctors/JournalEntryDetail';
 import PatientList from './pages/doctors/PatientList';
 
+// 🆕 NEW: Import DoctorProfile component
+import DoctorProfile from './components/doctors/profile_doctor/DoctorProfile.jsx';
+
 // 🆕 NEW: Import DoctorMessages component for messaging
 import DoctorMessages from '../src/components/doctors/communication/DoctorMessages.jsx';
 
@@ -430,6 +433,9 @@ const App = () => {
                   <Route path="form-templates/:id/assign" element={<AssignTemplate />} />
                   <Route path="journal-entries" element={<JournalEntries />} />
                   <Route path="journal-entries/:id" element={<JournalEntryDetail />} />
+                  
+                  {/* 🆕 NEW: Doctor Profile Route - NEWLY ADDED */}
+                  <Route path="profile" element={<DoctorProfile />} />
                   
                   {/* 🆕 NEW: Doctor Messages Route - SAFE TO ADD */}
                   <Route path="messages" element={<DoctorMessages />} />

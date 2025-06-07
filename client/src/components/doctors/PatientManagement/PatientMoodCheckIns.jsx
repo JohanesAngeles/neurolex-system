@@ -166,26 +166,40 @@ const PatientMoodCheckIns = () => {
 
   return (
     <div className="mood-checkins-container">
-      {/* Header */}
+      {/* Updated Header */}
       <div className="mood-checkins-header">
-        <div className="header-left">
-          <h1>Patient Mood Check-Ins</h1>
-          <p>Monitor reflections and mood patterns from those seeking through life's challenges - we feeling at a time.</p>
-        </div>
-        <div className="header-right">
-          <div className="time-filter">
-            <label>This data</label>
-            <select 
-              value={selectedDays} 
-              onChange={(e) => handleDaysChange(parseInt(e.target.value))}
-              className="days-select"
-            >
-              <option value={7}>Last 7 days</option>
-              <option value={14}>Last 14 days</option>
-              <option value={30}>Last 30 days</option>
-            </select>
+        <div className="header-content">
+          <div className="header-left">
+            <h1>Patient Mood Check-Ins</h1>
+            <p>Honest reflections and mood updates from those working through life's challenges — one feeling at a time.</p>
           </div>
-          <div className="rainbow-icon">🌈</div>
+          <div className="header-right">
+            <div className="rainbow-icon-container">
+              <div className="rainbow-icon">🌈</div>
+            </div>
+          </div>
+        </div>
+        <div className="header-divider"></div>
+      </div>
+
+      {/* Weekly Insights Header */}
+      <div className="weekly-insights-header">
+        <h2>Weekly Insights</h2>
+      </div>
+
+      {/* Time Filter Section */}
+      <div className="time-filter-section">
+        <div className="time-filter">
+          <label>This data</label>
+          <select 
+            value={selectedDays} 
+            onChange={(e) => handleDaysChange(parseInt(e.target.value))}
+            className="days-select"
+          >
+            <option value={7}>Last 7 days</option>
+            <option value={14}>Last 14 days</option>
+            <option value={30}>Last 30 days</option>
+          </select>
         </div>
       </div>
 

@@ -1,4 +1,4 @@
-/* Updated styles/components/doctors/DoctorLayout.css */
+/* Updated styles/components/doctors/DoctorLayout.css - WITH PROFILE BUTTON */
 
 /* Basic Reset */
 * {
@@ -113,7 +113,7 @@ html, body {
   color: white;
 }
 
-/* Doctor Info Section */
+/* 🆕 UPDATED: Profile Button Section (replaces logout) */
 .sidebar-footer {
   width: 100%;
   padding: 0 10px;
@@ -123,64 +123,80 @@ html, body {
   align-items: center;
 }
 
+.doctor-profile-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  padding: 12px 8px;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  background-color: transparent;
+  border: 2px solid transparent;
+  width: 100%;
+}
+
+.doctor-profile-button:hover {
+  background-color: rgba(91, 140, 126, 0.1);
+  border-color: rgba(91, 140, 126, 0.2);
+  transform: translateY(-2px);
+}
+
+.profile-picture-container {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid #5B8C7E;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #5B8C7E;
+  box-shadow: 0 2px 8px rgba(91, 140, 126, 0.3);
+}
+
+.doctor-profile-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.doctor-profile-initials {
+  color: white;
+  font-weight: 700;
+  font-size: 16px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
 .doctor-info {
   display: flex;
   flex-direction: column;
   align-items: center;
-  cursor: pointer;
-  padding: 10px;
-  border-radius: 8px;
-  transition: background-color 0.3s ease;
-}
-
-.doctor-info:hover {
-  background-color: #f0f9f5;
-}
-
-.doctor-avatar {
-  width: 36px;
-  height: 36px;
-  background-color: #5B8C7E;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: bold;
-  margin-bottom: 5px;
-}
-
-.doctor-details {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  text-align: center;
 }
 
 .doctor-name {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   color: #333;
+  margin-bottom: 2px;
+  line-height: 1.2;
 }
 
 .doctor-role {
-  font-size: 8px;
+  font-size: 9px;
   color: #666;
+  line-height: 1.2;
+  max-width: 80px;
 }
 
-.logout-button {
-  margin-top: 15px;
-  background-color: #f0f0f0;
-  border: none;
-  border-radius: 5px;
-  padding: 5px 10px;
-  font-size: 10px;
-  cursor: pointer;
-  color: #333;
-  transition: background-color 0.3s ease;
-}
-
-.logout-button:hover {
-  background-color: #e0e0e0;
+/* 🆕 NEW: Profile button active state */
+.doctor-profile-button:active {
+  transform: translateY(0);
+  background-color: rgba(91, 140, 126, 0.2);
 }
 
 /* Main Content Area - KEY CHANGES HERE */
@@ -235,6 +251,55 @@ html, body {
   height: 36px;
 }
 
+/* Development Feature Status Panel */
+.dev-feature-status {
+  margin-top: 20px;
+  padding: 12px 8px;
+  background-color: rgba(91, 140, 126, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(91, 140, 126, 0.2);
+}
+
+.dev-title {
+  font-size: 10px;
+  color: #5B8C7E;
+  margin-bottom: 8px;
+  display: block;
+  text-align: center;
+}
+
+.feature-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 8px;
+  color: #666;
+}
+
+.feature-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #ddd;
+}
+
+.feature-dot.active {
+  background-color: #5B8C7E;
+}
+
+.feature-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .doctor-sidebar {
@@ -255,13 +320,130 @@ html, body {
     display: none;
   }
   
-  .doctor-avatar {
-    width: 30px;
-    height: 30px;
-    font-size: 10px;
+  .profile-picture-container {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .doctor-profile-initials {
+    font-size: 12px;
+  }
+  
+  .doctor-name {
+    font-size: 9px;
+  }
+  
+  .doctor-role {
+    font-size: 8px;
   }
   
   .doctor-content-container {
     padding: 16px;
+  }
+  
+  .dev-feature-status {
+    display: none; /* Hide in mobile */
+  }
+}
+
+@media (max-width: 480px) {
+  .doctor-sidebar {
+    width: 50px;
+    padding: 15px 0;
+  }
+  
+  .nav-link {
+    width: 35px;
+    height: 35px;
+  }
+  
+  .nav-icon {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .profile-picture-container {
+    width: 30px;
+    height: 30px;
+    margin-bottom: 4px;
+  }
+  
+  .doctor-profile-initials {
+    font-size: 10px;
+  }
+  
+  .doctor-name {
+    font-size: 8px;
+  }
+  
+  .doctor-role {
+    display: none; /* Hide role text in very small screens */
+  }
+  
+  .doctor-profile-button {
+    padding: 8px 4px;
+  }
+}
+
+/* Focus and Accessibility */
+.doctor-profile-button:focus,
+.nav-link:focus {
+  outline: 2px solid #5B8C7E;
+  outline-offset: 2px;
+}
+
+/* Animation for profile picture hover */
+.doctor-profile-button:hover .profile-picture-container {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(91, 140, 126, 0.4);
+}
+
+/* Tooltip for profile button */
+.doctor-profile-button::after {
+  content: attr(title);
+  position: absolute;
+  left: 110%;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: #333;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 1000;
+}
+
+.doctor-profile-button:hover::after {
+  opacity: 1;
+}
+
+/* Arrow for tooltip */
+.doctor-profile-button::before {
+  content: '';
+  position: absolute;
+  left: 105%;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 6px solid transparent;
+  border-right-color: #333;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 1001;
+}
+
+.doctor-profile-button:hover::before {
+  opacity: 1;
+}
+
+/* Hide tooltips on mobile */
+@media (max-width: 768px) {
+  .doctor-profile-button::after,
+  .doctor-profile-button::before {
+    display: none;
   }
 }
