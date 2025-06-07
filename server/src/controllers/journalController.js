@@ -715,6 +715,7 @@ exports.analyzeJournalEntry = async (req, res) => {
     const { sentiment, notes, useAI, applyChanges = true } = req.body;
     
     console.log(`🩺 Doctor ${doctorId} attempting to analyze journal entry ${id}`);
+    console.log('🚨 USING NEW ANALYZE FUNCTION WITH DEBUGGING!');
     
     // Get the correct model
     let JournalEntry;
@@ -752,6 +753,40 @@ exports.analyzeJournalEntry = async (req, res) => {
     }
     
     console.log(`✅ Found journal entry for analysis`);
+    
+    // ✅ FUNCTION TO MAP AI FLAGS TO VALID SCHEMA VALUES
+    function mapFlagsToValidEnums(flags) {
+      if (!Array.isArray(flags)) return [];
+      
+      const flagMapping = {
+        // Depression risk flags → 'attention_needed'
+        'moderate_depression_risk': 'attention_needed',
+        'severe_depression_risk': 'attention_needed', 
+        'mild_depression_risk': 'attention_needed',
+        'depression_indicator': 'attention_needed',
+        'depression_emotion_pattern': 'attention_needed',
+        
+        // Risk flags → 'attention_needed' 
+        'self_harm_risk': 'attention_needed',
+        'suicide_risk': 'attention_needed',
+        'crisis_indicator': 'attention_needed',
+        'severe_concern': 'attention_needed',
+        'moderate_concern': 'attention_needed',
+        'professional_review': 'attention_needed',
+        'review_needed': 'attention_needed',
+        
+        // Positive flags → 'positive_content'
+        'positive_indicator': 'positive_content',
+        'recovery_sign': 'positive_content',
+        'coping_strategy': 'positive_content',
+        'improvement': 'positive_content',
+        'progress': 'positive_content'
+      };
+      
+      // Map flags and remove duplicates
+      const mappedFlags = flags.map(flag => flagMapping[flag] || 'attention_needed');
+      return [...new Set(mappedFlags)]; // Remove duplicates
+    }
     
     let aiAnalysis = null;
     
@@ -800,43 +835,78 @@ exports.analyzeJournalEntry = async (req, res) => {
           // ✅ DEBUGGING: Let's see what the NLP service actually returns
           console.log('🔍 RAW AI Analysis Response:', JSON.stringify(aiAnalysis, null, 2));
           
+          // ✅ SAVE AI ANALYSIS RESULTS
           if (applyChanges && aiAnalysis) {
-  if (!entry.sentimentAnalysis) {
-    entry.sentimentAnalysis = {};
-  }
-  
-  // ✅ DEBUGGING: Check what emotions we have
-  console.log('🔍 Emotions from AI:', aiAnalysis.emotions);
-  console.log('🔍 Emotions type:', typeof aiAnalysis.emotions);
-  console.log('🔍 Is emotions array?', Array.isArray(aiAnalysis.emotions));
-  
-  // ✅ FIXED: Save sentiment according to schema structure
-  entry.sentimentAnalysis.sentiment = {
-    type: aiAnalysis.sentiment?.type || aiAnalysis.sentiment || 'neutral',
-    // Remove nested fields - they should be at root level
-    score: aiAnalysis.sentiment?.score || 50,
-    confidence: aiAnalysis.sentiment?.confidence || 0.5,
-    flags: aiAnalysis.sentiment?.flags || aiAnalysis.flags || []
-  };
-  
-  // ✅ FIXED: Save emotions, highlights, etc. at ROOT level of sentimentAnalysis
-  entry.sentimentAnalysis.emotions = aiAnalysis.emotions || [];
-  entry.sentimentAnalysis.summary = aiAnalysis.summary || '';
-  entry.sentimentAnalysis.flags = aiAnalysis.flags || [];
-  entry.sentimentAnalysis.timestamp = new Date();
-  entry.sentimentAnalysis.source = 'ai';
-  
-  // ✅ FINAL DEBUG: What are we actually saving?
-  console.log('💾 SAVING emotions:', JSON.stringify(entry.sentimentAnalysis.emotions, null, 2));
-  console.log('💾 SAVING sentiment:', JSON.stringify(entry.sentimentAnalysis.sentiment, null, 2));
-  
-  await entry.save();
-  console.log('💾 Analysis results saved to database');
-}
+            if (!entry.sentimentAnalysis) {
+              entry.sentimentAnalysis = {};
+            }
+            
+            // ✅ DEBUGGING: Check what emotions we have
+            console.log('🔍 Emotions from AI:', aiAnalysis.emotions);
+            console.log('🔍 Emotions type:', typeof aiAnalysis.emotions);
+            console.log('🔍 Is emotions array?', Array.isArray(aiAnalysis.emotions));
+            
+            // ✅ Map flags to valid enum values before saving
+            const mappedSentimentFlags = mapFlagsToValidEnums(aiAnalysis.sentiment?.flags || []);
+            const mappedGlobalFlags = mapFlagsToValidEnums(aiAnalysis.flags || []);
+            
+            console.log('🏷️ Original sentiment flags:', aiAnalysis.sentiment?.flags || []);
+            console.log('🏷️ Mapped sentiment flags:', mappedSentimentFlags);
+            console.log('🏷️ Original global flags:', aiAnalysis.flags || []);
+            console.log('🏷️ Mapped global flags:', mappedGlobalFlags);
+            
+            // ✅ FIXED: Save sentiment according to schema structure
+            entry.sentimentAnalysis.sentiment = {
+              type: aiAnalysis.sentiment?.type || aiAnalysis.sentiment || 'neutral',
+              score: aiAnalysis.sentiment?.score || 50,
+              confidence: aiAnalysis.sentiment?.confidence || 0.5,
+              flags: mappedSentimentFlags // ✅ Use mapped flags
+            };
+            
+            // ✅ FIXED: Save emotions, highlights, etc. at ROOT level of sentimentAnalysis
+            entry.sentimentAnalysis.emotions = Array.isArray(aiAnalysis.emotions) ? aiAnalysis.emotions : [];
+            entry.sentimentAnalysis.summary = aiAnalysis.summary || '';
+            entry.sentimentAnalysis.flags = mappedGlobalFlags; // ✅ Use mapped flags
+            entry.sentimentAnalysis.timestamp = new Date();
+            entry.sentimentAnalysis.source = 'ai';
+            
+            // ✅ FINAL DEBUG: What are we actually saving?
+            console.log('💾 SAVING emotions:', JSON.stringify(entry.sentimentAnalysis.emotions, null, 2));
+            console.log('💾 SAVING sentiment:', JSON.stringify(entry.sentimentAnalysis.sentiment, null, 2));
+            
+            try {
+              await entry.save();
+              console.log('💾 Analysis results saved to database successfully');
+            } catch (saveError) {
+              console.error('❌ Error saving analysis:', saveError);
+              // Create intelligent fallback and try again
+              console.log('🧠 Creating intelligent fallback due to save error...');
+              aiAnalysis = createIntelligentFallback(truncatedText);
+              
+              // Try saving with fallback data
+              entry.sentimentAnalysis.sentiment = {
+                type: aiAnalysis.sentiment?.type || 'neutral',
+                score: aiAnalysis.sentiment?.score || 50,
+                confidence: aiAnalysis.sentiment?.confidence || 0.5,
+                flags: mapFlagsToValidEnums(aiAnalysis.sentiment?.flags || [])
+              };
+              
+              entry.sentimentAnalysis.emotions = aiAnalysis.emotions || [];
+              entry.sentimentAnalysis.summary = aiAnalysis.summary || '';
+              entry.sentimentAnalysis.flags = mapFlagsToValidEnums(aiAnalysis.flags || []);
+              entry.sentimentAnalysis.timestamp = new Date();
+              entry.sentimentAnalysis.source = 'ai';
+              
+              await entry.save();
+              console.log('✅ Intelligent fallback saved successfully');
+            }
+          }
         }
       } catch (error) {
         console.error('❌ Error in AI analysis:', error);
+        console.log('🧠 Creating intelligent fallback analysis...');
         aiAnalysis = createIntelligentFallback(entry.rawText || '');
+        console.log('✅ Intelligent fallback created: ' + aiAnalysis.sentiment?.type + ' sentiment, ' + (aiAnalysis.emotions?.length || 0) + ' emotions');
       }
     }
     
@@ -846,14 +916,15 @@ exports.analyzeJournalEntry = async (req, res) => {
         entry.sentimentAnalysis = {};
       }
       
+      // ✅ Map manual flags too
+      const mappedManualFlags = mapFlagsToValidEnums(sentiment.flags || []);
+      
       // ✅ FIXED: Structure sentiment as object (not string)
       entry.sentimentAnalysis.sentiment = {
         type: sentiment.type || sentiment || 'neutral',
         score: sentiment.score || 50,
         confidence: sentiment.confidence || 0.8,
-        emotions: sentiment.emotions || [],
-        highlights: sentiment.highlights || [],
-        flags: sentiment.flags || []
+        flags: mappedManualFlags // ✅ Use mapped flags
       };
       
       // ✅ FIX: Also save emotions at root level
@@ -862,9 +933,7 @@ exports.analyzeJournalEntry = async (req, res) => {
       }
       
       entry.sentimentAnalysis.timestamp = new Date();
-      
-      // ✅ FIX: Use 'manual' instead of 'doctor' (valid enum value)
-      entry.sentimentAnalysis.source = 'manual';
+      entry.sentimentAnalysis.source = 'manual'; // ✅ Use 'manual' instead of 'doctor'
     }
     
     // ✅ Handle doctor notes correctly
@@ -925,7 +994,7 @@ exports.analyzeJournalEntry = async (req, res) => {
   }
 };
 
-// ✅ FIXED: Update intelligent fallback to return correct structure
+// ✅ FIXED: Update intelligent fallback to return correct structure and valid flags
 function createIntelligentFallback(text) {
   console.log('🧠 Creating intelligent fallback analysis...');
   
@@ -935,15 +1004,13 @@ function createIntelligentFallback(text) {
         type: 'neutral', 
         score: 50, 
         confidence: 0.3,
-        emotions: [],
-        highlights: [],
         flags: []
       },
       emotions: [{ name: 'neutral', score: 0.5 }],
       highlights: [],
       flags: [],
       summary: 'No content to analyze',
-      source: 'ai' // ✅ FIXED: Use valid enum value
+      source: 'ai'
     };
   }
   
@@ -1006,42 +1073,42 @@ function createIntelligentFallback(text) {
   
   let sentimentType = 'neutral';
   let sentimentScore = 50;
+  let validFlags = []; // ✅ Use valid flags only
   
   if (positiveScore > negativeScore) {
     sentimentType = 'positive';
     sentimentScore = Math.min(50 + (positiveScore * 10), 90);
+    validFlags = ['positive_content'];
   } else if (negativeScore > positiveScore) {
     sentimentType = 'negative';
     sentimentScore = Math.max(50 - (negativeScore * 10), 10);
+    validFlags = negativeScore > 2 ? ['attention_needed'] : [];
   }
   
   if (detectedEmotions.length === 0) {
     detectedEmotions.push(
-      { name: 'thoughtful', score: 0.6 },
-      { name: 'reflective', score: 0.4 }
+      { name: 'neutral', score: 0.6 },
+      { name: 'thoughtful', score: 0.4 }
     );
   }
   
   const wordCount = text.split(' ').length;
-  const summary = `Text-based analysis of ${wordCount} words. Detected ${sentimentType} sentiment with ${detectedEmotions.length} primary emotions. ${positiveScore > 0 ? 'Contains positive elements. ' : ''}${negativeScore > 0 ? 'Contains areas of concern. ' : ''}Recommended for professional review.`;
+  const summary = `Fallback analysis of ${wordCount} words. Detected ${sentimentType} sentiment with ${detectedEmotions.length} primary emotions. ${positiveScore > 0 ? 'Contains positive elements. ' : ''}${negativeScore > 0 ? 'Contains areas of concern. ' : ''}Recommended for professional review.`;
   
   console.log(`✅ Intelligent fallback created: ${sentimentType} sentiment, ${detectedEmotions.length} emotions`);
   
-  // ✅ FIXED: Return sentiment as object with proper structure
   return {
     sentiment: {
       type: sentimentType,
       score: sentimentScore,
       confidence: 0.7,
-      emotions: detectedEmotions.slice(0, 5),
-      highlights: highlights,
-      flags: negativeScore > 2 ? ['review_needed'] : []
+      flags: validFlags // ✅ Only valid enum values
     },
-    emotions: detectedEmotions.slice(0, 5), // ✅ ENSURE: Emotions at root level too
+    emotions: detectedEmotions.slice(0, 5),
     highlights: highlights,
-    flags: negativeScore > 2 ? ['review_needed'] : [],
+    flags: validFlags, // ✅ Only valid enum values
     summary: summary,
-    source: 'ai' // ✅ FIXED: Use valid enum value
+    source: 'ai'
   };
 }
 
