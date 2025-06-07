@@ -11,18 +11,19 @@
   align-items: center;
   margin-bottom: 30px;
 }
+
 .welcome-title {
+  padding-top: 50px;
   font-family: 'Poppins', sans-serif;
   font-style: normal;
   font-weight: 400;
   font-size: 45px;
-  line-height: 50px;
+  line-height: 1.1; /* Changed from fixed 50px to relative */
   display: flex;
   align-items: center;
   color: #000000;
   margin: 0;
-  width: 773px;
-  height: 60px;
+  /* Removed fixed width and height */
 }
 
 .welcome-subtitle {
@@ -30,11 +31,10 @@
   font-style: italic;
   font-weight: 400;
   font-size: 15px;
-  line-height: 20px;
+  line-height: 1.33; /* Changed from fixed 20px to relative */
   color: #548170;
   margin: 5px 0 0;
-  width: 647px;
-  height: 20px;
+  /* Removed fixed width and height */
 }
 .section-divider {
   width: 100%;

@@ -422,9 +422,9 @@ const JournalList = () => {
       color: '#3D6B59'
     },
     heartIcon: {
-      position: 'absolute',
+      position: 'fixed',
       top: '40px',
-      right: '24px',
+      right: '40px',
       width: '85px',
       height: '85px',
       backgroundColor: 'rgba(167, 215, 197, 0.1)',
@@ -433,7 +433,8 @@ const JournalList = () => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontSize: '52px'
+      fontSize: '52px',
+      zIndex: 1000
     },
     tableContainer: {
       marginBottom: '30px',

@@ -27,7 +27,7 @@ doctorApi.interceptors.request.use(
       try {
         const tenantData = JSON.parse(tenant);
         if (tenantData && tenantData._id) {
-          config.headers['X-Tenant-ID'] = tenantData._id;
+          config.headers['x-tenant-id'] = tenantData._id;
           console.log(`🏢 Adding tenant header: ${tenantData._id}`);
         }
       } catch (error) {
