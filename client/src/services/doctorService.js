@@ -814,6 +814,308 @@ analyzeJournalEntry: async (id, analysis = {}) => {
   }
 },
 
+
+  getIndividualPatientMoodAnalytics: async (patientId, days = 7) => {
+    try {
+      console.log(`🔍 Fetching INDIVIDUAL mood analytics for specific patient: ${patientId} (${days} days)`);
+      
+      // Get authentication token and tenant info
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+      
+      const tenantStr = localStorage.getItem('tenant');
+      let tenantId = null;
+      if (tenantStr) {
+        const tenant = JSON.parse(tenantStr);
+        tenantId = tenant._id;
+      }
+      
+      // Use the EXISTING mood user endpoint to get raw mood data
+      const baseURL = process.env.REACT_APP_API_URL || 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com/api';
+      const url = `${baseURL}/mood/user/${patientId}?days=${days}`;
+      
+      console.log('🌐 Individual Patient Mood API URL:', url);
+      
+      // Set up headers
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+      
+      // Add tenant ID to headers
+      if (tenantId) {
+        headers['x-tenant-id'] = tenantId;
+        headers['X-Tenant-ID'] = tenantId;
+      }
+      
+      // Make the API request using axios directly
+      const response = await axios.get(url, { 
+        headers,
+        timeout: 15000
+      });
+      
+      console.log('✅ Individual patient mood response:', response.data);
+      
+      // Process the raw mood data into analytics format
+      let moodEntries = [];
+      
+      if (response.data && response.data.success && Array.isArray(response.data.data)) {
+        moodEntries = response.data.data;
+      } else if (Array.isArray(response.data)) {
+        moodEntries = response.data;
+      }
+      
+      console.log('📊 Processing mood entries:', moodEntries.length, 'entries found');
+      
+      // INLINE PROCESSING FUNCTION - moved inside to fix the scope issue
+      const processMoodDataToAnalytics = (moodEntries, days) => {
+        if (!Array.isArray(moodEntries) || moodEntries.length === 0) {
+          return {
+            keyMetrics: {
+              totalLogs: 0,
+              averageLogsPerDay: 0,
+              averageMoodScore: 0,
+              topEmotionalTrends: []
+            },
+            dailyOverview: [],
+            moodDistribution: {},
+            moodHistory: []
+          };
+        }
+
+        // Calculate key metrics
+        const totalLogs = moodEntries.length;
+        const averageLogsPerDay = (totalLogs / days).toFixed(1);
+        const averageRating = moodEntries.reduce((sum, entry) => sum + (entry.moodRating || 0), 0) / totalLogs;
+        const averageMoodScore = averageRating.toFixed(1);
+
+        // Calculate mood distribution
+        const moodCounts = {};
+        moodEntries.forEach(entry => {
+          const moodKey = entry.moodKey || 'unknown';
+          moodCounts[moodKey] = (moodCounts[moodKey] || 0) + 1;
+        });
+
+        const moodDistribution = {};
+        Object.entries(moodCounts).forEach(([mood, count]) => {
+          moodDistribution[mood] = {
+            count,
+            percentage: ((count / totalLogs) * 100).toFixed(1)
+          };
+        });
+
+        // Find most frequent mood
+        const topMood = Object.entries(moodCounts).reduce((a, b) => 
+          moodCounts[a[0]] > moodCounts[b[0]] ? a : b
+        );
+
+        const topEmotionalTrends = topMood ? [{
+          mood: topMood[0].charAt(0).toUpperCase() + topMood[0].slice(1),
+          count: topMood[1]
+        }] : [];
+
+        // Create daily overview
+        const dailyOverview = [];
+        for (let i = days - 1; i >= 0; i--) {
+          const date = new Date();
+          date.setDate(date.getDate() - i);
+          const dateStr = date.toISOString().split('T')[0];
+          
+          const dayEntries = moodEntries.filter(entry => {
+            const entryDate = new Date(entry.timestamp).toISOString().split('T')[0];
+            return entryDate === dateStr;
+          });
+
+          if (dayEntries.length > 0) {
+            const avgRating = dayEntries.reduce((sum, entry) => sum + (entry.moodRating || 0), 0) / dayEntries.length;
+            const mostFrequentMood = dayEntries.reduce((prev, current) => 
+              dayEntries.filter(e => e.moodKey === current.moodKey).length > 
+              dayEntries.filter(e => e.moodKey === prev.moodKey).length ? current : prev
+            ).moodKey;
+
+            dailyOverview.push({
+              date: dateStr,
+              dateFormatted: date.getDate().toString(),
+              totalEntries: dayEntries.length,
+              averageMoodScore: avgRating.toFixed(1),
+              mostFrequentMood: mostFrequentMood
+            });
+          }
+        }
+
+        return {
+          keyMetrics: {
+            totalLogs,
+            averageLogsPerDay: parseFloat(averageLogsPerDay),
+            averageMoodScore: parseFloat(averageMoodScore),
+            topEmotionalTrends
+          },
+          dailyOverview,
+          moodDistribution,
+          moodHistory: moodEntries.slice(0, 20) // Latest 20 entries
+        };
+      };
+      
+      // Transform raw mood data into analytics format
+      const analyticsData = processMoodDataToAnalytics(moodEntries, days);
+      
+      console.log('📈 Analytics data generated:', analyticsData);
+      
+      return {
+        success: true,
+        data: analyticsData
+      };
+      
+    } catch (error) {
+      console.error(`❌ Error fetching individual mood analytics for patient ${patientId}:`, error);
+      
+      if (error.response) {
+        console.error('❌ Server error details:');
+        console.error('   Status:', error.response.status);
+        console.error('   Data:', error.response.data);
+        console.error('   URL:', error.config?.url);
+      }
+      
+      // Return empty result instead of throwing to prevent UI crash
+      return {
+        success: false,
+        data: null,
+        error: error.message
+      };
+    }
+  },
+
+  getIndividualPatientJournals: async (patientId, filters = {}) => {
+    try {
+      console.log(`🔍 Fetching INDIVIDUAL journals for specific patient: ${patientId}`);
+      
+      // Get authentication token and tenant info
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+      
+      const tenantStr = localStorage.getItem('tenant');
+      let tenantId = null;
+      if (tenantStr) {
+        const tenant = JSON.parse(tenantStr);
+        tenantId = tenant._id;
+      }
+      
+      // Build query parameters
+      const params = new URLSearchParams();
+      params.append('userId', patientId); // Use userId parameter for individual patient
+      
+      // Add any additional filters
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value && value !== 'all') {
+          params.append(key, value);
+        }
+      });
+      
+      // Use the journal user endpoint directly
+      const baseURL = process.env.REACT_APP_API_URL || 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com/api';
+      const url = `${baseURL}/journal/users/${patientId}/journal-entries?${params.toString()}`;
+      
+      console.log('🌐 Individual Patient Journals API URL:', url);
+      
+      // Set up headers
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+      
+      // Add tenant ID to headers
+      if (tenantId) {
+        headers['x-tenant-id'] = tenantId;
+        headers['X-Tenant-ID'] = tenantId;
+      }
+      
+      // Make the API request using axios directly
+      const response = await axios.get(url, { 
+        headers,
+        timeout: 15000
+      });
+      
+      console.log('✅ Individual patient journals response:', response.data);
+      console.log('🔍 Response structure check:', {
+        hasSuccess: !!response.data?.success,
+        hasData: !!response.data?.data,
+        dataType: Array.isArray(response.data?.data) ? 'array' : typeof response.data?.data,
+        dataLength: Array.isArray(response.data?.data) ? response.data.data.length : 'not array',
+        responseKeys: Object.keys(response.data || {}),
+        actualData: response.data?.data
+      });
+      
+      // Handle the response structure
+      if (response.data && response.data.success && Array.isArray(response.data.data)) {
+        console.log(`✅ Found ${response.data.data.length} journal entries for patient ${patientId}`);
+        return {
+          success: true,
+          data: response.data.data,
+          pagination: response.data.pagination || { total: response.data.data.length }
+        };
+      } else if (Array.isArray(response.data)) {
+        console.log(`✅ Found ${response.data.length} journal entries (array format)`);
+        return {
+          success: true,
+          data: response.data,
+          pagination: { total: response.data.length }
+        };
+      } else {
+        console.warn('⚠️ Unexpected response format - checking if data exists but in different structure:', response.data);
+        
+        // Try to extract data from different possible structures
+        let extractedData = [];
+        if (response.data?.data && !Array.isArray(response.data.data)) {
+          // Maybe data is an object with entries property
+          if (response.data.data.entries) {
+            extractedData = response.data.data.entries;
+          } else if (response.data.data.journals) {
+            extractedData = response.data.data.journals;
+          }
+        }
+        
+        if (extractedData.length > 0) {
+          console.log(`✅ Found ${extractedData.length} journal entries in nested structure`);
+          return {
+            success: true,
+            data: extractedData,
+            pagination: { total: extractedData.length }
+          };
+        }
+        
+        // If no data found, return empty
+        console.log('📝 No journal entries found for this patient');
+        return {
+          success: true,
+          data: [],
+          pagination: { total: 0 }
+        };
+      }
+      
+    } catch (error) {
+      console.error(`❌ Error fetching individual journals for patient ${patientId}:`, error);
+      
+      if (error.response) {
+        console.error('❌ Server error details:');
+        console.error('   Status:', error.response.status);
+        console.error('   Data:', error.response.data);
+        console.error('   URL:', error.config?.url);
+      }
+      
+      // Return empty result instead of throwing to prevent UI crash
+      return {
+        success: false,
+        data: [],
+        pagination: { total: 0 },
+        error: error.message
+      };
+    }
+  },
+
    endPatientCare: async (patientId) => {
     try {
       console.log('🔴 DoctorService: Ending care for patient:', patientId);

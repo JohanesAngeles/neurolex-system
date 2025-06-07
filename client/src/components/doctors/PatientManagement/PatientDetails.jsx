@@ -18,6 +18,29 @@ const PatientDetails = () => {
   const [journalLoading, setJournalLoading] = useState(false);
   const [journalError, setJournalError] = useState(null);
 
+  // Mood check-ins related states
+  const [moodData, setMoodData] = useState(null);
+  const [moodLoading, setMoodLoading] = useState(false);
+  const [moodError, setMoodError] = useState(null);
+  const [selectedDays, setSelectedDays] = useState(7);
+
+  // Mood SVG URLs and colors
+  const moodSvgUrls = {
+    great: 'https://res.cloudinary.com/dm7qxemrt/image/upload/v1749199687/Face_Im_Great_anfp2e.svg',
+    good: 'https://res.cloudinary.com/dm7qxemrt/image/upload/v1749199687/Face_Im_good_ldcpo4.svg',
+    okay: 'https://res.cloudinary.com/dm7qxemrt/image/upload/v1749199687/Face_Im_okay_tcf9cp.svg',
+    struggling: 'https://res.cloudinary.com/dm7qxemrt/image/upload/v1749199687/Face_Im_struggling_regocn.svg',
+    upset: 'https://res.cloudinary.com/dm7qxemrt/image/upload/v1749199687/Face_Im_upset_pqskxp.svg'
+  };
+
+  const moodColors = {
+    great: '#4CAF50',
+    good: '#8BC34A', 
+    okay: '#FFC107',
+    struggling: '#FF9800',
+    upset: '#F44336'
+  };
+
   // Helper function to safely display values
   const displayValue = (value) => {
     if (value === null || value === undefined || value === '' || value === 'null') {
@@ -82,7 +105,8 @@ const PatientDetails = () => {
       setJournalLoading(true);
       setJournalError(null);
       
-      const response = await doctorService.getPatientJournals(id);
+      // Use the NEW individual patient journals method
+      const response = await doctorService.getIndividualPatientJournals(id);
       
       if (response.success && response.data) {
         setJournalData(response.data);
@@ -100,12 +124,35 @@ const PatientDetails = () => {
     }
   };
 
-  // Fetch journal data when tab becomes active
-  useEffect(() => {
-    if (activeTab === 'journals' && patient) {
-      fetchPatientJournalData();
+  // Fetch patient mood data
+  const fetchPatientMoodData = async () => {
+    try {
+      setMoodLoading(true);
+      setMoodError(null);
+      
+      // Use the NEW individual patient mood analytics method
+      const response = await doctorService.getIndividualPatientMoodAnalytics(id, selectedDays);
+      
+      if (response.success && response.data) {
+        setMoodData(response.data);
+      } else {
+        setMoodData(null);
+      }
+    } catch (error) {
+      console.error('Error fetching patient mood data:', error);
+      setMoodError('Failed to load mood check-in data');
+      setMoodData(null);
+    } finally {
+      setMoodLoading(false);
     }
-  }, [activeTab, patient]);
+  };
+
+  // Fetch mood data when tab becomes active or days filter changes
+  useEffect(() => {
+    if (activeTab === 'mood-checkins' && patient) {
+      fetchPatientMoodData();
+    }
+  }, [activeTab, patient, selectedDays]);
 
   const handleBack = () => {
     navigate('/doctor/patients');
@@ -192,9 +239,8 @@ const PatientDetails = () => {
           Onboarding
         </button>
         <button 
-          className={`tab-button ${activeTab === 'mood-checkins' ? 'active' : ''} disabled`}
+          className={`tab-button ${activeTab === 'mood-checkins' ? 'active' : ''}`}
           onClick={() => setActiveTab('mood-checkins')}
-          disabled
         >
           Mood Check-ins
         </button>
@@ -222,10 +268,17 @@ const PatientDetails = () => {
           <OnboardingTab patient={patient} displayValue={displayValue} />
         )}
         {activeTab === 'mood-checkins' && (
-          <div className="coming-soon">
-            <h3>Mood Check-ins</h3>
-            <p>This section will be implemented later.</p>
-          </div>
+          <MoodCheckinsTab 
+            patient={patient}
+            moodData={moodData}
+            moodLoading={moodLoading}
+            moodError={moodError}
+            selectedDays={selectedDays}
+            setSelectedDays={setSelectedDays}
+            fetchPatientMoodData={fetchPatientMoodData}
+            moodSvgUrls={moodSvgUrls}
+            moodColors={moodColors}
+          />
         )}
         {activeTab === 'journals' && (
           <JournalsTab 
@@ -736,6 +789,327 @@ const JournalsTab = ({
               </div>
             )}
           </>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Mood Check-ins Tab Component
+const MoodCheckinsTab = ({ 
+  patient,
+  moodData,
+  moodLoading,
+  moodError,
+  selectedDays,
+  setSelectedDays,
+  fetchPatientMoodData,
+  moodSvgUrls,
+  moodColors
+}) => {
+  // Helper functions
+  const formatMoodLabel = (moodKey) => {
+    return moodKey?.charAt(0).toUpperCase() + moodKey?.slice(1) || 'Unknown';
+  };
+
+  const getMoodSvg = (moodKey) => {
+    return moodSvgUrls[moodKey] || moodSvgUrls['okay'];
+  };
+
+  const getMoodColor = (moodKey) => {
+    return moodColors[moodKey] || '#FFC107';
+  };
+
+  const formatDayName = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { weekday: 'long' });
+  };
+
+  if (moodLoading) {
+    return (
+      <div className="tab-panel">
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Loading mood check-ins...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (moodError) {
+    return (
+      <div className="tab-panel">
+        <div className="error-container">
+          <div className="error-alert">
+            <span className="error-icon">⚠️</span>
+            <span className="error-message">{moodError}</span>
+          </div>
+          <button className="retry-button" onClick={fetchPatientMoodData}>
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!moodData || !moodData.keyMetrics) {
+    return (
+      <div className="tab-panel">
+        <div className="mood-checkins-container">
+          {/* Header */}
+          <div className="mood-checkins-header">
+            <div className="header-left">
+              <h1>{patient.firstName}'s Mood Check-Ins</h1>
+              <p>Monitor {patient.firstName}'s mood patterns and emotional insights over time.</p>
+            </div>
+            <div className="header-right">
+              <div className="time-filter">
+                <label>Show data for</label>
+                <select 
+                  value={selectedDays} 
+                  onChange={(e) => setSelectedDays(parseInt(e.target.value))}
+                  className="days-select"
+                >
+                  <option value={7}>Last 7 days</option>
+                  <option value={14}>Last 14 days</option>
+                  <option value={30}>Last 30 days</option>
+                </select>
+              </div>
+              <div className="rainbow-icon">🌈</div>
+            </div>
+          </div>
+
+          <div className="empty-state">
+            <h3>No Mood Check-ins Available</h3>
+            <p>{patient.firstName} hasn't submitted any mood check-ins during the selected time period.</p>
+            <p style={{ fontSize: '14px', color: '#666', marginTop: '8px' }}>
+              Mood check-ins will appear here once {patient.firstName} starts using the mood tracking feature.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const { keyMetrics, dailyOverview, moodDistribution, moodHistory } = moodData;
+
+  return (
+    <div className="tab-panel">
+      <div className="mood-checkins-container">
+        {/* Header */}
+        <div className="mood-checkins-header">
+          <div className="header-left">
+            <h1>{patient.firstName}'s Mood Check-Ins</h1>
+            <p>Monitor {patient.firstName}'s mood patterns and emotional insights over time.</p>
+          </div>
+          <div className="header-right">
+            <div className="time-filter">
+              <label>Show data for</label>
+              <select 
+                value={selectedDays} 
+                onChange={(e) => setSelectedDays(parseInt(e.target.value))}
+                className="days-select"
+              >
+                <option value={7}>Last 7 days</option>
+                <option value={14}>Last 14 days</option>
+                <option value={30}>Last 30 days</option>
+              </select>
+            </div>
+            <div className="rainbow-icon">🌈</div>
+          </div>
+        </div>
+
+        {/* Key Metrics */}
+        <div className="key-metrics-section">
+          <h2>Key Metrics</h2>
+          <div className="metrics-grid">
+            <div className="metric-card">
+              <h3>Total Check-ins</h3>
+              <div className="metric-card-inside">
+                <div className="metric-value">{keyMetrics?.totalLogs || 0}</div>
+                <div className="metric-label">This Period</div>
+              </div>
+            </div>
+            <div className="metric-card">
+              <h3>Average per Day</h3>
+              <div className="metric-card-inside">
+                <div className="metric-value">{keyMetrics?.averageLogsPerDay || 0}</div>
+                <div className="metric-label">Check-ins / day</div>
+              </div>
+            </div>
+            <div className="metric-card">
+              <h3>Average Mood Score</h3>
+              <div className="metric-card-inside">
+                <div className="metric-value">{keyMetrics?.averageMoodScore || 0}</div>
+                <div className="metric-label">out of 5</div>
+              </div>
+            </div>
+            <div className="metric-card">
+              <h3>Most Frequent Mood</h3>
+              <div className="emotional-trends">
+                {keyMetrics?.topEmotionalTrends?.length > 0 ? (
+                  <div className="trend-item">
+                    <div className="emotional-trends-conainer-inside-emoji">
+                      <img 
+                        src={getMoodSvg(keyMetrics.topEmotionalTrends[0].mood?.toLowerCase())} 
+                        alt={keyMetrics.topEmotionalTrends[0].mood}
+                        className="trend-svg"
+                      />
+                    </div>
+                    <div className="emotional-trends-conainer-inside">
+                      <span className="trend-label">{keyMetrics.topEmotionalTrends[0].mood}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="trend-item">
+                    <div className="emotional-trends-conainer-inside-emoji">
+                      <img src={getMoodSvg('okay')} alt="okay" className="trend-svg" />
+                    </div>
+                    <div className="emotional-trends-conainer-inside">
+                      <span className="trend-label">No data</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Daily Overview */}
+        {dailyOverview && dailyOverview.length > 0 && (
+          <div className="daily-overview-section">
+            <h2>Daily Overview</h2>
+            <div className="daily-overview-grid">
+              {dailyOverview.map((day, index) => (
+                <div key={index} className="daily-item">
+                  <div className="daily-date">{day.dateFormatted}</div>
+                  <div className="daily-day-name">{formatDayName(day.date)}</div>
+                  <div className="daily-mood-svg">
+                    <img 
+                      src={getMoodSvg(day.mostFrequentMood)} 
+                      alt={day.mostFrequentMood}
+                      className="daily-svg"
+                    />
+                  </div>
+                  <div className="daily-stats">
+                    <div className="daily-score">{day.averageMoodScore}</div>
+                    <div className="daily-entries">{day.totalEntries} logs</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Mood Distribution */}
+        {moodDistribution && Object.keys(moodDistribution).length > 0 && (
+          <div className="mood-distribution-section">
+            <h2>Mood Distribution</h2>
+            <div className="mood-distribution-grid">
+              {Object.entries(moodDistribution).map(([moodKey, data]) => (
+                <div key={moodKey} className="mood-distribution-item">
+                  <div className="mood-info">
+                    <span 
+                      className="mood-dot"
+                      style={{ backgroundColor: getMoodColor(moodKey) }}
+                    ></span>
+                    <span className="mood-label">{formatMoodLabel(moodKey)}</span>
+                  </div>
+                  <div className="mood-stats">
+                    <div className="mood-count">{data.count} logs</div>
+                    <div className="mood-percentage">{data.percentage}%</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Mood History Table */}
+        {moodHistory && moodHistory.length > 0 && (
+          <div className="mood-history-section">
+            <h2>Mood Check-in History</h2>
+            
+            <div className="appointments-table">
+              {/* Table Header */}
+              <div className="table-header">
+                <div className="header-cell">Date</div>
+                <div className="header-cell">Time</div>
+                <div className="header-cell">Mood</div>
+                <div className="header-cell">Rating</div>
+                <div className="header-cell">Reflection</div>
+                <div className="header-cell">Actions</div>
+              </div>
+
+              {/* Table Rows */}
+              {moodHistory.map((entry, index) => (
+                <div key={entry._id || index} className="table-row">
+                  <div className="table-cell">
+                    {new Date(entry.timestamp || entry.createdAt).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
+                    })}
+                  </div>
+                  <div className="table-cell">
+                    {new Date(entry.timestamp || entry.createdAt).toLocaleTimeString('en-US', {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </div>
+                  <div className="table-cell">
+                    <div className="mood-indicator">
+                      <img 
+                        src={getMoodSvg(entry.moodKey || 'okay')} 
+                        alt={entry.moodKey || 'okay'}
+                        className="mood-svg-small"
+                        style={{ width: '20px', height: '20px', marginRight: '8px' }}
+                      />
+                      <span>{formatMoodLabel(entry.moodKey)}</span>
+                    </div>
+                  </div>
+                  <div className="table-cell">
+                    <div 
+                      className="mood-rating"
+                      style={{ 
+                        background: `${getMoodColor(entry.moodKey)}20`,
+                        color: getMoodColor(entry.moodKey),
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        fontWeight: '600',
+                        display: 'inline-block'
+                      }}
+                    >
+                      {entry.mood || entry.rating || 'N/A'}/5
+                    </div>
+                  </div>
+                  <div className="table-cell">
+                    <div className="reflection-preview">
+                      {entry.reflection ? (
+                        entry.reflection.length > 50 
+                          ? `${entry.reflection.substring(0, 50)}...`
+                          : entry.reflection
+                      ) : (
+                        <span style={{ color: '#999', fontSize: '12px' }}>No reflection</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="table-cell">
+                    <div className="actions-cell">
+                      <button
+                        className="action-btn view-btn"
+                        onClick={() => {
+                          console.log('View mood entry details:', entry);
+                        }}
+                      >
+                        👁️ View
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </div>
     </div>
