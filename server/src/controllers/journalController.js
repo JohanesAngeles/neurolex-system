@@ -704,6 +704,9 @@ exports.getAssignedTemplates = async (req, res) => {
   }
 };
 
+// Fix for analyzeJournalEntry function in server/src/controllers/journalController.js
+// Replace lines 835-868 with this corrected version:
+
 exports.analyzeJournalEntry = async (req, res) => {
   try {
     const doctorId = req.user._id;
@@ -849,16 +852,34 @@ exports.analyzeJournalEntry = async (req, res) => {
       entry.sentimentAnalysis.source = 'manual';
     }
     
+    // ✅ FIX 5: Handle doctor notes correctly - check if notes exists and is not empty
     if (notes && applyChanges) {
-      if (!entry.doctorNotes) {
-        entry.doctorNotes = [];
+      // Handle notes whether it comes as string or array
+      let noteContent = '';
+      
+      if (Array.isArray(notes)) {
+        // If notes is an array, join it or take first element
+        noteContent = notes.length > 0 ? notes.join(' ') : '';
+      } else if (typeof notes === 'string') {
+        noteContent = notes.trim();
       }
       
-      entry.doctorNotes.push({
-        content: notes,
-        createdBy: doctorId,
-        createdAt: new Date()
-      });
+      // Only add note if there's actual content
+      if (noteContent && noteContent.length > 0) {
+        if (!entry.doctorNotes) {
+          entry.doctorNotes = [];
+        }
+        
+        entry.doctorNotes.push({
+          content: noteContent,
+          createdBy: doctorId,
+          createdAt: new Date()
+        });
+        
+        console.log(`📝 Added doctor note: "${noteContent.substring(0, 50)}..."`);
+      } else {
+        console.log('⚠️ Notes parameter received but was empty, skipping note creation');
+      }
     }
     
     if (applyChanges && (sentiment || notes)) {
