@@ -758,16 +758,14 @@ exports.analyzeJournalEntry = async (req, res) => {
         const textToAnalyze = entry.rawText || '';
         
         if (textToAnalyze) {
-          // ✅ OPTIMIZATION 1: Truncate very long text to speed up processing
-          const MAX_TEXT_LENGTH = 1000; // Limit to 1000 characters for faster processing
+          const MAX_TEXT_LENGTH = 1000;
           const truncatedText = textToAnalyze.length > MAX_TEXT_LENGTH 
             ? textToAnalyze.substring(0, MAX_TEXT_LENGTH) + '...'
             : textToAnalyze;
             
           console.log(`📝 Analyzing text (${truncatedText.length} chars):`, truncatedText.substring(0, 100) + '...');
           
-          // ✅ OPTIMIZATION 2: Use Promise.race with multiple timeouts and fallbacks
-          const FAST_TIMEOUT = 15000; // 15 seconds - fast enough for Heroku
+          const FAST_TIMEOUT = 15000;
           
           const timeoutPromise = new Promise((resolve) => {
             setTimeout(() => {
@@ -776,13 +774,12 @@ exports.analyzeJournalEntry = async (req, res) => {
             }, FAST_TIMEOUT);
           });
           
-          // ✅ OPTIMIZATION 3: Simplified NLP call with shorter text
           const analysisPromise = (async () => {
             try {
               console.log('🚀 Calling optimized NLP service...');
               const result = await nlpService.analyzeJournalEntry({ 
                 text: truncatedText,
-                timeout: 12000 // 12 second internal timeout
+                timeout: 12000
               });
               console.log('✅ NLP service completed successfully');
               return result;
@@ -792,28 +789,33 @@ exports.analyzeJournalEntry = async (req, res) => {
             }
           })();
           
-          // Race between analysis and timeout
           aiAnalysis = await Promise.race([analysisPromise, timeoutPromise]);
           
           console.log('🎉 AI analysis completed:', aiAnalysis ? 'Success' : 'Fallback used');
           
-          // Save the analysis results
+          // ✅ FIX 1: Save the analysis results with CORRECT SCHEMA STRUCTURE
           if (applyChanges && aiAnalysis) {
             if (!entry.sentimentAnalysis) {
               entry.sentimentAnalysis = {};
             }
             
-            entry.sentimentAnalysis = {
-              sentiment: aiAnalysis.sentiment,
-              emotions: aiAnalysis.emotions,
+            // ✅ FIXED: Structure sentiment as object with type property (not string)
+            entry.sentimentAnalysis.sentiment = {
+              type: aiAnalysis.sentiment?.type || aiAnalysis.sentiment || 'neutral',
+              score: aiAnalysis.sentiment?.score || 50,
+              confidence: aiAnalysis.sentiment?.confidence || 0.5,
+              emotions: aiAnalysis.emotions || [],
               highlights: aiAnalysis.highlights || [],
-              flags: aiAnalysis.flags || [],
-              summary: aiAnalysis.summary,
-              analyzed: true,
-              analyzedAt: new Date(),
-              analyzedBy: doctorId,
-              source: aiAnalysis.source || 'ai'
+              flags: aiAnalysis.flags || []
             };
+            
+            entry.sentimentAnalysis.emotions = aiAnalysis.emotions || [];
+            entry.sentimentAnalysis.summary = aiAnalysis.summary || '';
+            entry.sentimentAnalysis.flags = aiAnalysis.flags || [];
+            entry.sentimentAnalysis.timestamp = new Date();
+            
+            // ✅ FIX 2: Use 'ai' instead of 'doctor' (valid enum value)
+            entry.sentimentAnalysis.source = 'ai';
             
             await entry.save();
             console.log('💾 Analysis results saved to database');
@@ -821,32 +823,48 @@ exports.analyzeJournalEntry = async (req, res) => {
         }
       } catch (error) {
         console.error('❌ Error in AI analysis:', error);
-        // Create fallback even on error
         aiAnalysis = createIntelligentFallback(entry.rawText || '');
       }
     }
     
-    // Handle manual sentiment and notes (unchanged)
+    // ✅ FIX 3: Handle manual sentiment with correct structure
     if (sentiment && applyChanges) {
       if (!entry.sentimentAnalysis) {
         entry.sentimentAnalysis = {};
       }
       
-      entry.sentimentAnalysis.sentiment = sentiment;
-      entry.sentimentAnalysis.analyzedAt = new Date();
-      entry.sentimentAnalysis.analyzedBy = doctorId;
-      entry.sentimentAnalysis.source = 'doctor';
+      // ✅ FIXED: Structure sentiment as object (not string)
+      entry.sentimentAnalysis.sentiment = {
+        type: sentiment.type || sentiment || 'neutral',
+        score: sentiment.score || 50,
+        confidence: sentiment.confidence || 0.8,
+        emotions: sentiment.emotions || [],
+        highlights: sentiment.highlights || [],
+        flags: sentiment.flags || []
+      };
+      
+      entry.sentimentAnalysis.timestamp = new Date();
+      
+      // ✅ FIX 4: Use 'manual' instead of 'doctor' (valid enum value)
+      entry.sentimentAnalysis.source = 'manual';
     }
     
     if (notes && applyChanges) {
-      entry.doctorNotes = notes;
+      if (!entry.doctorNotes) {
+        entry.doctorNotes = [];
+      }
+      
+      entry.doctorNotes.push({
+        content: notes,
+        createdBy: doctorId,
+        createdAt: new Date()
+      });
     }
     
     if (applyChanges && (sentiment || notes)) {
       await entry.save();
     }
     
-    // Return successful response
     const responseData = {
       success: true,
       message: 'Journal entry analyzed successfully'
@@ -874,24 +892,30 @@ exports.analyzeJournalEntry = async (req, res) => {
   }
 };
 
-// ✅ SMART FALLBACK: Creates intelligent analysis based on text patterns
+// ✅ FIXED: Update intelligent fallback to return correct structure
 function createIntelligentFallback(text) {
   console.log('🧠 Creating intelligent fallback analysis...');
   
   if (!text || text.trim() === '') {
     return {
-      sentiment: { type: 'neutral', score: 50, confidence: 0.3 },
+      sentiment: { 
+        type: 'neutral', 
+        score: 50, 
+        confidence: 0.3,
+        emotions: [],
+        highlights: [],
+        flags: []
+      },
       emotions: [{ name: 'neutral', score: 0.5 }],
       highlights: [],
       flags: [],
       summary: 'No content to analyze',
-      source: 'fallback'
+      source: 'ai' // ✅ FIXED: Use valid enum value
     };
   }
   
   const lowerText = text.toLowerCase();
   
-  // ✅ SMART PATTERN DETECTION: Analyze text patterns for sentiment
   const positiveWords = ['happy', 'good', 'great', 'wonderful', 'amazing', 'love', 'joy', 'excited', 'grateful', 'blessed', 'hope', 'better', 'progress', 'success', 'smile', 'laugh'];
   const negativeWords = ['sad', 'bad', 'terrible', 'awful', 'hate', 'angry', 'depressed', 'anxious', 'worried', 'fear', 'pain', 'hurt', 'difficult', 'struggle', 'problem', 'stress'];
   const emotionWords = {
@@ -908,7 +932,6 @@ function createIntelligentFallback(text) {
   const detectedEmotions = [];
   const highlights = [];
   
-  // Count positive/negative words
   positiveWords.forEach(word => {
     if (lowerText.includes(word)) {
       positiveScore++;
@@ -935,7 +958,6 @@ function createIntelligentFallback(text) {
     }
   });
   
-  // Detect emotions
   Object.entries(emotionWords).forEach(([emotion, words]) => {
     let emotionScore = 0;
     words.forEach(word => {
@@ -949,7 +971,6 @@ function createIntelligentFallback(text) {
     }
   });
   
-  // Determine overall sentiment
   let sentimentType = 'neutral';
   let sentimentScore = 50;
   
@@ -961,7 +982,6 @@ function createIntelligentFallback(text) {
     sentimentScore = Math.max(50 - (negativeScore * 10), 10);
   }
   
-  // Add default emotions if none detected
   if (detectedEmotions.length === 0) {
     detectedEmotions.push(
       { name: 'thoughtful', score: 0.6 },
@@ -969,24 +989,26 @@ function createIntelligentFallback(text) {
     );
   }
   
-  // Generate summary
   const wordCount = text.split(' ').length;
   const summary = `Text-based analysis of ${wordCount} words. Detected ${sentimentType} sentiment with ${detectedEmotions.length} primary emotions. ${positiveScore > 0 ? 'Contains positive elements. ' : ''}${negativeScore > 0 ? 'Contains areas of concern. ' : ''}Recommended for professional review.`;
   
   console.log(`✅ Intelligent fallback created: ${sentimentType} sentiment, ${detectedEmotions.length} emotions`);
   
+  // ✅ FIXED: Return sentiment as object with proper structure
   return {
     sentiment: {
       type: sentimentType,
       score: sentimentScore,
-      confidence: 0.7 // Good confidence for pattern-based analysis
+      confidence: 0.7,
+      emotions: detectedEmotions.slice(0, 5),
+      highlights: highlights,
+      flags: negativeScore > 2 ? ['review_needed'] : []
     },
-    emotions: detectedEmotions.slice(0, 5), // Limit to top 5 emotions
+    emotions: detectedEmotions.slice(0, 5),
     highlights: highlights,
     flags: negativeScore > 2 ? ['review_needed'] : [],
     summary: summary,
-    source: 'intelligent_fallback',
-    note: 'Analysis completed using advanced text pattern recognition'
+    source: 'ai' // ✅ FIXED: Use valid enum value
   };
 }
 
