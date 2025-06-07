@@ -238,648 +238,628 @@ const JournalList = () => {
   
   // Inline styles
   const styles = {
-  container: {
-    padding: '40px 24px 24px 24px',
-    backgroundColor: '#FFFFFF'
-  },
-  header: {
-    marginBottom: '32px'
-  },
-  headerTitle: {
-    fontSize: '45px',
-    fontFamily: 'Poppins, sans-serif',
-    fontStyle: 'normal',
-    fontWeight: 400,
-    lineHeight: '50px',
-    display: 'flex',
-    alignItems: 'center',
-    color: '#000000',
-    marginBottom: '8px'
-  },
-  headerSubtitle: {
-    fontSize: '15px',
-    fontFamily: 'IBM Plex Mono, monospace',
-    fontStyle: 'italic',
-    fontWeight: 400,
-    lineHeight: '20px',
-    color: '#3D6B59',
-    margin: 0
-  },
-  dividerLine: {
-    width: '100%',
-    height: '1px',
-    border: 'none',
-    backgroundColor: '#A7D7C5',
-    margin: '24px 0'
-  },
-  searchAndControlsSection: {
-    marginBottom: '24px'
-  },
-  topControlsRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '20px',
-    gap: '16px'
-  },
-  searchContainer: {
-    position: 'relative',
-    flex: 1,
-    maxWidth: '421px'
-  },
-  searchBox: {
-    position: 'relative',
-    width: '100%'
-  },
-  searchInput: {
-    width: '100%',
-    height: '54px',
-    padding: '15px 16px 15px 48px',
-    border: '1px solid #A7D7C5',
-    borderRadius: '10px',
-    fontSize: '15px',
-    fontFamily: 'IBM Plex Mono, monospace',
-    backgroundColor: '#FFFFFF',
-    boxSizing: 'border-box'
-  },
-  searchIcon: {
-    position: 'absolute',
-    left: '16px',
-    top: '50%',
-    transform: 'translateY(-50%)',
-    width: '20px',
-    height: '20px',
-    color: '#3D6B59'
-  },
-  exportButton: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '8px',
-    width: '165px',
-    height: '54px',
-    backgroundColor: '#548170',
-    border: '1px solid #548170',
-    borderRadius: '10px',
-    color: '#FFFFFF',
-    fontSize: '15px',
-    fontFamily: 'IBM Plex Mono, monospace',
-    fontWeight: 700,
-    cursor: 'pointer',
-    textAlign: 'center'
-  },
-  filtersRow: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    alignItems: 'flex-end',
-    gap: '16px'
-  },
-  filterGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px'
-  },
-  filterLabel: {
-    fontSize: '15px',
-    fontWeight: 700,
-    fontFamily: 'IBM Plex Mono, monospace',
-    color: '#3D6B59',
-    lineHeight: '20px'
-  },
-  dateInput: {
-    width: '388px',
-    height: '54px',
-    padding: '15px 16px',
-    border: '1.19518px solid #A7D7C5',
-    borderRadius: '10px',
-    backgroundColor: 'rgba(167, 215, 197, 0.1)',
-    fontSize: '15px',
-    fontFamily: 'IBM Plex Mono, monospace',
-    color: '#548170',
-    boxSizing: 'border-box'
-  },
-  patientSelect: {
-    width: '365px',
-    height: '54px',
-    padding: '15px 16px',
-    border: '1.19518px solid #A7D7C5',
-    borderRadius: '10px',
-    backgroundColor: 'rgba(167, 215, 197, 0.1)',
-    fontSize: '15px',
-    fontFamily: 'IBM Plex Mono, monospace',
-    color: '#548170',
-    boxSizing: 'border-box',
-    appearance: 'none',
-    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23548170' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
-    backgroundPosition: 'right 16px center',
-    backgroundRepeat: 'no-repeat',
-    backgroundSize: '16px'
-  },
-  sentimentSelect: {
-    width: '365px',
-    height: '54px',
-    padding: '15px 16px',
-    border: '1.19518px solid #A7D7C5',
-    borderRadius: '10px',
-    backgroundColor: 'rgba(167, 215, 197, 0.1)',
-    fontSize: '15px',
-    fontFamily: 'IBM Plex Mono, monospace',
-    color: '#548170',
-    boxSizing: 'border-box',
-    appearance: 'none',
-    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23548170' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
-    backgroundPosition: 'right 16px center',
-    backgroundRepeat: 'no-repeat',
-    backgroundSize: '16px'
-  },
-  showControl: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px'
-  },
-  showBox: {
-    width: '54px',
-    height: '54px',
-    border: '1px solid #A7D7C5',
-    borderRadius: '10px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF'
-  },
-  showNumber: {
-    fontSize: '15px',
-    fontFamily: 'IBM Plex Mono, monospace',
-    fontWeight: 700,
-    color: '#548170',
-    textAlign: 'center'
-  },
-  showLabel: {
-    fontSize: '15px',
-    fontFamily: 'IBM Plex Mono, monospace',
-    fontWeight: 700,
-    color: '#3D6B59'
-  },
-  heartIcon: {
-    position: 'absolute',
-    top: '40px',
-    right: '85px',  // Moved the entire icon container to the left
-    width: '85px',
-    height: '85px',
-    backgroundColor: 'rgba(167, 215, 197, 0.1)',
-    border: '1px solid #A7D7C5',
-    borderRadius: '10px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '52px'
-  },
-  // Keep all your existing table and other styles...
-  tableContainer: {
-    marginBottom: '30px',
-    overflowX: 'auto'
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'separate',
-    borderSpacing: '0 10px'
-  },
-  tableHead: {
-    backgroundColor: 'rgba(167, 215, 197, 0.1)'
-  },
-  tableHeadCell: {
-    padding: '12px 16px',
-    textAlign: 'left',
-    borderTop: '1px solid #A7D7C5',
-    borderBottom: '1px solid #A7D7C5',
-    fontSize: '15px',
-    fontFamily: 'IBM Plex Mono, monospace',
-    color: '#548170',
-    fontWeight: 700
-  },
-  tableHeadCellFirst: {
-    padding: '12px 16px',
-    textAlign: 'left',
-    borderTop: '1px solid #A7D7C5',
-    borderBottom: '1px solid #A7D7C5',
-    borderLeft: '1px solid #A7D7C5',
-    borderTopLeftRadius: '12px',
-    borderBottomLeftRadius: '12px',
-    fontSize: '15px',
-    fontFamily: 'IBM Plex Mono, monospace',
-    color: '#548170',
-    fontWeight: 700
-  },
-  tableHeadCellLast: {
-    padding: '12px 16px',
-    textAlign: 'left',
-    borderTop: '1px solid #A7D7C5',
-    borderBottom: '1px solid #A7D7C5',
-    borderRight: '1px solid #A7D7C5',
-    borderTopRightRadius: '12px',
-    borderBottomRightRadius: '12px',
-    fontSize: '15px',
-    fontFamily: 'IBM Plex Mono, monospace',
-    color: '#548170',
-    fontWeight: 700
-  },
-  tableRow: {
-    backgroundColor: '#ffffff'
-  },
-  tableRowAlt: {
-    backgroundColor: 'rgba(167, 215, 197, 0.1)'
-  },
-  tableCell: {
-    padding: '12px 16px',
-    borderTop: '1px solid #A7D7C5',
-    borderBottom: '1px solid #A7D7C5',
-    fontSize: '15px',
-    fontFamily: 'IBM Plex Mono, monospace'
-  },
-  tableCellFirst: {
-    padding: '12px 16px',
-    borderTop: '1px solid #A7D7C5',
-    borderBottom: '1px solid #A7D7C5',
-    borderLeft: '1px solid #A7D7C5',
-    borderTopLeftRadius: '12px',
-    borderBottomLeftRadius: '12px',
-    fontSize: '15px',
-    fontFamily: 'IBM Plex Mono, monospace'
-  },
-  tableCellLast: {
-    padding: '12px 16px',
-    borderTop: '1px solid #A7D7C5',
-    borderBottom: '1px solid #A7D7C5',
-    borderRight: '1px solid #A7D7C5',
-    borderTopRightRadius: '12px',
-    borderBottomRightRadius: '12px',
-    fontSize: '15px',
-    fontFamily: 'IBM Plex Mono, monospace'
-  },
-  emotionTags: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: '6px'
-  },
-  emotionTag: {
-    display: 'inline-block',
-    padding: '2px 8px',
-    borderRadius: '12px',
-    backgroundColor: 'rgba(167, 215, 197, 0.3)',
-    color: '#333',
-    fontSize: '12px',
-    whiteSpace: 'nowrap'
-  },
-  actionIcons: {
-    display: 'flex',
-    justifyContent: 'flex-end',
-    gap: '10px'
-  },
-  actionIconView: {
-    width: '24px',
-    height: '24px',
-    cursor: 'pointer',
-    padding: '4px',
-    borderRadius: '4px',
-    backgroundColor: '#E8F5E9'
-  },
-  actionIconEdit: {
-    width: '24px',
-    height: '24px',
-    cursor: 'pointer',
-    padding: '4px',
-    borderRadius: '4px',
-    backgroundColor: '#E3F2FD'
-  },
-  actionIconDelete: {
-    width: '24px',
-    height: '24px',
-    cursor: 'pointer',
-    padding: '4px',
-    borderRadius: '4px',
-    backgroundColor: '#FFEBEE'
-  },
-  pagination: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: '20px',
-    gap: '16px'
-  },
-  paginationButton: {
-    padding: '8px 16px',
-    backgroundColor: '#fff',
-    border: '1px solid #A7D7C5',
-    borderRadius: '6px',
-    color: '#333',
-    fontSize: '14px',
-    cursor: 'pointer'
-  },
-  paginationButtonDisabled: {
-    padding: '8px 16px',
-    backgroundColor: '#fff',
-    border: '1px solid #A7D7C5',
-    borderRadius: '6px',
-    color: '#333',
-    fontSize: '14px',
-    opacity: 0.5,
-    cursor: 'not-allowed'
-  },
-  paginationInfo: {
-    fontSize: '14px',
-    color: '#666'
-  },
-  rowsPerPage: {
-    display: 'flex',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    gap: '12px',
-    marginTop: '16px',
-    fontFamily: 'IBM Plex Mono, monospace',
-    fontSize: '14px',
-    color: '#666'
-  },
-  rowsPerPageSelect: {
-    padding: '4px 8px',
-    border: '1px solid #A7D7C5',
-    borderRadius: '4px',
-    backgroundColor: '#fff'
-  }
-};
+    container: {
+      padding: '40px 24px 24px 24px',
+      backgroundColor: '#FFFFFF'
+    },
+    header: {
+      marginBottom: '32px'
+    },
+    headerTitle: {
+      fontSize: '45px',
+      fontFamily: 'Poppins, sans-serif',
+      fontStyle: 'normal',
+      fontWeight: 400,
+      lineHeight: '50px',
+      display: 'flex',
+      alignItems: 'center',
+      color: '#000000',
+      marginBottom: '8px'
+    },
+    headerSubtitle: {
+      fontSize: '15px',
+      fontFamily: 'IBM Plex Mono, monospace',
+      fontStyle: 'italic',
+      fontWeight: 400,
+      lineHeight: '20px',
+      color: '#3D6B59',
+      margin: 0,
+      marginTop: '12px'
+    },
+    dividerLine: {
+      width: '100%',
+      height: '1px',
+      border: 'none',
+      backgroundColor: '#A7D7C5',
+      margin: '24px 0'
+    },
+    searchAndControlsSection: {
+      marginBottom: '24px'
+    },
+    topControlsRow: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: '20px',
+      gap: '16px'
+    },
+    searchContainer: {
+      position: 'relative',
+      flex: 1,
+      maxWidth: '421px'
+    },
+    searchBox: {
+      position: 'relative',
+      width: '100%'
+    },
+    searchInput: {
+      width: '100%',
+      height: '54px',
+      padding: '15px 16px 15px 48px',
+      border: '1px solid #A7D7C5',
+      borderRadius: '10px',
+      fontSize: '15px',
+      fontFamily: 'IBM Plex Mono, monospace',
+      backgroundColor: '#FFFFFF',
+      boxSizing: 'border-box'
+    },
+    searchIcon: {
+      position: 'absolute',
+      left: '16px',
+      top: '50%',
+      transform: 'translateY(-50%)',
+      width: '20px',
+      height: '20px',
+      color: '#3D6B59'
+    },
+    exportButton: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '8px',
+      width: '165px',
+      height: '54px',
+      backgroundColor: '#548170',
+      border: '1px solid #548170',
+      borderRadius: '10px',
+      color: '#FFFFFF',
+      fontSize: '15px',
+      fontFamily: 'IBM Plex Mono, monospace',
+      fontWeight: 700,
+      cursor: 'pointer',
+      textAlign: 'center'
+    },
+    filtersRow: {
+      display: 'flex',
+      flexWrap: 'wrap',
+      alignItems: 'flex-end',
+      gap: '16px'
+    },
+    filterGroup: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '8px'
+    },
+    filterLabel: {
+      fontSize: '15px',
+      fontWeight: 700,
+      fontFamily: 'IBM Plex Mono, monospace',
+      color: '#3D6B59',
+      lineHeight: '20px'
+    },
+    dateInput: {
+      width: '388px',
+      height: '54px',
+      padding: '15px 16px',
+      border: '1.19518px solid #A7D7C5',
+      borderRadius: '10px',
+      backgroundColor: 'rgba(167, 215, 197, 0.1)',
+      fontSize: '15px',
+      fontFamily: 'IBM Plex Mono, monospace',
+      color: '#548170',
+      boxSizing: 'border-box'
+    },
+    patientSelect: {
+      width: '365px',
+      height: '54px',
+      padding: '15px 16px',
+      border: '1.19518px solid #A7D7C5',
+      borderRadius: '10px',
+      backgroundColor: 'rgba(167, 215, 197, 0.1)',
+      fontSize: '15px',
+      fontFamily: 'IBM Plex Mono, monospace',
+      color: '#548170',
+      boxSizing: 'border-box',
+      appearance: 'none',
+      backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23548170' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
+      backgroundPosition: 'right 16px center',
+      backgroundRepeat: 'no-repeat',
+      backgroundSize: '16px'
+    },
+    sentimentSelect: {
+      width: '365px',
+      height: '54px',
+      padding: '15px 16px',
+      border: '1.19518px solid #A7D7C5',
+      borderRadius: '10px',
+      backgroundColor: 'rgba(167, 215, 197, 0.1)',
+      fontSize: '15px',
+      fontFamily: 'IBM Plex Mono, monospace',
+      color: '#548170',
+      boxSizing: 'border-box',
+      appearance: 'none',
+      backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23548170' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
+      backgroundPosition: 'right 16px center',
+      backgroundRepeat: 'no-repeat',
+      backgroundSize: '16px'
+    },
+    showControl: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px'
+    },
+    showBox: {
+      width: '54px',
+      height: '54px',
+      border: '1px solid #A7D7C5',
+      borderRadius: '10px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#FFFFFF'
+    },
+    showNumber: {
+      fontSize: '15px',
+      fontFamily: 'IBM Plex Mono, monospace',
+      fontWeight: 700,
+      color: '#548170',
+      textAlign: 'center'
+    },
+    showLabel: {
+      fontSize: '15px',
+      fontFamily: 'IBM Plex Mono, monospace',
+      fontWeight: 700,
+      color: '#3D6B59'
+    },
+    heartIcon: {
+      position: 'absolute',
+      top: '40px',
+      right: '24px',
+      width: '85px',
+      height: '85px',
+      backgroundColor: 'rgba(167, 215, 197, 0.1)',
+      border: '1px solid #A7D7C5',
+      borderRadius: '10px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: '52px'
+    },
+    tableContainer: {
+      marginBottom: '30px',
+      overflowX: 'auto'
+    },
+    table: {
+      width: '100%',
+      borderCollapse: 'separate',
+      borderSpacing: '0 10px'
+    },
+    tableHead: {
+      backgroundColor: 'rgba(167, 215, 197, 0.1)'
+    },
+    tableHeadCell: {
+      padding: '12px 16px',
+      textAlign: 'left',
+      borderTop: '1px solid #A7D7C5',
+      borderBottom: '1px solid #A7D7C5',
+      fontSize: '15px',
+      fontFamily: 'IBM Plex Mono, monospace',
+      color: '#548170',
+      fontWeight: 700
+    },
+    tableHeadCellFirst: {
+      padding: '12px 16px',
+      textAlign: 'left',
+      borderTop: '1px solid #A7D7C5',
+      borderBottom: '1px solid #A7D7C5',
+      borderLeft: '1px solid #A7D7C5',
+      borderTopLeftRadius: '12px',
+      borderBottomLeftRadius: '12px',
+      fontSize: '15px',
+      fontFamily: 'IBM Plex Mono, monospace',
+      color: '#548170',
+      fontWeight: 700
+    },
+    tableHeadCellLast: {
+      padding: '12px 16px',
+      textAlign: 'left',
+      borderTop: '1px solid #A7D7C5',
+      borderBottom: '1px solid #A7D7C5',
+      borderRight: '1px solid #A7D7C5',
+      borderTopRightRadius: '12px',
+      borderBottomRightRadius: '12px',
+      fontSize: '15px',
+      fontFamily: 'IBM Plex Mono, monospace',
+      color: '#548170',
+      fontWeight: 700
+    },
+    tableRow: {
+      backgroundColor: '#ffffff'
+    },
+    tableRowAlt: {
+      backgroundColor: 'rgba(167, 215, 197, 0.1)'
+    },
+    tableCell: {
+      padding: '12px 16px',
+      borderTop: '1px solid #A7D7C5',
+      borderBottom: '1px solid #A7D7C5',
+      fontSize: '15px',
+      fontFamily: 'IBM Plex Mono, monospace'
+    },
+    tableCellFirst: {
+      padding: '12px 16px',
+      borderTop: '1px solid #A7D7C5',
+      borderBottom: '1px solid #A7D7C5',
+      borderLeft: '1px solid #A7D7C5',
+      borderTopLeftRadius: '12px',
+      borderBottomLeftRadius: '12px',
+      fontSize: '15px',
+      fontFamily: 'IBM Plex Mono, monospace'
+    },
+    tableCellLast: {
+      padding: '12px 16px',
+      borderTop: '1px solid #A7D7C5',
+      borderBottom: '1px solid #A7D7C5',
+      borderRight: '1px solid #A7D7C5',
+      borderTopRightRadius: '12px',
+      borderBottomRightRadius: '12px',
+      fontSize: '15px',
+      fontFamily: 'IBM Plex Mono, monospace'
+    },
+    emotionTags: {
+      display: 'flex',
+      flexWrap: 'wrap',
+      gap: '6px'
+    },
+    emotionTag: {
+      display: 'inline-block',
+      padding: '2px 8px',
+      borderRadius: '12px',
+      backgroundColor: 'rgba(167, 215, 197, 0.3)',
+      color: '#333',
+      fontSize: '12px',
+      whiteSpace: 'nowrap'
+    },
+    actionIcons: {
+      display: 'flex',
+      justifyContent: 'flex-start',
+      gap: '10px',
+      paddingLeft: '20px'
+    },
+    viewIconContainer: {
+      width: '40px',
+      height: '40px',
+      backgroundColor: 'rgba(167, 215, 197, 0.1)',
+      border: '1px solid #A7D7C5',
+      borderRadius: '10px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      cursor: 'pointer'
+    },
+    viewIcon: {
+      width: '24px',
+      height: '24px'
+    },
+    pagination: {
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: '20px',
+      gap: '16px'
+    },
+    paginationButton: {
+      padding: '8px 16px',
+      backgroundColor: '#fff',
+      border: '1px solid #A7D7C5',
+      borderRadius: '6px',
+      color: '#333',
+      fontSize: '14px',
+      cursor: 'pointer'
+    },
+    paginationButtonDisabled: {
+      padding: '8px 16px',
+      backgroundColor: '#fff',
+      border: '1px solid #A7D7C5',
+      borderRadius: '6px',
+      color: '#333',
+      fontSize: '14px',
+      opacity: 0.5,
+      cursor: 'not-allowed'
+    },
+    paginationInfo: {
+      fontSize: '14px',
+      color: '#666'
+    },
+    rowsPerPage: {
+      display: 'flex',
+      justifyContent: 'flex-end',
+      alignItems: 'center',
+      gap: '12px',
+      marginTop: '16px',
+      fontFamily: 'IBM Plex Mono, monospace',
+      fontSize: '14px',
+      color: '#666'
+    },
+    rowsPerPageSelect: {
+      padding: '4px 8px',
+      border: '1px solid #A7D7C5',
+      borderRadius: '4px',
+      backgroundColor: '#fff'
+    }
+  };
   
   return (
-  <div style={styles.container}>
-    {/* Heart Icon */}
-    <div style={styles.heartIcon}>
-      ❤️‍🩹
-    </div>
-    
-    {/* Header */}
-    <div style={styles.header}>
-      <h1 style={styles.headerTitle}>Patient Journal Entries</h1>
-      <p style={styles.headerSubtitle}>Thoughtful entries and emotional check-ins from those you are helping heal.</p>
-    </div>
-    
-    {/* Divider Line */}
-    <hr style={styles.dividerLine} />
-    
-    {/* Error Alert */}
-    {error && (
-      <div style={{ 
-        backgroundColor: '#FFEBEE', 
-        borderLeft: '4px solid #F44336', 
-        color: '#D32F2F', 
-        padding: '16px', 
-        borderRadius: '4px', 
-        marginBottom: '24px' 
-      }}>
-        <span style={{ fontWeight: 600, marginRight: '8px' }}>Error:</span> {error}
+    <div style={styles.container}>
+      {/* Heart Icon */}
+      <div style={styles.heartIcon}>
+        ❤️‍🩹
       </div>
-    )}
-    
-    {/* Search and Controls Section */}
-    <div style={styles.searchAndControlsSection}>
-      {/* Top Row - Search and Export */}
-      <div style={styles.topControlsRow}>
-        <div style={styles.searchContainer}>
-          <div style={styles.searchBox}>
-            {/* Search Icon */}
-            <svg style={styles.searchIcon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m21 21-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      
+      {/* Header */}
+      <div style={styles.header}>
+        <h1 style={styles.headerTitle}>Patient Journal Entries</h1>
+        <p style={styles.headerSubtitle}>Thoughtful entries and emotional check-ins from those you are helping heal.</p>
+      </div>
+      
+      {/* Divider Line */}
+      <hr style={styles.dividerLine} />
+      
+      {/* Error Alert */}
+      {error && (
+        <div style={{ 
+          backgroundColor: '#FFEBEE', 
+          borderLeft: '4px solid #F44336', 
+          color: '#D32F2F', 
+          padding: '16px', 
+          borderRadius: '4px', 
+          marginBottom: '24px' 
+        }}>
+          <span style={{ fontWeight: 600, marginRight: '8px' }}>Error:</span> {error}
+        </div>
+      )}
+      
+      {/* Search and Controls Section */}
+      <div style={styles.searchAndControlsSection}>
+        {/* Top Row - Search and Export */}
+        <div style={styles.topControlsRow}>
+          <div style={styles.searchContainer}>
+            <div style={styles.searchBox}>
+              {/* Search Icon */}
+              <svg style={styles.searchIcon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m21 21-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                style={styles.searchInput}
+                type="text"
+                placeholder="Search"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
+          
+          <button style={styles.exportButton} onClick={exportToPDF}>
+            <svg width="16" height="24" viewBox="0 0 16 24" fill="none">
+              <path d="M0.84 0.73H15.16V21.81H0.84V0.73Z" fill="white"/>
             </svg>
+            Export PDF
+          </button>
+        </div>
+        
+        {/* Filters Row */}
+        <div style={styles.filtersRow}>
+          <div style={styles.filterGroup}>
+            <label style={styles.filterLabel}>From Date</label>
             <input
-              style={styles.searchInput}
-              type="text"
-              placeholder="Search"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              style={styles.dateInput}
+              type="date"
+              name="dateFrom"
+              value={filters.dateFrom}
+              onChange={handleFilterChange}
+              placeholder="Select Birthdate"
             />
           </div>
-        </div>
-        
-        <button style={styles.exportButton} onClick={exportToPDF}>
-          <svg width="16" height="24" viewBox="0 0 16 24" fill="none">
-            <path d="M0.84 0.73H15.16V21.81H0.84V0.73Z" fill="white"/>
-          </svg>
-          Export PDF
-        </button>
-      </div>
-      
-      {/* Filters Row */}
-      <div style={styles.filtersRow}>
-        <div style={styles.filterGroup}>
-          <label style={styles.filterLabel}>From Date</label>
-          <input
-            style={styles.dateInput}
-            type="date"
-            name="dateFrom"
-            value={filters.dateFrom}
-            onChange={handleFilterChange}
-            placeholder="Select Birthdate"
-          />
-        </div>
-        
-        <div style={styles.filterGroup}>
-          <label style={styles.filterLabel}>To Date</label>
-          <input
-            style={styles.dateInput}
-            type="date"
-            name="dateTo"
-            value={filters.dateTo}
-            onChange={handleFilterChange}
-            placeholder="Select Birthdate"
-          />
-        </div>
-        
-        <div style={styles.filterGroup}>
-          <label style={styles.filterLabel}>Patient</label>
-          <select
-            style={styles.patientSelect}
-            name="patient"
-            value={filters.patient}
-            onChange={handleFilterChange}
-          >
-            <option value="">All</option>
-            {Array.isArray(patients) && patients.map(patient => (
-              <option
-                key={patient._id || `patient-${Math.random()}`}
-                value={patient._id || ''}
-              >
-                {patient.firstName || ''} {patient.lastName || ''}
-              </option>
-            ))}
-          </select>
-        </div>
-        
-        <div style={styles.filterGroup}>
-          <label style={styles.filterLabel}>Sentiment</label>
-          <select
-            style={styles.sentimentSelect}
-            name="sentiment"
-            value={filters.sentiment}
-            onChange={handleFilterChange}
-          >
-            <option value="">All</option>
-            <option value="positive">Positive</option>
-            <option value="neutral">Neutral</option>
-            <option value="negative">Negative</option>
-          </select>
-        </div>
-        
-        <div style={styles.showControl}>
-          <div style={styles.showBox}>
-            <span style={styles.showNumber}>{rowsPerPage}</span>
+          
+          <div style={styles.filterGroup}>
+            <label style={styles.filterLabel}>To Date</label>
+            <input
+              style={styles.dateInput}
+              type="date"
+              name="dateTo"
+              value={filters.dateTo}
+              onChange={handleFilterChange}
+              placeholder="Select Birthdate"
+            />
           </div>
-          <span style={styles.showLabel}>Show</span>
+          
+          <div style={styles.filterGroup}>
+            <label style={styles.filterLabel}>Patient</label>
+            <select
+              style={styles.patientSelect}
+              name="patient"
+              value={filters.patient}
+              onChange={handleFilterChange}
+            >
+              <option value="">All</option>
+              {Array.isArray(patients) && patients.map(patient => (
+                <option
+                  key={patient._id || `patient-${Math.random()}`}
+                  value={patient._id || ''}
+                >
+                  {patient.firstName || ''} {patient.lastName || ''}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div style={styles.filterGroup}>
+            <label style={styles.filterLabel}>Sentiment</label>
+            <select
+              style={styles.sentimentSelect}
+              name="sentiment"
+              value={filters.sentiment}
+              onChange={handleFilterChange}
+            >
+              <option value="">All</option>
+              <option value="positive">Positive</option>
+              <option value="neutral">Neutral</option>
+              <option value="negative">Negative</option>
+            </select>
+          </div>
+          
+          <div style={styles.showControl}>
+            <div style={styles.showBox}>
+              <span style={styles.showNumber}>{rowsPerPage}</span>
+            </div>
+            <span style={styles.showLabel}>Show</span>
+          </div>
         </div>
       </div>
-    </div>
-      
-      {/* Table */}
-      {loading ? (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
+        
+        {/* Table */}
+        {loading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
+            <div style={{ 
+              width: '40px', 
+              height: '40px', 
+              border: '3px solid #f3f3f3', 
+              borderTop: '3px solid #5B8C7E', 
+              borderRadius: '50%', 
+              animation: 'spin 1s linear infinite' 
+            }}></div>
+          </div>
+        ) : !Array.isArray(entries) || entries.length === 0 ? (
           <div style={{ 
-            width: '40px', 
-            height: '40px', 
-            border: '3px solid #f3f3f3', 
-            borderTop: '3px solid #5B8C7E', 
-            borderRadius: '50%', 
-            animation: 'spin 1s linear infinite' 
-          }}></div>
-        </div>
-      ) : !Array.isArray(entries) || entries.length === 0 ? (
-        <div style={{ 
-          backgroundColor: '#fff', 
-          border: '1px solid #A7D7C5', 
-          borderRadius: '12px', 
-          padding: '40px', 
-          textAlign: 'center', 
-          marginBottom: '30px' 
-        }}>
-          <h3 style={{ fontSize: '20px', fontWeight: 600, color: '#333', marginBottom: '8px' }}>No journal entries found</h3>
-          <p style={{ fontSize: '16px', color: '#666', margin: 0 }}>Try adjusting your search or filters.</p>
-        </div>
-      ) : (
-        <div style={styles.tableContainer}>
-          <table style={styles.table}>
-            <thead>
-              <tr style={styles.tableHead}>
-                <th style={styles.tableHeadCellFirst}>Patient</th>
-                <th style={styles.tableHeadCell}>Date</th>
-                <th style={styles.tableHeadCell}>Journal Entry Title</th>
-                <th style={styles.tableHeadCell}>Mood</th>
-                <th style={styles.tableHeadCell}>Sentiment</th>
-                <th style={styles.tableHeadCell}>Emotions Detected</th>
-                <th style={styles.tableHeadCellLast}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {entries.map((entry, index) => {
-                // Map API data to UI format
-                const sentimentType = entry.sentiment?.type || 'neutral';
-                const sentimentLabel = sentimentType.charAt(0).toUpperCase() + sentimentType.slice(1);
-                const moodType = entry.mood?.label || sentimentType;
-                const emotions = getEmotionTags(entry) || [];
-                const isEven = index % 2 === 1;
-                
-                return (
-                  <tr key={entry._id || `entry-${index}`} style={isEven ? styles.tableRowAlt : styles.tableRow}>
-                    <td style={styles.tableCellFirst}>{entry.patientName || 'Unknown'}</td>
-                    <td style={styles.tableCell}>{formatDateSafe(entry.date)}</td>
-                    <td style={styles.tableCell}>
-                      {entry.title || entry.templateName || 'Journal Entry'}
-                    </td>
-                    <td style={styles.tableCell}>
-                      <MoodIndicator mood={moodType} />
-                    </td>
-                    <td style={styles.tableCell}>
-                      <SentimentIndicator sentiment={sentimentLabel} />
-                    </td>
-                    <td style={styles.tableCell}>
-                      <div style={styles.emotionTags}>
-                        {emotions.slice(0, 3).map((emotion, i) => (
-                          <span
-                            key={i}
-                            style={styles.emotionTag}
-                          >
-                            {emotion.charAt(0).toUpperCase() + emotion.slice(1)}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td style={styles.tableCellLast}>
-                      <div style={styles.actionIcons}>
-                        <img
-                          src="/assets/icons/view_icon.svg"
-                          style={styles.actionIconView}
-                          onClick={() => viewEntry(entry._id)}
-                          title="View Entry"
-                          alt="View"
-                        />
-                        <img
-                          src="/assets/icons/edit_icon.svg"
-                          style={styles.actionIconEdit}
-                          onClick={() => editEntry(entry._id)}
-                          title="Edit Entry"
-                          alt="Edit"
-                        />
-                        <img
-                          src="/assets/icons/delete_icon.svg"
-                          style={styles.actionIconDelete}
-                          onClick={() => deleteEntry(entry._id)}
-                          title="Delete Entry"
-                          alt="Delete"
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-      
-      {/* Pagination */}
-      {total > rowsPerPage && (
-        <div style={styles.pagination}>
-          <button
-            style={page === 0 ? styles.paginationButtonDisabled : styles.paginationButton}
-            onClick={() => handleChangePage(Math.max(0, page - 1))}
-            disabled={page === 0}
-          >
-            &laquo; Previous
-          </button>
-          
-          <div style={styles.paginationInfo}>
-            Page {page + 1} of {Math.ceil(total / rowsPerPage)}
+            backgroundColor: '#fff', 
+            border: '1px solid #A7D7C5', 
+            borderRadius: '12px', 
+            padding: '40px', 
+            textAlign: 'center', 
+            marginBottom: '30px' 
+          }}>
+            <h3 style={{ fontSize: '20px', fontWeight: 600, color: '#333', marginBottom: '8px' }}>No journal entries found</h3>
+            <p style={{ fontSize: '16px', color: '#666', margin: 0 }}>Try adjusting your search or filters.</p>
           </div>
-          
-          <button
-            style={page >= Math.ceil(total / rowsPerPage) - 1 ? styles.paginationButtonDisabled : styles.paginationButton}
-            onClick={() => handleChangePage(Math.min(Math.ceil(total / rowsPerPage) - 1, page + 1))}
-            disabled={page >= Math.ceil(total / rowsPerPage) - 1}
+        ) : (
+          <div style={styles.tableContainer}>
+            <table style={styles.table}>
+              <thead>
+                <tr style={styles.tableHead}>
+                  <th style={styles.tableHeadCellFirst}>Patient</th>
+                  <th style={styles.tableHeadCell}>Date</th>
+                  <th style={styles.tableHeadCell}>Journal Entry Title</th>
+                  <th style={styles.tableHeadCell}>Mood</th>
+                  <th style={styles.tableHeadCell}>Sentiment</th>
+                  <th style={styles.tableHeadCell}>Emotions Detected</th>
+                  <th style={styles.tableHeadCellLast}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {entries.map((entry, index) => {
+                  // Map API data to UI format
+                  const sentimentType = entry.sentiment?.type || 'neutral';
+                  const sentimentLabel = sentimentType.charAt(0).toUpperCase() + sentimentType.slice(1);
+                  const moodType = entry.mood?.label || sentimentType;
+                  const emotions = getEmotionTags(entry) || [];
+                  const isEven = index % 2 === 1;
+                  
+                  return (
+                    <tr key={entry._id || `entry-${index}`} style={isEven ? styles.tableRowAlt : styles.tableRow}>
+                      <td style={styles.tableCellFirst}>{entry.patientName || 'Unknown'}</td>
+                      <td style={styles.tableCell}>{formatDateSafe(entry.date)}</td>
+                      <td style={styles.tableCell}>
+                        {entry.title || entry.templateName || 'Journal Entry'}
+                      </td>
+                      <td style={styles.tableCell}>
+                        <MoodIndicator mood={moodType} />
+                      </td>
+                      <td style={styles.tableCell}>
+                        <SentimentIndicator sentiment={sentimentLabel} />
+                      </td>
+                      <td style={styles.tableCell}>
+                        <div style={styles.emotionTags}>
+                          {emotions.slice(0, 3).map((emotion, i) => (
+                            <span
+                              key={i}
+                              style={styles.emotionTag}
+                            >
+                              {emotion.charAt(0).toUpperCase() + emotion.slice(1)}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td style={styles.tableCellLast}>
+                        <div style={styles.actionIcons}>
+                          <div
+                            style={styles.viewIconContainer}
+                            onClick={() => viewEntry(entry._id)}
+                            title="View Entry"
+                          >
+                            <svg style={styles.viewIcon} viewBox="0 0 24 24" fill="none">
+                              <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" fill="#548170"/>
+                            </svg>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+        
+        {/* Pagination */}
+        {total > rowsPerPage && (
+          <div style={styles.pagination}>
+            <button
+              style={page === 0 ? styles.paginationButtonDisabled : styles.paginationButton}
+              onClick={() => handleChangePage(Math.max(0, page - 1))}
+              disabled={page === 0}
+            >
+              &laquo; Previous
+            </button>
+            
+            <div style={styles.paginationInfo}>
+              Page {page + 1} of {Math.ceil(total / rowsPerPage)}
+            </div>
+            
+            <button
+              style={page >= Math.ceil(total / rowsPerPage) - 1 ? styles.paginationButtonDisabled : styles.paginationButton}
+              onClick={() => handleChangePage(Math.min(Math.ceil(total / rowsPerPage) - 1, page + 1))}
+              disabled={page >= Math.ceil(total / rowsPerPage) - 1}
+            >
+              Next &raquo;
+            </button>
+          </div>
+        )}
+        
+        {/* Rows per page */}
+        <div style={styles.rowsPerPage}>
+          <span>Rows per page:</span>
+          <select
+            style={styles.rowsPerPageSelect}
+            value={rowsPerPage}
+            onChange={handleChangeRowsPerPage}
           >
-            Next &raquo;
-          </button>
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+          </select>
         </div>
-      )}
-      
-      {/* Rows per page */}
-      <div style={styles.rowsPerPage}>
-        <span>Rows per page:</span>
-        <select
-          style={styles.rowsPerPageSelect}
-          value={rowsPerPage}
-          onChange={handleChangeRowsPerPage}
-        >
-          <option value={10}>10</option>
-          <option value={25}>25</option>
-          <option value={50}>50</option>
-        </select>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
 export default JournalList;
