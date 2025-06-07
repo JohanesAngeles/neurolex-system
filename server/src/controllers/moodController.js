@@ -525,6 +525,144 @@ const getDoctorPatientMoodAnalytics = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Get patient mood history data for the mood check-ins table
+ * @route   GET /api/mood/doctor/history
+ * @access  Private (Doctor only)
+ */
+const getDoctorPatientMoodHistory = async (req, res) => {
+  try {
+    console.log('Fetching doctor patient mood history for:', req.user.id);
+    
+    // Use tenant connection
+    const Mood = req.tenantConnection.model('Mood');
+    const PatientDoctorAssociation = req.tenantConnection.model('PatientDoctorAssociation');
+    const User = req.tenantConnection.model('User');
+    
+    // Verify user is a doctor
+    if (req.user.role !== 'doctor') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Doctor role required.'
+      });
+    }
+
+    const { days = 7 } = req.query;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - parseInt(days));
+    
+    // Get all active patients under this doctor's care
+    const patientAssociations = await PatientDoctorAssociation.find({
+      doctor: req.user.id,
+      status: 'active'
+    }).select('patient');
+    
+    const patientIds = patientAssociations.map(assoc => assoc.patient);
+    
+    if (patientIds.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: []
+      });
+    }
+
+    // Get patient information
+    const patients = await User.find({
+      _id: { $in: patientIds }
+    }).select('_id firstName lastName email');
+
+    // Create patient info map
+    const patientMap = {};
+    patients.forEach(patient => {
+      patientMap[patient._id] = {
+        id: patient._id,
+        name: `${patient.firstName} ${patient.lastName}`,
+        email: patient.email
+      };
+    });
+
+    // Get mood entries for all patients
+    const moodEntries = await Mood.find({
+      tenantId: req.user.tenantId,
+      userId: { $in: patientIds },
+      timestamp: { $gte: startDate }
+    }).sort({ timestamp: -1 });
+
+    // Group mood entries by patient
+    const patientMoodData = {};
+    
+    moodEntries.forEach(entry => {
+      const patientId = entry.userId.toString();
+      
+      if (!patientMoodData[patientId]) {
+        patientMoodData[patientId] = {
+          patientId,
+          patientName: patientMap[patientId]?.name || 'Unknown Patient',
+          patientEmail: patientMap[patientId]?.email || '',
+          moods: [],
+          totalLogs: 0,
+          averageRating: 0,
+          lastMood: null
+        };
+      }
+      
+      patientMoodData[patientId].moods.push(entry);
+      patientMoodData[patientId].totalLogs++;
+      
+      // Set last mood (most recent)
+      if (!patientMoodData[patientId].lastMood || 
+          entry.timestamp > patientMoodData[patientId].lastMood.timestamp) {
+        patientMoodData[patientId].lastMood = {
+          moodKey: entry.moodKey,
+          moodLabel: entry.moodLabel,
+          moodRating: entry.moodRating,
+          timestamp: entry.timestamp
+        };
+      }
+    });
+
+    // Calculate averages and format response
+    const patientHistoryData = Object.values(patientMoodData).map(patient => {
+      // Calculate average mood rating
+      if (patient.moods.length > 0) {
+        const totalRating = patient.moods.reduce((sum, mood) => sum + mood.moodRating, 0);
+        patient.averageRating = totalRating / patient.moods.length;
+      }
+
+      // Get the most recent date for sorting
+      patient.date = patient.lastMood ? patient.lastMood.timestamp : new Date();
+
+      return {
+        patientId: patient.patientId,
+        patientName: patient.patientName,
+        patientEmail: patient.patientEmail,
+        totalLogs: patient.totalLogs,
+        averageRating: Math.round(patient.averageRating * 10) / 10,
+        lastMood: patient.lastMood,
+        date: patient.date
+      };
+    });
+
+    // Sort by most recent activity
+    patientHistoryData.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    res.status(200).json({
+      success: true,
+      data: patientHistoryData,
+      totalPatients: patientHistoryData.length,
+      generatedAt: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Error getting doctor patient mood history:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error occurred while retrieving patient mood history',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+};
+
 module.exports = {
   createMoodCheckIn,
   getMoodHistory,
@@ -532,6 +670,7 @@ module.exports = {
   getCurrentMood,
   canCheckIn,
   getUserMoodHistory,
+  getDoctorPatientMoodHistory,
   
   // Legacy methods for backward compatibility
   saveMood: createMoodCheckIn,

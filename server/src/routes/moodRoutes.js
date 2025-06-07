@@ -92,20 +92,10 @@ router.get('/user/:userId/analytics', async (req, res) => {
       });
     }
     
-    const Mood = require('../models/Mood');
+    // ✅ FIXED: Use tenant connection instead of require
+    const Mood = req.tenantConnection.model('Mood');
     
-    const analytics = await Mood.getMoodAnalytics(
-      req.user.tenantId,
-      userId,
-      parseInt(days)
-    );
-    
-    const trends = await Mood.getMoodTrends(
-      req.user.tenantId,
-      userId,
-      parseInt(days)
-    );
-    
+    // Get recent moods for calculation
     const recentMoods = await Mood.find({
       tenantId: req.user.tenantId,
       userId: userId,
@@ -114,14 +104,29 @@ router.get('/user/:userId/analytics', async (req, res) => {
       }
     });
     
-    const moodScore = Mood.calculateMoodScore(recentMoods);
+    // Calculate basic analytics
+    const totalEntries = recentMoods.length;
+    const averageRating = totalEntries > 0 
+      ? recentMoods.reduce((sum, mood) => sum + mood.moodRating, 0) / totalEntries 
+      : 0;
+    
+    // Calculate mood distribution
+    const moodDistribution = recentMoods.reduce((dist, mood) => {
+      dist[mood.moodKey] = (dist[mood.moodKey] || 0) + 1;
+      return dist;
+    }, {});
+    
+    const moodScore = totalEntries > 0
+      ? Math.round(((averageRating - 1) / 4) * 100)
+      : 0;
     
     res.status(200).json({
       success: true,
       data: {
-        ...analytics,
+        totalEntries,
+        averageRating: Math.round(averageRating * 100) / 100,
         moodScore,
-        trends,
+        moodDistribution,
         period: `${days} days`,
         userId
       }
@@ -168,7 +173,8 @@ router.get('/users/:userId/current', async (req, res) => {
       });
     }
     
-    const Mood = require('../models/Mood');
+    // ✅ FIXED: Use tenant connection instead of require
+    const Mood = req.tenantConnection.model('Mood');
     
     const latestMood = await Mood.findOne({
       tenantId: req.user.tenantId,
@@ -233,7 +239,8 @@ router.post('/users/:userId/create', async (req, res) => {
       });
     }
     
-    const Mood = require('../models/Mood');
+    // ✅ FIXED: Use tenant connection instead of require
+    const Mood = req.tenantConnection.model('Mood');
     const { CloudinaryHelper } = require('../utils/cloudinaryHelper');
     
     // Convert legacy mood format to new format

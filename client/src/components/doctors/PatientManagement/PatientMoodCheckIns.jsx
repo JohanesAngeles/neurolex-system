@@ -5,9 +5,12 @@ import '../../../styles/components/doctor/PatientMoodCheckIns.css';
 
 const PatientMoodCheckIns = () => {
   const [analyticsData, setAnalyticsData] = useState(null);
+  const [patientMoodHistory, setPatientMoodHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedDays, setSelectedDays] = useState(7);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState('date_desc');
 
   // Mood emoji mapping
   const moodEmojis = {
@@ -48,9 +51,25 @@ const PatientMoodCheckIns = () => {
     }
   };
 
+  // Fetch patient mood history data
+  const fetchPatientMoodHistory = async (days = 7) => {
+    try {
+      const response = await moodAnalyticsService.getDoctorPatientMoodHistory(days);
+      
+      if (response.success) {
+        setPatientMoodHistory(response.data);
+      } else {
+        console.error('Failed to fetch patient mood history');
+      }
+    } catch (err) {
+      console.error('Error fetching patient mood history:', err);
+    }
+  };
+
   // Load data on component mount and when days filter changes
   useEffect(() => {
     fetchAnalytics(selectedDays);
+    fetchPatientMoodHistory(selectedDays);
   }, [selectedDays]);
 
   // Handle days filter change
@@ -71,6 +90,34 @@ const PatientMoodCheckIns = () => {
   // Get mood color
   const getMoodColor = (moodKey) => {
     return moodColors[moodKey] || '#FFC107';
+  };
+
+  // Filter and sort patient mood history
+  const getFilteredMoodHistory = () => {
+    let filtered = patientMoodHistory.filter(entry => {
+      if (searchTerm) {
+        return entry.patientName?.toLowerCase().includes(searchTerm.toLowerCase());
+      }
+      return true;
+    });
+
+    // Sort data
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'date_asc':
+          return new Date(a.date) - new Date(b.date);
+        case 'date_desc':
+          return new Date(b.date) - new Date(a.date);
+        case 'mood':
+          return a.lastMood?.moodRating - b.lastMood?.moodRating;
+        case 'average':
+          return a.averageRating - b.averageRating;
+        default:
+          return new Date(b.date) - new Date(a.date);
+      }
+    });
+
+    return filtered;
   };
 
   if (loading) {
@@ -220,21 +267,22 @@ const PatientMoodCheckIns = () => {
           <div className="search-container">
             <input 
               type="text" 
-              placeholder="Search..." 
+              placeholder="Search patients..." 
               className="search-input"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <div className="filter-controls">
-            <select className="filter-select">
-              <option>Patient: All</option>
-            </select>
-            <select className="filter-select">
-              <option>Sort by: Date Asc</option>
-              <option>Sort by: Date Desc</option>
-              <option>Sort by: Mood</option>
-            </select>
-            <select className="filter-select">
-              <option>Average: All</option>
+            <select 
+              className="filter-select"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+            >
+              <option value="date_desc">Sort by: Date (Newest)</option>
+              <option value="date_asc">Sort by: Date (Oldest)</option>
+              <option value="mood">Sort by: Mood Rating</option>
+              <option value="average">Sort by: Average Rating</option>
             </select>
           </div>
           <button className="export-button">
@@ -255,77 +303,52 @@ const PatientMoodCheckIns = () => {
               </tr>
             </thead>
             <tbody>
-              {/* Sample data - you can replace this with actual patient data */}
-              <tr>
-                <td>April 30, 2025</td>
-                <td>Melissa Chin Gabriel</td>
-                <td>1.8/5</td>
-                <td>5 logs</td>
-                <td>
-                  <span className="mood-indicator struggling">
-                    😟 I'm struggling
-                  </span>
-                </td>
-                <td>
-                  <button className="action-button">👁️</button>
-                </td>
-              </tr>
-              <tr>
-                <td>April 19, 2025</td>
-                <td>Johanna Angelica</td>
-                <td>2.3/5</td>
-                <td>3 logs</td>
-                <td>
-                  <span className="mood-indicator struggling">
-                    😟 I'm struggling
-                  </span>
-                </td>
-                <td>
-                  <button className="action-button">👁️</button>
-                </td>
-              </tr>
-              <tr>
-                <td>April 18, 2025</td>
-                <td>Alessandro Izelka Kakoma</td>
-                <td>3.7/5</td>
-                <td>7 logs</td>
-                <td>
-                  <span className="mood-indicator okay">
-                    😐 I'm okay
-                  </span>
-                </td>
-                <td>
-                  <button className="action-button">👁️</button>
-                </td>
-              </tr>
-              <tr>
-                <td>April 17, 2025</td>
-                <td>Dewfall Allyn Romahin</td>
-                <td>4.5/5</td>
-                <td>6 logs</td>
-                <td>
-                  <span className="mood-indicator great">
-                    😊 I'm great
-                  </span>
-                </td>
-                <td>
-                  <button className="action-button">👁️</button>
-                </td>
-              </tr>
-              <tr>
-                <td>April 16, 2025</td>
-                <td>Dara Vashita Demarsh</td>
-                <td>2.5/5</td>
-                <td>4 logs</td>
-                <td>
-                  <span className="mood-indicator struggling">
-                    😟 I'm struggling
-                  </span>
-                </td>
-                <td>
-                  <button className="action-button">👁️</button>
-                </td>
-              </tr>
+              {getFilteredMoodHistory().length > 0 ? (
+                getFilteredMoodHistory().map((entry, index) => (
+                  <tr key={index}>
+                    <td>{new Date(entry.date).toLocaleDateString('en-US', { 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })}</td>
+                    <td>{entry.patientName}</td>
+                    <td>{entry.averageRating ? `${entry.averageRating.toFixed(1)}/5` : 'N/A'}</td>
+                    <td>{entry.totalLogs} logs</td>
+                    <td>
+                      {entry.lastMood ? (
+                        <span className={`mood-indicator ${entry.lastMood.moodKey}`}>
+                          {getMoodEmoji(entry.lastMood.moodKey)} {entry.lastMood.moodLabel}
+                        </span>
+                      ) : (
+                        <span className="mood-indicator okay">
+                          😐 No recent mood
+                        </span>
+                      )}
+                    </td>
+                    <td>
+                      <button 
+                        className="action-button"
+                        onClick={() => {
+                          // TODO: Navigate to patient details
+                          console.log('View patient details:', entry.patientId);
+                        }}
+                        title="View patient details"
+                      >
+                        👁️
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '20px' }}>
+                    {patientMoodHistory.length === 0 
+                      ? 'No mood check-in data available for your patients'
+                      : 'No patients match your search criteria'
+                    }
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
