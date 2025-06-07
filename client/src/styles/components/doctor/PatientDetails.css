@@ -170,6 +170,80 @@
   border-bottom: 1px solid #f0f0f0;
 }
 
+/* Actions Column Styling - Updated for your requirements */
+.actions-column {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 100px;
+}
+
+/* Hide View Journals button */
+.view-journals-btn {
+  display: none !important;
+}
+
+/* Hide Edit button */
+.edit-btn {
+  display: none !important;
+}
+
+/* Style for action buttons container */
+.action-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* View button (eye icon) */
+.view-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+  background-color: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #666;
+}
+
+.view-btn:hover {
+  background-color: #e9ecef;
+  border-color: #5B8C7E;
+  color: #5B8C7E;
+}
+
+/* Delete button (X icon) */
+.delete-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid #ffcdd2;
+  background-color: #ffebee;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #d32f2f;
+}
+
+.delete-btn:hover {
+  background-color: #ffcdd2;
+  border-color: #d32f2f;
+}
+
+/* Icon styling */
+.action-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
 /* Registration Tab Specific Styles */
 .profile-section {
   display: flex;
@@ -400,6 +474,21 @@
   
   .section-card {
     padding: 16px;
+  }
+
+  /* Mobile action buttons */
+  .action-buttons {
+    gap: 6px;
+  }
+  
+  .view-btn,
+  .delete-btn {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .action-icon {
+    font-size: 12px;
   }
 }
 
