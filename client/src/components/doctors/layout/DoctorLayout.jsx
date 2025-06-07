@@ -35,7 +35,7 @@ const DoctorLayout = () => {
   // Get tenant theme styles
   const theme = getThemeStyles();
 
-  // Load current doctor info
+  // Load current doctor info and listen for profile updates
   useEffect(() => {
     const loadDoctorInfo = () => {
       try {
@@ -48,7 +48,23 @@ const DoctorLayout = () => {
         console.error('Error loading doctor info:', error);
       }
     };
+    
     loadDoctorInfo();
+    
+    // Listen for profile picture updates
+    const handleProfilePictureUpdate = (event) => {
+      console.log('🖼️ Profile picture updated:', event.detail);
+      setCurrentUser(prev => ({
+        ...prev,
+        profilePicture: event.detail.profilePicture
+      }));
+    };
+    
+    window.addEventListener('profilePictureUpdated', handleProfilePictureUpdate);
+    
+    return () => {
+      window.removeEventListener('profilePictureUpdated', handleProfilePictureUpdate);
+    };
   }, []);
 
   // Apply CSS variables for theming

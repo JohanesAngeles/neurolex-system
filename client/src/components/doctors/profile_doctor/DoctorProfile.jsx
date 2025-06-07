@@ -13,6 +13,7 @@ import keyIcon from '../../../assets/icons/pub_profile.svg';
 import helpIcon from '../../../assets/icons/help_icon.svg';
 import logoutIcon from '../../../assets/icons/logout_icon.svg';
 
+
 const DoctorProfile = () => {
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState('edit-profile');
@@ -34,20 +35,11 @@ const DoctorProfile = () => {
     profilePicture: null
   });
 
-  // Form state for editing
+  // Form state for editing - Only essential fields
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
-    title: '',
-    specialization: '',
-    email: '',
-    phoneNumber: '',
-    licenseNumber: '',
-    yearsOfExperience: '',
-    practiceAddress: '',
-    bio: '',
-    languages: [],
-    availableForEmergency: false
+    title: ''
   });
 
   const [profileImagePreview, setProfileImagePreview] = useState(null);
@@ -76,21 +68,11 @@ const DoctorProfile = () => {
         profileData = response;
       }
       
-      // Set default values if missing
+      // Set default values if missing - Only essential fields
       const processedProfile = {
         firstName: profileData.firstName || '',
         lastName: profileData.lastName || '',
-        title: profileData.title || '',
-        specialization: profileData.specialization || '',
-        email: profileData.email || '',
-        phoneNumber: profileData.phoneNumber || '',
-        licenseNumber: profileData.licenseNumber || '',
-        yearsOfExperience: profileData.yearsOfExperience || '',
-        practiceAddress: profileData.practiceAddress || '',
-        bio: profileData.bio || '',
-        languages: profileData.languages || [],
-        availableForEmergency: profileData.availableForEmergency || false,
-        profilePicture: profileData.profilePicture || null
+        title: profileData.title || ''
       };
       
       setDoctorProfile(processedProfile);
@@ -159,17 +141,17 @@ const DoctorProfile = () => {
       setSaving(true);
       console.log('💾 Saving doctor profile...');
       
-      // Validate required fields
-      if (!formData.firstName || !formData.lastName || !formData.email) {
-        toast.error('Please fill in all required fields');
+      // Validate required fields - Only essential ones
+      if (!formData.firstName || !formData.lastName) {
+        toast.error('Please fill in all required fields (First Name and Last Name)');
         return;
       }
       
-      // Prepare data for submission
+      // Prepare data for submission - Only essential fields
       const updateData = {
-        ...formData,
-        // Convert years of experience to number if provided
-        yearsOfExperience: formData.yearsOfExperience ? parseInt(formData.yearsOfExperience) : null
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        title: formData.title || ''
       };
       
       console.log('📤 Sending update data:', updateData);
@@ -258,24 +240,6 @@ const DoctorProfile = () => {
   };
 
   const renderEditProfile = () => {
-    const availableLanguages = [
-      'English', 'Spanish', 'French', 'German', 'Italian', 
-      'Portuguese', 'Chinese', 'Japanese', 'Korean', 'Arabic'
-    ];
-
-    const specializations = [
-      'Psychiatrist',
-      'Psychologist', 
-      'Clinical Psychologist',
-      'Mental Health Counselor',
-      'Clinical Social Worker',
-      'Marriage and Family Therapist',
-      'Addiction Counselor',
-      'Child Psychologist',
-      'Neuropsychologist',
-      'Other'
-    ];
-
     return (
       <div className="profile-content">
         <div className="content-header">
@@ -319,7 +283,7 @@ const DoctorProfile = () => {
             </div>
           </div>
 
-          {/* Basic Information */}
+          {/* Basic Information - Only Essential Fields */}
           <div className="form-section">
             <h3>Basic Information</h3>
             <div className="form-row">
@@ -363,151 +327,17 @@ const DoctorProfile = () => {
             </div>
           </div>
 
-          {/* Professional Information */}
-          <div className="form-section">
-            <h3>Professional Information</h3>
-            <div className="form-group">
-              <label htmlFor="specialization">Specialization</label>
-              <select
-                id="specialization"
-                name="specialization"
-                value={formData.specialization}
-                onChange={handleInputChange}
-                className="form-select"
-              >
-                <option value="">Select Specialization</option>
-                {specializations.map(spec => (
-                  <option key={spec} value={spec}>{spec}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="licenseNumber">License Number</label>
-                <input
-                  type="text"
-                  id="licenseNumber"
-                  name="licenseNumber"
-                  value={formData.licenseNumber}
-                  onChange={handleInputChange}
-                  className="form-input"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="yearsOfExperience">Years of Experience</label>
-                <input
-                  type="number"
-                  id="yearsOfExperience"
-                  name="yearsOfExperience"
-                  value={formData.yearsOfExperience}
-                  onChange={handleInputChange}
-                  min="0"
-                  max="50"
-                  className="form-input"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Contact Information */}
-          <div className="form-section">
-            <h3>Contact Information</h3>
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="email">Email Address *</label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  required
-                  className="form-input"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="phoneNumber">Phone Number</label>
-                <input
-                  type="tel"
-                  id="phoneNumber"
-                  name="phoneNumber"
-                  value={formData.phoneNumber}
-                  onChange={handleInputChange}
-                  className="form-input"
-                />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="practiceAddress">Practice Address</label>
-              <textarea
-                id="practiceAddress"
-                name="practiceAddress"
-                value={formData.practiceAddress}
-                onChange={handleInputChange}
-                rows="3"
-                className="form-textarea"
-                placeholder="Enter your practice address"
-              />
-            </div>
-          </div>
-
-          {/* Languages */}
-          <div className="form-section">
-            <h3>Languages Spoken</h3>
-            <div className="checkbox-grid">
-              {availableLanguages.map(language => (
-                <label key={language} className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    value={language}
-                    checked={formData.languages.includes(language)}
-                    onChange={handleLanguageChange}
-                    className="checkbox-input"
-                  />
-                  <span className="checkbox-text">{language}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Bio */}
-          <div className="form-section">
-            <h3>Professional Bio</h3>
-            <div className="form-group">
-              <label htmlFor="bio">About You</label>
-              <textarea
-                id="bio"
-                name="bio"
-                value={formData.bio}
-                onChange={handleInputChange}
-                rows="6"
-                className="form-textarea"
-                placeholder="Tell patients about your background, approach, and specialties..."
-              />
-            </div>
-          </div>
-
-          {/* Availability */}
-          <div className="form-section">
-            <h3>Availability</h3>
-            <div className="form-group">
-              <label className="checkbox-label emergency-availability">
-                <input
-                  type="checkbox"
-                  name="availableForEmergency"
-                  checked={formData.availableForEmergency}
-                  onChange={handleInputChange}
-                  className="checkbox-input"
-                />
-                <span className="checkbox-text">
-                  Available for Emergency Consultations
-                </span>
-                <p className="checkbox-help">
-                  Check this if you're available for urgent mental health consultations
-                </p>
-              </label>
+          {/* Info Message for Other Sections */}
+          <div className="form-section info-section">
+            <div className="info-message">
+              <h3>📋 Additional Profile Information</h3>
+              <p>Other profile details like contact information, specialization, license details, and bio can be managed in the corresponding sections:</p>
+              <ul className="info-list">
+                <li><strong>Change Email or Password</strong> - Update your login credentials</li>
+                <li><strong>My Doctor Application</strong> - View and update professional credentials</li>
+                <li><strong>Public Profile</strong> - Manage your public-facing profile information</li>
+              </ul>
+              <p className="info-note">Use the sidebar menu to navigate to these sections.</p>
             </div>
           </div>
 

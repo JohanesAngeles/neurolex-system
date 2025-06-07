@@ -1179,7 +1179,42 @@ analyzeJournalEntry: async (id, analysis = {}) => {
         healthy: false
       };
     }
+  },
+
+uploadProfilePicture: async (formData) => {
+  try {
+    console.log('📤 Uploading profile picture via doctorService...');
+    
+    const response = await doctorApi.post('/profile/upload-picture', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      timeout: 30000 // 30 second timeout for file upload
+    });
+    
+    console.log('✅ Profile picture uploaded successfully:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('❌ Error uploading profile picture:', error);
+    throw error;
   }
+},
+
+// Delete profile picture
+deleteProfilePicture: async () => {
+  try {
+    console.log('🗑️ Deleting profile picture via doctorService...');
+    
+    const response = await doctorApi.delete('/profile/delete-picture');
+    
+    console.log('✅ Profile picture deleted successfully:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('❌ Error deleting profile picture:', error);
+    throw error;
+  }
+}
+
 };
 
 export default doctorService;

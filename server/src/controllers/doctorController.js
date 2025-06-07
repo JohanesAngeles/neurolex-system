@@ -2577,3 +2577,148 @@ exports.endPatientCare = async (req, res) => {
     });
   }
 };
+
+/**
+ * Update doctor's basic profile information (firstName, lastName, title)
+ * @authenticated - Doctor only
+ */
+exports.updateDoctorProfile = async (req, res) => {
+  console.log('🚀🚀🚀 UPDATE DOCTOR PROFILE METHOD CALLED!');
+  console.log('🚀🚀🚀 REQUEST RECEIVED!');
+  console.log('🚀🚀🚀 Request body:', req.body);
+  console.log('🚀🚀🚀 User:', req.user);
+  try {
+    console.log('🔄 updateDoctorProfile called');
+    console.log('🏢 Tenant context:', {
+      tenantId: req.tenantId || 'None',
+      tenantDbName: req.tenantDbName || 'None',
+      tenantConnection: !!req.tenantConnection
+    });
+    console.log('📝 Request body:', req.body);
+    
+    const doctorId = req.user._id || req.user.id;
+    
+    if (!doctorId) {
+      console.log('❌ No doctor ID found in request');
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+    
+    // Extract and validate data
+    const { firstName, lastName, title } = req.body;
+    
+    if (!firstName || !lastName) {
+      return res.status(400).json({
+        success: false,
+        message: 'First name and last name are required'
+      });
+    }
+    
+    // Prepare update data
+    const updateData = {
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      title: title ? title.trim() : '',
+      updatedAt: new Date()
+    };
+    
+    console.log('📝 Update data:', updateData);
+    
+    let updatedDoctor = null;
+    
+    // Method 1: Try tenant connection first
+    if (req.tenantConnection) {
+      try {
+        console.log('🔧 Using tenant connection for doctor profile update');
+        
+        // Direct collection update (most reliable)
+        if (req.tenantConnection.db) {
+          const usersCollection = req.tenantConnection.db.collection('users');
+          const mongoose = require('mongoose');
+          
+          const doctorObjectId = mongoose.Types.ObjectId.isValid(doctorId)
+            ? new mongoose.Types.ObjectId(doctorId)
+            : doctorId;
+          
+          const updateResult = await usersCollection.updateOne(
+            { _id: doctorObjectId, role: 'doctor' },
+            { $set: updateData }
+          );
+          
+          console.log('📊 Direct update result:', updateResult);
+          
+          if (updateResult.modifiedCount > 0) {
+            // Fetch updated doctor
+            updatedDoctor = await usersCollection.findOne(
+              { _id: doctorObjectId },
+              { projection: { password: 0 } } // Exclude password
+            );
+            console.log('✅ Doctor profile updated via direct collection');
+          }
+        }
+        
+        // Fallback to Mongoose model
+        if (!updatedDoctor) {
+          const User = req.tenantConnection.model('User');
+          updatedDoctor = await User.findOneAndUpdate(
+            { _id: doctorId, role: 'doctor' },
+            { $set: updateData },
+            { new: true, runValidators: true }
+          ).select('-password').lean();
+          
+          if (updatedDoctor) {
+            console.log('✅ Doctor profile updated via tenant model');
+          }
+        }
+      } catch (tenantError) {
+        console.error('Tenant update failed:', tenantError.message);
+      }
+    }
+    
+    // Method 2: Fallback to default database
+    if (!updatedDoctor) {
+      try {
+        console.log('🔧 Using default database for doctor profile update');
+        const User = require('../models/User');
+        
+        updatedDoctor = await User.findOneAndUpdate(
+          { _id: doctorId, role: 'doctor' },
+          { $set: updateData },
+          { new: true, runValidators: true }
+        ).select('-password').lean();
+        
+        if (updatedDoctor) {
+          console.log('✅ Doctor profile updated via default database');
+        }
+      } catch (defaultError) {
+        console.error('Default database update failed:', defaultError.message);
+      }
+    }
+    
+    if (!updatedDoctor) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to update doctor profile'
+      });
+    }
+    
+    console.log('✅ Doctor profile update successful');
+    
+    // Return success response with updated doctor
+    return res.status(200).json({
+      success: true,
+      message: 'Doctor profile updated successfully',
+      data: updatedDoctor
+    });
+    
+  } catch (error) {
+    console.error('❌ Error in updateDoctorProfile:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update doctor profile',
+      error: error.message
+    });
+  }
+};

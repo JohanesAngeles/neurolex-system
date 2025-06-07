@@ -1,4 +1,4 @@
-// server/src/routes/doctorRoutes.js - COMPLETE VERSION WITH FIXED AI ANALYSIS ROUTES
+// server/src/routes/doctorRoutes.js - COMPLETE VERSION WITH PROFILE PICTURE UPLOAD
 const express = require('express');
 const router = express.Router();
 const doctorController = require('../controllers/doctorController');
@@ -7,6 +7,9 @@ const billingController = require('../controllers/billingController');
 const { protect, restrictTo } = require('../middleware/auth');
 const tenantMiddleware = require('../middleware/tenantMiddleware');
 const multer = require('multer');
+
+// 🆕 NEW: Import Cloudinary functions for profile picture upload
+const { uploadToCloudinary, deleteCloudinaryImage, extractPublicId } = require('../services/cloudinary');
 
 console.log('Loading complete doctor routes with billing functionality...');
 
@@ -32,6 +35,20 @@ const qrUpload = multer({
       cb(null, true);
     } else {
       cb(new Error('Only image files are allowed for QR codes'), false);
+    }
+  }
+});
+
+// 🆕 NEW: Configure multer for profile picture uploads
+const profilePictureUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    // Check file type
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'), false);
     }
   }
 });
@@ -98,8 +115,374 @@ router.get('/patients/:id', doctorController.getPatient);
 // Apply doctor role restriction for routes below
 router.use(restrictTo('doctor'));
 
-// Doctor-only routes
+// 🆕 NEW: Doctor profile management routes (added before other doctor-only routes)
 router.get('/profile', doctorController.getCurrentDoctorProfile);
+router.put('/profile', doctorController.updateDoctorProfile);
+
+// 🆕 NEW: Profile picture upload routes
+router.post('/profile/upload-picture', profilePictureUpload.single('profilePicture'), async (req, res) => {
+  try {
+    console.log('=== DOCTOR PROFILE PICTURE UPLOAD ===');
+    console.log('Doctor ID:', req.user?.id || req.user?._id);
+    console.log('File received:', !!req.file);
+
+    const doctorId = req.user?.id || req.user?._id;
+
+    if (!doctorId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Not authenticated'
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No image file provided'
+      });
+    }
+
+    console.log('File details:', {
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size
+    });
+
+    // Get current doctor to check for existing profile picture
+    let currentDoctor = null;
+
+    // Try to get doctor from tenant connection first
+    if (req.tenantConnection) {
+      try {
+        const User = req.tenantConnection.model('User');
+        currentDoctor = await User.findById(doctorId).select('profilePicture firstName lastName');
+      } catch (tenantError) {
+        console.error('Tenant doctor lookup failed:', tenantError.message);
+      }
+    }
+
+    // Fallback to default database
+    if (!currentDoctor) {
+      try {
+        const User = require('../models/User');
+        currentDoctor = await User.findById(doctorId).select('profilePicture firstName lastName');
+      } catch (defaultError) {
+        console.error('Default database doctor lookup failed:', defaultError.message);
+      }
+    }
+
+    if (!currentDoctor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Doctor not found'
+      });
+    }
+
+    // Upload new image to Cloudinary
+    console.log('📤 Uploading doctor profile picture to Cloudinary...');
+    const uploadOptions = {
+      folder: `${process.env.CLOUDINARY_FOLDER || 'neurolex'}/doctors/profile_pictures`,
+      public_id: `doctor_${doctorId}_${Date.now()}`,
+      overwrite: true,
+      transformation: [
+        { width: 400, height: 400, crop: 'fill', gravity: 'face' },
+        { quality: 'auto:good' },
+        { fetch_format: 'auto' }
+      ]
+    };
+
+    const uploadResult = await uploadToCloudinary(req.file.buffer, uploadOptions);
+    
+    if (!uploadResult || !uploadResult.secure_url) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to upload image to cloud storage'
+      });
+    }
+
+    console.log('✅ Image uploaded successfully:', uploadResult.secure_url);
+
+    // Update doctor profile picture in database
+    const updateData = {
+      profilePicture: uploadResult.secure_url,
+      updatedAt: new Date()
+    };
+
+    let updatedDoctor = null;
+
+    // Try tenant connection first
+    if (req.tenantConnection) {
+      try {
+        if (req.tenantConnection.db) {
+          // Direct collection update
+          const usersCollection = req.tenantConnection.db.collection('users');
+          const mongoose = require('mongoose');
+          
+          const doctorObjectId = mongoose.Types.ObjectId.isValid(doctorId)
+            ? new mongoose.Types.ObjectId(doctorId)
+            : doctorId;
+
+          const updateResult = await usersCollection.updateOne(
+            { _id: doctorObjectId },
+            { $set: updateData }
+          );
+
+          if (updateResult.modifiedCount > 0) {
+            updatedDoctor = await usersCollection.findOne(
+              { _id: doctorObjectId },
+              { projection: { password: 0 } }
+            );
+            console.log('✅ Doctor profile picture updated via tenant connection');
+          }
+        }
+
+        if (!updatedDoctor) {
+          const User = req.tenantConnection.model('User');
+          updatedDoctor = await User.findByIdAndUpdate(
+            doctorId,
+            { $set: updateData },
+            { new: true, runValidators: true }
+          ).select('-password').lean();
+        }
+      } catch (tenantError) {
+        console.error('Tenant update failed:', tenantError.message);
+      }
+    }
+
+    // Fallback to default database
+    if (!updatedDoctor) {
+      try {
+        const User = require('../models/User');
+        updatedDoctor = await User.findByIdAndUpdate(
+          doctorId,
+          { $set: updateData },
+          { new: true, runValidators: true }
+        ).select('-password').lean();
+        
+        if (updatedDoctor) {
+          console.log('✅ Doctor profile picture updated via default database');
+        }
+      } catch (defaultError) {
+        console.error('Default database update failed:', defaultError.message);
+      }
+    }
+
+    if (!updatedDoctor) {
+      // If database update failed, try to clean up uploaded image
+      try {
+        await deleteCloudinaryImage(uploadResult.public_id);
+      } catch (cleanupError) {
+        console.error('Failed to cleanup uploaded image:', cleanupError.message);
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to update profile picture in database'
+      });
+    }
+
+    // Clean up old profile picture from Cloudinary (optional, run in background)
+    if (currentDoctor.profilePicture && currentDoctor.profilePicture !== uploadResult.secure_url) {
+      try {
+        const oldPublicId = extractPublicId(currentDoctor.profilePicture);
+        if (oldPublicId) {
+          // Don't await this - run in background
+          deleteCloudinaryImage(oldPublicId).catch(err => {
+            console.error('Failed to delete old profile picture:', err.message);
+          });
+        }
+      } catch (cleanupError) {
+        console.error('Error extracting old image public ID:', cleanupError.message);
+      }
+    }
+
+    console.log('✅ Doctor profile picture upload completed successfully');
+
+    return res.status(200).json({
+      success: true,
+      message: 'Profile picture updated successfully',
+      data: {
+        profilePicture: uploadResult.secure_url,
+        doctor: updatedDoctor
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error in doctor profile picture upload:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to upload profile picture',
+      error: error.message
+    });
+  }
+});
+
+// 🆕 NEW: Delete profile picture route
+router.delete('/profile/delete-picture', async (req, res) => {
+  try {
+    console.log('=== DELETE DOCTOR PROFILE PICTURE ===');
+    console.log('Doctor ID:', req.user?.id || req.user?._id);
+
+    const doctorId = req.user?.id || req.user?._id;
+
+    if (!doctorId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Not authenticated'
+      });
+    }
+
+    // Get current doctor to find existing profile picture
+    let currentDoctor = null;
+
+    // Try to get doctor from tenant connection first
+    if (req.tenantConnection) {
+      try {
+        const User = req.tenantConnection.model('User');
+        currentDoctor = await User.findById(doctorId).select('profilePicture firstName lastName');
+      } catch (tenantError) {
+        console.error('Tenant doctor lookup failed:', tenantError.message);
+      }
+    }
+
+    // Fallback to default database
+    if (!currentDoctor) {
+      try {
+        const User = require('../models/User');
+        currentDoctor = await User.findById(doctorId).select('profilePicture firstName lastName');
+      } catch (defaultError) {
+        console.error('Default database doctor lookup failed:', defaultError.message);
+      }
+    }
+
+    if (!currentDoctor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Doctor not found'
+      });
+    }
+
+    // Check if doctor has a profile picture to delete
+    if (!currentDoctor.profilePicture) {
+      return res.status(400).json({
+        success: false,
+        message: 'No profile picture to delete'
+      });
+    }
+
+    console.log('🗑️ Deleting doctor profile picture:', currentDoctor.profilePicture);
+
+    // Remove profile picture from database first
+    const updateData = {
+      profilePicture: null,
+      updatedAt: new Date()
+    };
+
+    let updatedDoctor = null;
+
+    // Try tenant connection first
+    if (req.tenantConnection) {
+      try {
+        if (req.tenantConnection.db) {
+          // Direct collection update
+          const usersCollection = req.tenantConnection.db.collection('users');
+          const mongoose = require('mongoose');
+          
+          const doctorObjectId = mongoose.Types.ObjectId.isValid(doctorId)
+            ? new mongoose.Types.ObjectId(doctorId)
+            : doctorId;
+
+          const updateResult = await usersCollection.updateOne(
+            { _id: doctorObjectId },
+            { $set: updateData }
+          );
+
+          if (updateResult.modifiedCount > 0) {
+            updatedDoctor = await usersCollection.findOne(
+              { _id: doctorObjectId },
+              { projection: { password: 0 } }
+            );
+            console.log('✅ Doctor profile picture removed via tenant connection');
+          }
+        }
+
+        if (!updatedDoctor) {
+          const User = req.tenantConnection.model('User');
+          updatedDoctor = await User.findByIdAndUpdate(
+            doctorId,
+            { $set: updateData },
+            { new: true, runValidators: true }
+          ).select('-password').lean();
+        }
+      } catch (tenantError) {
+        console.error('Tenant update failed:', tenantError.message);
+      }
+    }
+
+    // Fallback to default database
+    if (!updatedDoctor) {
+      try {
+        const User = require('../models/User');
+        updatedDoctor = await User.findByIdAndUpdate(
+          doctorId,
+          { $set: updateData },
+          { new: true, runValidators: true }
+        ).select('-password').lean();
+        
+        if (updatedDoctor) {
+          console.log('✅ Doctor profile picture removed via default database');
+        }
+      } catch (defaultError) {
+        console.error('Default database update failed:', defaultError.message);
+      }
+    }
+
+    if (!updatedDoctor) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to remove profile picture from database'
+      });
+    }
+
+    // Delete image from Cloudinary (run in background, don't fail if this fails)
+    try {
+      const oldPublicId = extractPublicId(currentDoctor.profilePicture);
+      if (oldPublicId) {
+        // Run deletion in background - don't await
+        deleteCloudinaryImage(oldPublicId).then(result => {
+          console.log('✅ Old doctor profile picture deleted from Cloudinary:', result);
+        }).catch(error => {
+          console.error('❌ Failed to delete image from Cloudinary:', error.message);
+          // Don't fail the request if Cloudinary deletion fails
+        });
+      }
+    } catch (cleanupError) {
+      console.error('Error extracting public ID for deletion:', cleanupError.message);
+      // Don't fail the request if we can't extract the public ID
+    }
+
+    console.log('✅ Doctor profile picture deletion completed successfully');
+
+    return res.status(200).json({
+      success: true,
+      message: 'Profile picture deleted successfully',
+      data: {
+        profilePicture: null,
+        doctor: updatedDoctor
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error in doctor profile picture deletion:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to delete profile picture',
+      error: error.message
+    });
+  }
+});
+
+// Other doctor-only routes (EXISTING - unchanged)
 router.get('/dashboard/stats', doctorController.getDashboardStats);
 router.get('/patients', doctorController.getPatients);
 router.delete('/patients/:patientId/end-care', doctorController.endPatientCare);
@@ -452,6 +835,27 @@ router.put('/billing/:billingId/mark-paid', billingController.markAsPaid);
 
 console.log('Billing routes added successfully');
 
-console.log('Complete doctor routes with billing functionality and appointment management loaded successfully');
+// 🆕 NEW: Add error handling middleware for multer errors (profile picture uploads)
+router.use((error, req, res, next) => {
+  if (error instanceof multer.MulterError) {
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        success: false,
+        message: 'File size too large. Maximum size is 5MB.'
+      });
+    }
+  }
+  
+  if (error.message === 'Only image files are allowed!' || error.message === 'Only image files are allowed for QR codes') {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid file type. Only image files are allowed.'
+    });
+  }
+  
+  next(error);
+});
+
+console.log('Complete doctor routes with billing functionality, appointment management, and profile picture upload loaded successfully');
 
 module.exports = router;

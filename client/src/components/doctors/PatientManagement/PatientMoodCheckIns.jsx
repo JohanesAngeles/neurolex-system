@@ -273,28 +273,30 @@ const PatientMoodCheckIns = () => {
           ))}
         </div>
       </div>
-
+      
       {/* Mood Distribution */}
-      <div className="mood-distribution-section">
-        <h2>Mood Distribution</h2>
-        <div className="mood-distribution-grid">
-          {Object.entries(moodDistribution).map(([moodKey, data]) => (
-            <div key={moodKey} className="mood-distribution-item">
-              <div className="mood-info">
-                <span 
-                  className="mood-dot"
-                  style={{ backgroundColor: getMoodColor(moodKey) }}
-                ></span>
-                <span className="mood-label">{formatMoodLabel(moodKey)}</span>
-              </div>
-              <div className="mood-stats">
-                <div className="mood-count">{data.count} logs</div>
-                <div className="mood-percentage">{data.percentage}%</div>
-              </div>
-            </div>
-          ))}
+<div className="mood-distribution-section">
+  <h2>Mood Distribution</h2>
+  <div className="mood-distribution-container">
+    <div className="mood-distribution-grid">
+      {Object.entries(moodDistribution).map(([moodKey, data]) => (
+        <div key={moodKey} className={`mood-distribution-item ${moodKey}`}>
+          <div className="mood-info">
+            <img 
+              src={getMoodSvg(moodKey)} 
+              alt={moodKey}
+              className="mood-svg-icon"
+            />
+            <span className="mood-label">I'm {moodKey}</span>
+          </div>
+          <div className="mood-stats">
+            <div className="mood-count">{data.count} logs</div>
+          </div>
         </div>
-      </div>
+      ))}
+    </div>
+  </div>
+</div>
 
       {/* Mood Check-in History */}
       <div className="mood-history-section">
