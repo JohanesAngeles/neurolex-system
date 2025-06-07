@@ -1,4 +1,4 @@
-// server/src/routes/journalRoutes.js - UPDATED WITH DIRECT DELETE ROUTE
+// server/src/routes/journalRoutes.js - COMPLETE FILE WITH DIRECT ROUTES
 const express = require('express');
 const router = express.Router();
 const journalController = require('../controllers/journalController');
@@ -73,19 +73,191 @@ router.get('/users/:userId/entries', async (req, res) => {
   }
 });
 
-// ✅ NEW: Direct delete route that matches Flutter app expectations
-// This allows DELETE /journal/{id} instead of DELETE /journal/entry/{id}
-router.delete('/:id', journalController.deleteJournalEntry);
+// ✅ NEW: Direct routes for individual journal entries (CRITICAL - PLACE THESE BEFORE /entry/:id routes)
+// These routes handle the direct /journal/{id} pattern that Flutter expects
 
-// ✅ NEW: Direct get route for individual entries
-// This allows GET /journal/{id} instead of GET /journal/entry/{id}
-router.get('/:id', journalController.getJournalEntry);
+// GET individual journal entry
+router.get('/:id([0-9a-fA-F]{24})', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+    const tenantId = req.headers['x-tenant-id'];
+    
+    console.log(`📖 GET individual journal entry: ${id}`);
+    console.log(`👤 User ID: ${userId}`);
+    console.log(`🏢 Tenant ID: ${tenantId}`);
+    
+    let JournalEntry;
+    
+    if (req.tenantConnection) {
+      console.log(`Using tenant connection: ${req.tenantDbName}`);
+      JournalEntry = req.tenantConnection.model('JournalEntry');
+    } else {
+      console.log('Using default database');
+      JournalEntry = require('../models/JournalEntry');
+    }
+    
+    // Find the journal entry
+    const journalEntry = await JournalEntry.findOne({
+      _id: id,
+      user: userId,
+      tenantId: tenantId
+    }).lean();
+    
+    if (!journalEntry) {
+      return res.status(404).json({
+        success: false,
+        message: 'Journal entry not found or you do not have permission to view it'
+      });
+    }
+    
+    console.log(`✅ Found journal entry: ${id}`);
+    
+    res.status(200).json({
+      success: true,
+      data: journalEntry
+    });
+    
+  } catch (error) {
+    console.error(`❌ Error getting journal entry: ${error.message}`);
+    
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid journal entry ID format'
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error while getting journal entry',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
 
-// ✅ NEW: Direct put route for updates
-// This allows PUT /journal/{id} instead of PUT /journal/entry/{id}
-router.put('/:id', journalController.updateJournalEntry);
+// DELETE individual journal entry
+router.delete('/:id([0-9a-fA-F]{24})', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+    const tenantId = req.headers['x-tenant-id'];
+    
+    console.log(`🗑️ DELETE journal entry: ${id}`);
+    console.log(`👤 User ID: ${userId}`);
+    console.log(`🏢 Tenant ID: ${tenantId}`);
+    
+    let JournalEntry;
+    
+    if (req.tenantConnection) {
+      console.log(`Using tenant connection: ${req.tenantDbName}`);
+      JournalEntry = req.tenantConnection.model('JournalEntry');
+    } else {
+      console.log('Using default database');
+      JournalEntry = require('../models/JournalEntry');
+    }
+    
+    // Find and delete the journal entry
+    const deletedEntry = await JournalEntry.findOneAndDelete({
+      _id: id,
+      user: userId,
+      tenantId: tenantId
+    });
+    
+    if (!deletedEntry) {
+      return res.status(404).json({
+        success: false,
+        message: 'Journal entry not found'
+      });
+    }
+    
+    console.log(`✅ Successfully deleted journal entry: ${id}`);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Journal entry deleted successfully',
+      data: {
+        id: id,
+        deletedAt: new Date().toISOString()
+      }
+    });
+    
+  } catch (error) {
+    console.error(`❌ Error deleting journal entry: ${error.message}`);
+    
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid journal entry ID format'
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error while deleting journal entry',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
 
-// Individual journal entry routes (keep these for backward compatibility)
+// PUT individual journal entry
+router.put('/:id([0-9a-fA-F]{24})', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+    const tenantId = req.headers['x-tenant-id'];
+    const updateData = req.body;
+    
+    console.log(`✏️ UPDATE journal entry: ${id}`);
+    
+    let JournalEntry;
+    
+    if (req.tenantConnection) {
+      JournalEntry = req.tenantConnection.model('JournalEntry');
+    } else {
+      JournalEntry = require('../models/JournalEntry');
+    }
+    
+    // Update the journal entry
+    const updatedEntry = await JournalEntry.findOneAndUpdate(
+      {
+        _id: id,
+        user: userId,
+        tenantId: tenantId
+      },
+      {
+        ...updateData,
+        updatedAt: new Date()
+      },
+      { new: true }
+    );
+    
+    if (!updatedEntry) {
+      return res.status(404).json({
+        success: false,
+        message: 'Journal entry not found'
+      });
+    }
+    
+    console.log(`✅ Successfully updated journal entry: ${id}`);
+    
+    res.status(200).json({
+      success: true,
+      data: updatedEntry
+    });
+    
+  } catch (error) {
+    console.error(`❌ Error updating journal entry: ${error.message}`);
+    
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error while updating journal entry',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// ✅ Keep existing /entry/:id routes for backward compatibility
 router.get('/entry/:id', journalController.getJournalEntry);
 router.put('/entry/:id', journalController.updateJournalEntry);
 router.delete('/entry/:id', journalController.deleteJournalEntry);

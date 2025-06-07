@@ -1,5 +1,3 @@
-/* client/src/styles/components/doctor/PatientMoodCheckIns.css */
-
 /* Header Styles */
 .mood-checkins-header {
   display: flex;
@@ -114,6 +112,32 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* Mood SVG Styles */
+.trend-svg {
+  width: 20px;
+  height: 20px;
+  margin-right: 4px;
+}
+
+.daily-mood-svg {
+  margin: 12px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.daily-svg {
+  width: 48px;
+  height: 48px;
+}
+
+.mood-svg-small {
+  width: 16px;
+  height: 16px;
+  margin-right: 6px;
+  vertical-align: middle;
 }
 
 .trend-emoji {
@@ -467,8 +491,9 @@
     padding: 12px 4px;
   }
   
-  .daily-mood-emoji {
-    font-size: 32px !important;
+  .daily-svg {
+    width: 32px !important;
+    height: 32px !important;
   }
   
   .mood-distribution-grid {

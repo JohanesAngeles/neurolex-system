@@ -12,13 +12,13 @@ const PatientMoodCheckIns = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('date_desc');
 
-  // Mood emoji mapping
-  const moodEmojis = {
-    great: '😊',
-    good: '🙂', 
-    okay: '😐',
-    struggling: '😟',
-    upset: '😢'
+  // FINAL: Exact working mood URLs from Cloudinary (corrected)
+  const moodSvgUrls = {
+    great: 'https://res.cloudinary.com/dm7qxemrt/image/upload/v1749199687/Face_Im_Great_anfp2e.svg',
+    good: 'https://res.cloudinary.com/dm7qxemrt/image/upload/v1749199687/Face_Im_good_ldcpo4.svg',
+    okay: 'https://res.cloudinary.com/dm7qxemrt/image/upload/v1749199687/Face_Im_okay_tcf9cp.svg',
+    struggling: 'https://res.cloudinary.com/dm7qxemrt/image/upload/v1749199687/Face_Im_struggling_regocn.svg',
+    upset: 'https://res.cloudinary.com/dm7qxemrt/image/upload/v1749199687/Face_Im_upset_pqskxp.svg'
   };
 
   // Mood colors for consistency
@@ -82,9 +82,9 @@ const PatientMoodCheckIns = () => {
     return moodKey.charAt(0).toUpperCase() + moodKey.slice(1);
   };
 
-  // Get mood emoji
-  const getMoodEmoji = (moodKey) => {
-    return moodEmojis[moodKey] || '😐';
+  // Get mood SVG URL
+  const getMoodSvg = (moodKey) => {
+    return moodSvgUrls[moodKey] || moodSvgUrls['okay'];
   };
 
   // Get mood color
@@ -207,7 +207,11 @@ const PatientMoodCheckIns = () => {
             <div className="emotional-trends">
               {keyMetrics.topEmotionalTrends.map((trend, index) => (
                 <div key={index} className="trend-item">
-                  <span className="trend-emoji">{getMoodEmoji(trend.mood.toLowerCase())}</span>
+                  <img 
+                    src={getMoodSvg(trend.mood.toLowerCase())} 
+                    alt={trend.mood}
+                    className="trend-svg"
+                  />
                   <span className="trend-label">{trend.mood}</span>
                 </div>
               ))}
@@ -223,11 +227,12 @@ const PatientMoodCheckIns = () => {
           {dailyOverview.map((day, index) => (
             <div key={index} className="daily-item">
               <div className="daily-date">{day.dateFormatted}</div>
-              <div 
-                className="daily-mood-emoji"
-                style={{ fontSize: '48px' }}
-              >
-                {getMoodEmoji(day.mostFrequentMood)}
+              <div className="daily-mood-svg">
+                <img 
+                  src={getMoodSvg(day.mostFrequentMood)} 
+                  alt={day.mostFrequentMood}
+                  className="daily-svg"
+                />
               </div>
               <div className="daily-stats">
                 <div className="daily-score">{day.averageMoodScore}</div>
@@ -317,11 +322,21 @@ const PatientMoodCheckIns = () => {
                     <td>
                       {entry.lastMood ? (
                         <span className={`mood-indicator ${entry.lastMood.moodKey}`}>
-                          {getMoodEmoji(entry.lastMood.moodKey)} {entry.lastMood.moodLabel}
+                          <img 
+                            src={getMoodSvg(entry.lastMood.moodKey)} 
+                            alt={entry.lastMood.moodKey}
+                            className="mood-svg-small"
+                          />
+                          {entry.lastMood.moodLabel}
                         </span>
                       ) : (
                         <span className="mood-indicator okay">
-                          😐 No recent mood
+                          <img 
+                            src={getMoodSvg('okay')} 
+                            alt="okay"
+                            className="mood-svg-small"
+                          />
+                          No recent mood
                         </span>
                       )}
                     </td>
