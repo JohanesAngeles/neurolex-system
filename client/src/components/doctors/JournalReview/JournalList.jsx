@@ -238,284 +238,374 @@ const JournalList = () => {
   
   // Inline styles
   const styles = {
-    container: {
-      padding: '24px'
-    },
-    header: {
-      marginBottom: '24px'
-    },
-    headerTitle: {
-      fontSize: '45px',
-      fontFamily: 'Poppins',
-      fontWeight: 600,
-      marginBottom: '8px',
-      color: '#000000'
-    },
-    headerSubtitle: {
-      fontSize: '16px',
-      fontFamily: 'IBM Plex Mono',
-      fontStyle: 'italic',
-      color: '#548170',
-      margin: 0
-    },
-    searchBar: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: '16px'
-    },
-    searchBox: {
-      position: 'relative',
-      flex: 1,
-      maxWidth: '421px'
-    },
-    searchInput: {
-      width: '100%',
-      height: '55px',
-      padding: '10px 12px 10px 40px',
-      border: '1px solid #A7D7C5',
-      borderRadius: '12px',
-      fontSize: '15px',
-      fontFamily: 'IBM Plex Mono, monospace'
-    },
-    exportButton: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-      padding: '10px 16px',
-      borderRadius: '8px',
-      fontFamily: 'IBM Plex Mono, monospace',
-      height: '55px',
-      fontSize: '15px',
-      fontWeight: 500,
-      cursor: 'pointer',
-      transition: 'all 0.2s ease',
-      backgroundColor: 'white',
-      color: '#333',
-      border: '1px solid #A7D7C5'
-    },
-    filtersContainer: {
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: '16px',
-      marginBottom: '24px'
-    },
-    filterItem: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '8px'
-    },
-    filterLabel: {
-      fontSize: '16px',
-      fontWeight: 'bold',
-      fontFamily: 'IBM Plex Mono',
-      color: '#548170',
-      whiteSpace: 'nowrap'
-    },
-    filterSelect: {
-      padding: '8px 12px',
-      border: '1px solid #A7D7C5',
-      borderRadius: '12px',
-      backgroundColor: 'rgba(167, 215, 197, 0.1)',
-      height: '55px',
-      minWidth: '150px',
-      fontSize: '14px',
-      fontFamily: 'IBM Plex Mono',
-      color: '#333'
-    },
-    filterDate: {
-      padding: '8px 12px',
-      border: '1px solid #A7D7C5',
-      borderRadius: '12px',
-      backgroundColor: 'rgba(167, 215, 197, 0.1)',
-      height: '40px',
-      width: '180px',
-      fontSize: '14px',
-      fontFamily: 'IBM Plex Mono',
-      color: '#333'
-    },
-    resetButton: {
-      backgroundColor: 'white',
-      color: '#333',
-      border: '1px solid #A7D7C5',
-      borderRadius: '8px',
-      padding: '10px 16px',
-      fontSize: '14px',
-      cursor: 'pointer',
-      height: '40px',
-      alignSelf: 'flex-end'
-    },
-    tableContainer: {
-      marginBottom: '30px',
-      overflowX: 'auto'
-    },
-    table: {
-      width: '100%',
-      borderCollapse: 'separate',
-      borderSpacing: '0 10px'
-    },
-    tableHead: {
-      backgroundColor: 'rgba(167, 215, 197, 0.1)'
-    },
-    tableHeadCell: {
-      padding: '12px 16px',
-      textAlign: 'left',
-      borderTop: '1px solid #A7D7C5',
-      borderBottom: '1px solid #A7D7C5',
-      fontSize: '15px',
-      fontFamily: 'IBM Plex Mono, monospace',
-      color: '#548170',
-      fontWeight: 700
-    },
-    tableHeadCellFirst: {
-      padding: '12px 16px',
-      textAlign: 'left',
-      borderTop: '1px solid #A7D7C5',
-      borderBottom: '1px solid #A7D7C5',
-      borderLeft: '1px solid #A7D7C5',
-      borderTopLeftRadius: '12px',
-      borderBottomLeftRadius: '12px',
-      fontSize: '15px',
-      fontFamily: 'IBM Plex Mono, monospace',
-      color: '#548170',
-      fontWeight: 700
-    },
-    tableHeadCellLast: {
-      padding: '12px 16px',
-      textAlign: 'left',
-      borderTop: '1px solid #A7D7C5',
-      borderBottom: '1px solid #A7D7C5',
-      borderRight: '1px solid #A7D7C5',
-      borderTopRightRadius: '12px',
-      borderBottomRightRadius: '12px',
-      fontSize: '15px',
-      fontFamily: 'IBM Plex Mono, monospace',
-      color: '#548170',
-      fontWeight: 700
-    },
-    tableRow: {
-      backgroundColor: '#ffffff'
-    },
-    tableRowAlt: {
-      backgroundColor: 'rgba(167, 215, 197, 0.1)'
-    },
-    tableCell: {
-      padding: '12px 16px',
-      borderTop: '1px solid #A7D7C5',
-      borderBottom: '1px solid #A7D7C5',
-      fontSize: '15px',
-      fontFamily: 'IBM Plex Mono, monospace'
-    },
-    tableCellFirst: {
-      padding: '12px 16px',
-      borderTop: '1px solid #A7D7C5',
-      borderBottom: '1px solid #A7D7C5',
-      borderLeft: '1px solid #A7D7C5',
-      borderTopLeftRadius: '12px',
-      borderBottomLeftRadius: '12px',
-      fontSize: '15px',
-      fontFamily: 'IBM Plex Mono, monospace'
-    },
-    tableCellLast: {
-      padding: '12px 16px',
-      borderTop: '1px solid #A7D7C5',
-      borderBottom: '1px solid #A7D7C5',
-      borderRight: '1px solid #A7D7C5',
-      borderTopRightRadius: '12px',
-      borderBottomRightRadius: '12px',
-      fontSize: '15px',
-      fontFamily: 'IBM Plex Mono, monospace'
-    },
-    emotionTags: {
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: '6px'
-    },
-    emotionTag: {
-      display: 'inline-block',
-      padding: '2px 8px',
-      borderRadius: '12px',
-      backgroundColor: 'rgba(167, 215, 197, 0.3)',
-      color: '#333',
-      fontSize: '12px',
-      whiteSpace: 'nowrap'
-    },
-    actionIcons: {
-      display: 'flex',
-      justifyContent: 'flex-end',
-      gap: '10px'
-    },
-    actionIconView: {
-      width: '24px',
-      height: '24px',
-      cursor: 'pointer',
-      padding: '4px',
-      borderRadius: '4px',
-      backgroundColor: '#E8F5E9'
-    },
-    actionIconEdit: {
-      width: '24px',
-      height: '24px',
-      cursor: 'pointer',
-      padding: '4px',
-      borderRadius: '4px',
-      backgroundColor: '#E3F2FD'
-    },
-    actionIconDelete: {
-      width: '24px',
-      height: '24px',
-      cursor: 'pointer',
-      padding: '4px',
-      borderRadius: '4px',
-      backgroundColor: '#FFEBEE'
-    },
-    pagination: {
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginTop: '20px',
-      gap: '16px'
-    },
-    paginationButton: {
-      padding: '8px 16px',
-      backgroundColor: '#fff',
-      border: '1px solid #A7D7C5',
-      borderRadius: '6px',
-      color: '#333',
-      fontSize: '14px',
-      cursor: 'pointer'
-    },
-    paginationButtonDisabled: {
-      padding: '8px 16px',
-      backgroundColor: '#fff',
-      border: '1px solid #A7D7C5',
-      borderRadius: '6px',
-      color: '#333',
-      fontSize: '14px',
-      opacity: 0.5,
-      cursor: 'not-allowed'
-    },
-    paginationInfo: {
-      fontSize: '14px',
-      color: '#666'
-    },
-    rowsPerPage: {
-      display: 'flex',
-      justifyContent: 'flex-end',
-      alignItems: 'center',
-      gap: '12px',
-      marginTop: '16px',
-      fontFamily: 'IBM Plex Mono, monospace',
-      fontSize: '14px',
-      color: '#666'
-    },
-    rowsPerPageSelect: {
-      padding: '4px 8px',
-      border: '1px solid #A7D7C5',
-      borderRadius: '4px',
-      backgroundColor: '#fff'
-    }
-  };
+  container: {
+    padding: '40px 24px 24px 24px',
+    backgroundColor: '#FFFFFF'
+  },
+  header: {
+    marginBottom: '32px'
+  },
+  headerTitle: {
+    fontSize: '45px',
+    fontFamily: 'Poppins, sans-serif',
+    fontStyle: 'normal',
+    fontWeight: 400,
+    lineHeight: '50px',
+    display: 'flex',
+    alignItems: 'center',
+    color: '#000000',
+    marginBottom: '8px'
+  },
+  headerSubtitle: {
+    fontSize: '15px',
+    fontFamily: 'IBM Plex Mono, monospace',
+    fontStyle: 'italic',
+    fontWeight: 400,
+    lineHeight: '20px',
+    color: '#3D6B59',
+    margin: 0
+  },
+  dividerLine: {
+    width: '100%',
+    height: '1px',
+    border: 'none',
+    backgroundColor: '#A7D7C5',
+    margin: '24px 0'
+  },
+  searchAndControlsSection: {
+    marginBottom: '24px'
+  },
+  topControlsRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '20px',
+    gap: '16px'
+  },
+  searchContainer: {
+    position: 'relative',
+    flex: 1,
+    maxWidth: '421px'
+  },
+  searchBox: {
+    position: 'relative',
+    width: '100%'
+  },
+  searchInput: {
+    width: '100%',
+    height: '54px',
+    padding: '15px 16px 15px 48px',
+    border: '1px solid #A7D7C5',
+    borderRadius: '10px',
+    fontSize: '15px',
+    fontFamily: 'IBM Plex Mono, monospace',
+    backgroundColor: '#FFFFFF',
+    boxSizing: 'border-box'
+  },
+  searchIcon: {
+    position: 'absolute',
+    left: '16px',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    width: '20px',
+    height: '20px',
+    color: '#3D6B59'
+  },
+  exportButton: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    width: '165px',
+    height: '54px',
+    backgroundColor: '#548170',
+    border: '1px solid #548170',
+    borderRadius: '10px',
+    color: '#FFFFFF',
+    fontSize: '15px',
+    fontFamily: 'IBM Plex Mono, monospace',
+    fontWeight: 700,
+    cursor: 'pointer',
+    textAlign: 'center'
+  },
+  filtersRow: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'flex-end',
+    gap: '16px'
+  },
+  filterGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px'
+  },
+  filterLabel: {
+    fontSize: '15px',
+    fontWeight: 700,
+    fontFamily: 'IBM Plex Mono, monospace',
+    color: '#3D6B59',
+    lineHeight: '20px'
+  },
+  dateInput: {
+    width: '388px',
+    height: '54px',
+    padding: '15px 16px',
+    border: '1.19518px solid #A7D7C5',
+    borderRadius: '10px',
+    backgroundColor: 'rgba(167, 215, 197, 0.1)',
+    fontSize: '15px',
+    fontFamily: 'IBM Plex Mono, monospace',
+    color: '#548170',
+    boxSizing: 'border-box'
+  },
+  patientSelect: {
+    width: '365px',
+    height: '54px',
+    padding: '15px 16px',
+    border: '1.19518px solid #A7D7C5',
+    borderRadius: '10px',
+    backgroundColor: 'rgba(167, 215, 197, 0.1)',
+    fontSize: '15px',
+    fontFamily: 'IBM Plex Mono, monospace',
+    color: '#548170',
+    boxSizing: 'border-box',
+    appearance: 'none',
+    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23548170' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
+    backgroundPosition: 'right 16px center',
+    backgroundRepeat: 'no-repeat',
+    backgroundSize: '16px'
+  },
+  sentimentSelect: {
+    width: '365px',
+    height: '54px',
+    padding: '15px 16px',
+    border: '1.19518px solid #A7D7C5',
+    borderRadius: '10px',
+    backgroundColor: 'rgba(167, 215, 197, 0.1)',
+    fontSize: '15px',
+    fontFamily: 'IBM Plex Mono, monospace',
+    color: '#548170',
+    boxSizing: 'border-box',
+    appearance: 'none',
+    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23548170' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
+    backgroundPosition: 'right 16px center',
+    backgroundRepeat: 'no-repeat',
+    backgroundSize: '16px'
+  },
+  showControl: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px'
+  },
+  showBox: {
+    width: '54px',
+    height: '54px',
+    border: '1px solid #A7D7C5',
+    borderRadius: '10px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF'
+  },
+  showNumber: {
+    fontSize: '15px',
+    fontFamily: 'IBM Plex Mono, monospace',
+    fontWeight: 700,
+    color: '#548170',
+    textAlign: 'center'
+  },
+  showLabel: {
+    fontSize: '15px',
+    fontFamily: 'IBM Plex Mono, monospace',
+    fontWeight: 700,
+    color: '#3D6B59'
+  },
+  heartIcon: {
+    position: 'absolute',
+    top: '40px',
+    right: '24px',
+    width: '85px',
+    height: '85px',
+    backgroundColor: 'rgba(167, 215, 197, 0.1)',
+    border: '1px solid #A7D7C5',
+    borderRadius: '10px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '52px'
+  },
+  // Keep all your existing table and other styles...
+  tableContainer: {
+    marginBottom: '30px',
+    overflowX: 'auto'
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'separate',
+    borderSpacing: '0 10px'
+  },
+  tableHead: {
+    backgroundColor: 'rgba(167, 215, 197, 0.1)'
+  },
+  tableHeadCell: {
+    padding: '12px 16px',
+    textAlign: 'left',
+    borderTop: '1px solid #A7D7C5',
+    borderBottom: '1px solid #A7D7C5',
+    fontSize: '15px',
+    fontFamily: 'IBM Plex Mono, monospace',
+    color: '#548170',
+    fontWeight: 700
+  },
+  tableHeadCellFirst: {
+    padding: '12px 16px',
+    textAlign: 'left',
+    borderTop: '1px solid #A7D7C5',
+    borderBottom: '1px solid #A7D7C5',
+    borderLeft: '1px solid #A7D7C5',
+    borderTopLeftRadius: '12px',
+    borderBottomLeftRadius: '12px',
+    fontSize: '15px',
+    fontFamily: 'IBM Plex Mono, monospace',
+    color: '#548170',
+    fontWeight: 700
+  },
+  tableHeadCellLast: {
+    padding: '12px 16px',
+    textAlign: 'left',
+    borderTop: '1px solid #A7D7C5',
+    borderBottom: '1px solid #A7D7C5',
+    borderRight: '1px solid #A7D7C5',
+    borderTopRightRadius: '12px',
+    borderBottomRightRadius: '12px',
+    fontSize: '15px',
+    fontFamily: 'IBM Plex Mono, monospace',
+    color: '#548170',
+    fontWeight: 700
+  },
+  tableRow: {
+    backgroundColor: '#ffffff'
+  },
+  tableRowAlt: {
+    backgroundColor: 'rgba(167, 215, 197, 0.1)'
+  },
+  tableCell: {
+    padding: '12px 16px',
+    borderTop: '1px solid #A7D7C5',
+    borderBottom: '1px solid #A7D7C5',
+    fontSize: '15px',
+    fontFamily: 'IBM Plex Mono, monospace'
+  },
+  tableCellFirst: {
+    padding: '12px 16px',
+    borderTop: '1px solid #A7D7C5',
+    borderBottom: '1px solid #A7D7C5',
+    borderLeft: '1px solid #A7D7C5',
+    borderTopLeftRadius: '12px',
+    borderBottomLeftRadius: '12px',
+    fontSize: '15px',
+    fontFamily: 'IBM Plex Mono, monospace'
+  },
+  tableCellLast: {
+    padding: '12px 16px',
+    borderTop: '1px solid #A7D7C5',
+    borderBottom: '1px solid #A7D7C5',
+    borderRight: '1px solid #A7D7C5',
+    borderTopRightRadius: '12px',
+    borderBottomRightRadius: '12px',
+    fontSize: '15px',
+    fontFamily: 'IBM Plex Mono, monospace'
+  },
+  emotionTags: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '6px'
+  },
+  emotionTag: {
+    display: 'inline-block',
+    padding: '2px 8px',
+    borderRadius: '12px',
+    backgroundColor: 'rgba(167, 215, 197, 0.3)',
+    color: '#333',
+    fontSize: '12px',
+    whiteSpace: 'nowrap'
+  },
+  actionIcons: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '10px'
+  },
+  actionIconView: {
+    width: '24px',
+    height: '24px',
+    cursor: 'pointer',
+    padding: '4px',
+    borderRadius: '4px',
+    backgroundColor: '#E8F5E9'
+  },
+  actionIconEdit: {
+    width: '24px',
+    height: '24px',
+    cursor: 'pointer',
+    padding: '4px',
+    borderRadius: '4px',
+    backgroundColor: '#E3F2FD'
+  },
+  actionIconDelete: {
+    width: '24px',
+    height: '24px',
+    cursor: 'pointer',
+    padding: '4px',
+    borderRadius: '4px',
+    backgroundColor: '#FFEBEE'
+  },
+  pagination: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: '20px',
+    gap: '16px'
+  },
+  paginationButton: {
+    padding: '8px 16px',
+    backgroundColor: '#fff',
+    border: '1px solid #A7D7C5',
+    borderRadius: '6px',
+    color: '#333',
+    fontSize: '14px',
+    cursor: 'pointer'
+  },
+  paginationButtonDisabled: {
+    padding: '8px 16px',
+    backgroundColor: '#fff',
+    border: '1px solid #A7D7C5',
+    borderRadius: '6px',
+    color: '#333',
+    fontSize: '14px',
+    opacity: 0.5,
+    cursor: 'not-allowed'
+  },
+  paginationInfo: {
+    fontSize: '14px',
+    color: '#666'
+  },
+  rowsPerPage: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: '12px',
+    marginTop: '16px',
+    fontFamily: 'IBM Plex Mono, monospace',
+    fontSize: '14px',
+    color: '#666'
+  },
+  rowsPerPageSelect: {
+    padding: '4px 8px',
+    border: '1px solid #A7D7C5',
+    borderRadius: '4px',
+    backgroundColor: '#fff'
+  }
+};
   
   return (
     <div style={styles.container}>

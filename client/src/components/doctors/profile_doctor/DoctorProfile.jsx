@@ -13,12 +13,16 @@ import keyIcon from '../../../assets/icons/pub_profile.svg';
 import helpIcon from '../../../assets/icons/help_icon.svg';
 import logoutIcon from '../../../assets/icons/logout_icon.svg';
 
-
 const DoctorProfile = () => {
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState('edit-profile');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  
+  // 🆕 NEW: Profile picture upload states
+  const [uploading, setUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  
   const [doctorProfile, setDoctorProfile] = useState({
     firstName: '',
     lastName: '',
@@ -72,11 +76,16 @@ const DoctorProfile = () => {
       const processedProfile = {
         firstName: profileData.firstName || '',
         lastName: profileData.lastName || '',
-        title: profileData.title || ''
+        title: profileData.title || '',
+        profilePicture: profileData.profilePicture || null
       };
       
       setDoctorProfile(processedProfile);
-      setFormData(processedProfile);
+      setFormData({
+        firstName: processedProfile.firstName,
+        lastName: processedProfile.lastName,
+        title: processedProfile.title
+      });
       
       if (processedProfile.profilePicture) {
         setProfileImagePreview(processedProfile.profilePicture);
@@ -110,7 +119,8 @@ const DoctorProfile = () => {
     }));
   };
 
-  const handleProfileImageChange = (e) => {
+  // 🆕 UPDATED: Profile picture change handler with automatic upload
+  const handleProfileImageChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
       // Validate file type
@@ -131,6 +141,93 @@ const DoctorProfile = () => {
         setProfileImagePreview(e.target.result);
       };
       reader.readAsDataURL(file);
+      
+      // Store the file for upload
+      setSelectedFile(file);
+      
+      // 🆕 NEW: Automatically upload the profile picture
+      await uploadProfilePicture(file);
+    }
+  };
+
+  // 🆕 NEW: Upload profile picture function
+  const uploadProfilePicture = async (file) => {
+    try {
+      setUploading(true);
+      console.log('📤 Uploading profile picture...');
+      
+      // Create FormData
+      const formData = new FormData();
+      formData.append('profilePicture', file);
+      
+      // Upload to server
+      const response = await doctorService.uploadProfilePicture(formData);
+      console.log('✅ Profile picture uploaded:', response);
+      
+      if (response.success) {
+        // Update the doctor profile state with new picture URL
+        setDoctorProfile(prev => ({
+          ...prev,
+          profilePicture: response.data.profilePicture
+        }));
+        
+        // Update preview with the actual uploaded URL
+        setProfileImagePreview(response.data.profilePicture);
+        
+        // Dispatch custom event to update layout sidebar
+        window.dispatchEvent(new CustomEvent('profilePictureUpdated', {
+          detail: { profilePicture: response.data.profilePicture }
+        }));
+        
+        toast.success('Profile picture updated successfully!');
+      }
+      
+    } catch (error) {
+      console.error('❌ Error uploading profile picture:', error);
+      
+      // Reset preview on error
+      setProfileImagePreview(doctorProfile.profilePicture || null);
+      setSelectedFile(null);
+      
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to upload profile picture';
+      toast.error(errorMessage);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // 🆕 NEW: Delete profile picture function
+  const deleteProfilePicture = async () => {
+    try {
+      setUploading(true);
+      console.log('🗑️ Deleting profile picture...');
+      
+      const response = await doctorService.deleteProfilePicture();
+      console.log('✅ Profile picture deleted:', response);
+      
+      if (response.success) {
+        // Clear the profile picture
+        setDoctorProfile(prev => ({
+          ...prev,
+          profilePicture: null
+        }));
+        setProfileImagePreview(null);
+        setSelectedFile(null);
+        
+        // Dispatch event to update layout sidebar
+        window.dispatchEvent(new CustomEvent('profilePictureUpdated', {
+          detail: { profilePicture: null }
+        }));
+        
+        toast.success('Profile picture deleted successfully!');
+      }
+      
+    } catch (error) {
+      console.error('❌ Error deleting profile picture:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to delete profile picture';
+      toast.error(errorMessage);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -160,7 +257,10 @@ const DoctorProfile = () => {
       console.log('✅ Profile updated:', response);
       
       // Update local state
-      setDoctorProfile(formData);
+      setDoctorProfile(prev => ({
+        ...prev,
+        ...formData
+      }));
       
       toast.success('Profile updated successfully!');
       
@@ -210,7 +310,11 @@ const DoctorProfile = () => {
         {/* Profile Picture Section */}
         <div className="sidebar-profile">
           <div className="profile-image-container">
-            {profileImagePreview ? (
+            {uploading ? (
+              <div className="profile-image-uploading">
+                <div className="upload-spinner"></div>
+              </div>
+            ) : profileImagePreview ? (
               <img 
                 src={profileImagePreview} 
                 alt="Profile" 
@@ -222,7 +326,7 @@ const DoctorProfile = () => {
               </div>
             )}
             <div className="profile-image-edit">
-              <label htmlFor="profile-image-input" className="image-edit-button">
+              <label htmlFor="profile-image-input" className={`image-edit-button ${uploading ? 'disabled' : ''}`}>
                 <img src={editIcon} alt="Edit" />
               </label>
               <input
@@ -230,6 +334,7 @@ const DoctorProfile = () => {
                 type="file"
                 accept="image/*"
                 onChange={handleProfileImageChange}
+                disabled={uploading}
                 style={{ display: 'none' }}
               />
             </div>
@@ -252,12 +357,17 @@ const DoctorProfile = () => {
         </div>
 
         <form onSubmit={handleSaveProfile} className="profile-form">
-          {/* Profile Photo Section */}
+          {/* 🆕 UPDATED: Profile Photo Section with upload status */}
           <div className="form-section profile-photo-section">
             <h3>Profile Photo</h3>
             <div className="photo-upload-area">
               <div className="photo-preview">
-                {profileImagePreview ? (
+                {uploading ? (
+                  <div className="photo-uploading">
+                    <div className="upload-spinner"></div>
+                    <p>Uploading...</p>
+                  </div>
+                ) : profileImagePreview ? (
                   <img src={profileImagePreview} alt="Profile Preview" />
                 ) : (
                   <div className="photo-placeholder">
@@ -266,16 +376,28 @@ const DoctorProfile = () => {
                 )}
               </div>
               <div className="photo-upload-controls">
-                <label htmlFor="photo-upload" className="upload-button">
-                  Choose Photo
+                <label htmlFor="photo-upload" className={`upload-button ${uploading ? 'disabled' : ''}`}>
+                  {uploading ? 'Uploading...' : 'Choose Photo'}
                 </label>
                 <input
                   id="photo-upload"
                   type="file"
                   accept="image/*"
                   onChange={handleProfileImageChange}
+                  disabled={uploading}
                   style={{ display: 'none' }}
                 />
+                {/* 🆕 NEW: Delete photo button */}
+                {profileImagePreview && !uploading && (
+                  <button 
+                    type="button" 
+                    onClick={deleteProfilePicture}
+                    className="delete-photo-button"
+                    disabled={uploading}
+                  >
+                    Delete Photo
+                  </button>
+                )}
                 <p className="upload-help">
                   Upload a professional photo. Max file size: 5MB
                 </p>
@@ -346,7 +468,7 @@ const DoctorProfile = () => {
             <button 
               type="submit" 
               className="save-button"
-              disabled={saving}
+              disabled={saving || uploading}
             >
               {saving ? 'Saving...' : 'Save & Update'}
             </button>
