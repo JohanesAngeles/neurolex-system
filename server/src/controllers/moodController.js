@@ -347,6 +347,184 @@ const getUserMoodHistory = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Get comprehensive mood analytics for all patients under a doctor's care
+ * @route   GET /api/mood/doctor/analytics
+ * @access  Private (Doctor only)
+ */
+const getDoctorPatientMoodAnalytics = async (req, res) => {
+  try {
+    console.log('Fetching doctor mood analytics for:', req.user.id);
+    
+    // Use tenant connection
+    const Mood = req.tenantConnection.model('Mood');
+    const PatientDoctorAssociation = req.tenantConnection.model('PatientDoctorAssociation');
+    
+    // Verify user is a doctor
+    if (req.user.role !== 'doctor') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Doctor role required.'
+      });
+    }
+
+    const { days = 7 } = req.query; // Default to 7 days for analytics
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - parseInt(days));
+    
+    // Get all active patients under this doctor's care
+    const patientAssociations = await PatientDoctorAssociation.find({
+      doctor: req.user.id,
+      status: 'active'
+    }).select('patient');
+    
+    const patientIds = patientAssociations.map(assoc => assoc.patient);
+    
+    if (patientIds.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          keyMetrics: {
+            totalLogs: 0,
+            averageLogsPerDay: 0,
+            averageMoodScore: 0,
+            topEmotionalTrends: []
+          },
+          dailyOverview: [],
+          moodDistribution: {
+            great: { count: 0, percentage: 0 },
+            good: { count: 0, percentage: 0 },
+            okay: { count: 0, percentage: 0 },
+            struggling: { count: 0, percentage: 0 },
+            upset: { count: 0, percentage: 0 }
+          }
+        }
+      });
+    }
+
+    // 1. KEY METRICS CALCULATION
+    // Get all mood entries for patients under doctor's care
+    const allMoodEntries = await Mood.find({
+      tenantId: req.user.tenantId,
+      userId: { $in: patientIds },
+      timestamp: { $gte: startDate }
+    }).sort({ timestamp: -1 });
+
+    const totalLogs = allMoodEntries.length;
+    const averageLogsPerDay = Math.round((totalLogs / parseInt(days)) * 10) / 10;
+    
+    // Calculate average mood score (1-5 scale converted to percentage)
+    const averageMoodRating = totalLogs > 0 
+      ? allMoodEntries.reduce((sum, entry) => sum + entry.moodRating, 0) / totalLogs 
+      : 0;
+    const averageMoodScore = Math.round(((averageMoodRating - 1) / 4) * 100) / 100;
+
+    // Get top 3 emotional trends (most frequent mood keys)
+    const moodKeyCount = allMoodEntries.reduce((acc, entry) => {
+      acc[entry.moodKey] = (acc[entry.moodKey] || 0) + 1;
+      return acc;
+    }, {});
+    
+    const topEmotionalTrends = Object.entries(moodKeyCount)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 3)
+      .map(([mood, count]) => ({
+        mood: mood.charAt(0).toUpperCase() + mood.slice(1),
+        count,
+        percentage: Math.round((count / totalLogs) * 100)
+      }));
+
+    // 2. DAILY OVERVIEW (Last 7 days with most frequent mood per day)
+    const dailyOverview = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dayStart = new Date(date.setHours(0, 0, 0, 0));
+      const dayEnd = new Date(date.setHours(23, 59, 59, 999));
+      
+      const dayMoods = allMoodEntries.filter(entry => 
+        entry.timestamp >= dayStart && entry.timestamp <= dayEnd
+      );
+      
+      // Find most frequent mood for the day
+      const dayMoodCount = dayMoods.reduce((acc, entry) => {
+        acc[entry.moodKey] = (acc[entry.moodKey] || 0) + 1;
+        return acc;
+      }, {});
+      
+      const mostFrequentMood = Object.entries(dayMoodCount)
+        .sort(([,a], [,b]) => b - a)[0];
+      
+      // Calculate average mood score for the day
+      const dayAverageMoodRating = dayMoods.length > 0
+        ? dayMoods.reduce((sum, entry) => sum + entry.moodRating, 0) / dayMoods.length
+        : 0;
+      const dayAverageMoodScore = Math.round(((dayAverageMoodRating - 1) / 4) * 100) / 100;
+      
+      dailyOverview.push({
+        date: dayStart.toISOString().split('T')[0],
+        dateFormatted: dayStart.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric' 
+        }),
+        mostFrequentMood: mostFrequentMood ? mostFrequentMood[0] : 'okay',
+        moodCount: mostFrequentMood ? mostFrequentMood[1] : 0,
+        totalEntries: dayMoods.length,
+        averageMoodScore: dayAverageMoodScore
+      });
+    }
+
+    // 3. MOOD DISTRIBUTION (All 5 moods with counts and percentages)
+    const moodDistribution = {
+      great: { count: 0, percentage: 0 },
+      good: { count: 0, percentage: 0 },
+      okay: { count: 0, percentage: 0 },
+      struggling: { count: 0, percentage: 0 },
+      upset: { count: 0, percentage: 0 }
+    };
+    
+    // Count each mood type
+    allMoodEntries.forEach(entry => {
+      if (moodDistribution[entry.moodKey]) {
+        moodDistribution[entry.moodKey].count++;
+      }
+    });
+    
+    // Calculate percentages
+    Object.keys(moodDistribution).forEach(moodKey => {
+      moodDistribution[moodKey].percentage = totalLogs > 0 
+        ? Math.round((moodDistribution[moodKey].count / totalLogs) * 100)
+        : 0;
+    });
+
+    // Response
+    res.status(200).json({
+      success: true,
+      data: {
+        keyMetrics: {
+          totalLogs,
+          averageLogsPerDay,
+          averageMoodScore,
+          topEmotionalTrends
+        },
+        dailyOverview,
+        moodDistribution,
+        period: `${days} days`,
+        totalPatients: patientIds.length,
+        generatedAt: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Error getting doctor patient mood analytics:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error occurred while retrieving mood analytics',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+};
+
 module.exports = {
   createMoodCheckIn,
   getMoodHistory,
@@ -357,5 +535,6 @@ module.exports = {
   
   // Legacy methods for backward compatibility
   saveMood: createMoodCheckIn,
-  getUserMoods: getMoodHistory
+  getUserMoods: getMoodHistory,
+  getDoctorPatientMoodAnalytics
 };

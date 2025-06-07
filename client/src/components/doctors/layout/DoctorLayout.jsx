@@ -12,6 +12,7 @@ import journalIcon from '../../../assets/icons/journal_icon.svg';
 import templatesIcon from '../../../assets/icons/JournalManagement_Icon.svg';
 import appointmentsIcon from '../../../assets/icons/appointment_icon.svg';
 import messageIcon from '../../../assets/icons/messages_icon.svg';
+import moodCheckInIcon from '../../../assets/icons/mood_icon.svg';
 
 const DoctorLayout = () => {
   const navigate = useNavigate();
@@ -118,7 +119,7 @@ const DoctorLayout = () => {
       : '76, 175, 80';
   };
 
-  // 🚨 FIXED: Menu items with proper feature control integration
+  // 🚨 UPDATED: Menu items with Patient Mood Check-Ins added
    const allItems = [
     { 
       id: 'dashboard', 
@@ -135,6 +136,14 @@ const DoctorLayout = () => {
       path: '/doctor/patients', 
       icon: patientsIcon,
       feature: 'Patients',
+      implemented: true
+    },
+    { 
+      id: 'patient-mood-checkins', 
+      label: 'Patient Mood Check-Ins', 
+      path: '/doctor/mood-checkins', 
+      icon: moodCheckInIcon,
+      feature: 'Patient Mood Check-Ins',
       implemented: true
     },
     { 

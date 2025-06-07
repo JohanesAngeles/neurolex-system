@@ -57,6 +57,9 @@ import PatientDetails from './components/doctors/PatientManagement/PatientDetail
 // Doctor Appointments Component
 import DoctorAppointments from './components/doctors/Appointments/DoctorAppointments';
 
+// 🆕 NEW: Import PatientMoodCheckIns component for mood analytics
+import PatientMoodCheckIns from './components/doctors/PatientManagement/PatientMoodCheckIns';
+
 // Admin Components
 import AdminLayout from './components/admin/layout/AdminLayout';
 import AdminDashboard from './components/admin/AdminDashboard';
@@ -430,6 +433,9 @@ const App = () => {
                   
                   {/* 🆕 NEW: Doctor Messages Route - SAFE TO ADD */}
                   <Route path="messages" element={<DoctorMessages />} />
+                  
+                  {/* 🆕 NEW: Patient Mood Check-Ins Route */}
+                  <Route path="mood-checkins" element={<PatientMoodCheckIns />} />
                   
                   {/* Patient Details route - IMPORTANT: This must come BEFORE the general patients route */}
                   <Route path="patients/:id" element={<PatientDetails />} />

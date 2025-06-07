@@ -11,6 +11,7 @@ const {
   getCurrentMood,
   canCheckIn,
   getUserMoodHistory,
+  getDoctorPatientMoodAnalytics, // ← ADDED THIS NEW IMPORT
   // Legacy methods
   saveMood,
   getUserMoods
@@ -64,6 +65,14 @@ router.get('/can-checkin', canCheckIn);
  * @query   ?limit=30&page=1
  */
 router.get('/user/:userId', getUserMoodHistory);
+
+/**
+ * @desc    Get comprehensive mood analytics for all patients under doctor's care
+ * @route   GET /api/mood/doctor/analytics
+ * @access  Private (Doctor only)
+ * @query   ?days=7
+ */
+router.get('/doctor/analytics', getDoctorPatientMoodAnalytics);
 
 /**
  * @desc    Get mood analytics for a specific user (Admin/Doctor access)

@@ -1,0 +1,503 @@
+/* client/src/styles/components/doctor/PatientMoodCheckIns.css */
+
+.mood-checkins-container {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  background-color: #f8f9fa;
+  min-height: 100vh;
+}
+
+/* Header Styles */
+.mood-checkins-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 32px;
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.header-left h1 {
+  font-size: 28px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 8px 0;
+}
+
+.header-left p {
+  font-size: 14px;
+  color: #666;
+  margin: 0;
+  max-width: 600px;
+  line-height: 1.5;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.time-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.time-filter label {
+  font-size: 14px;
+  color: #666;
+}
+
+.days-select {
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+}
+
+.rainbow-icon {
+  font-size: 24px;
+}
+
+/* Key Metrics Section */
+.key-metrics-section {
+  margin-bottom: 32px;
+}
+
+.key-metrics-section h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 16px 0;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.metric-card {
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.metric-card h3 {
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  margin: 0 0 12px 0;
+}
+
+.metric-value {
+  font-size: 36px;
+  font-weight: 700;
+  color: #4CAF50;
+  margin: 0 0 8px 0;
+}
+
+.metric-label {
+  font-size: 12px;
+  color: #999;
+  margin: 0;
+}
+
+.emotional-trends {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.trend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.trend-emoji {
+  font-size: 20px;
+}
+
+.trend-label {
+  font-size: 14px;
+  color: #333;
+}
+
+/* Daily Overview Section */
+.daily-overview-section {
+  margin-bottom: 32px;
+}
+
+.daily-overview-section h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 16px 0;
+}
+
+.daily-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 12px;
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.daily-item {
+  text-align: center;
+  padding: 16px 8px;
+  border-radius: 8px;
+  background: #f8f9fa;
+}
+
+.daily-date {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+.daily-mood-emoji {
+  margin: 12px 0;
+}
+
+.daily-stats {
+  margin-top: 12px;
+}
+
+.daily-score {
+  font-size: 16px;
+  font-weight: 600;
+  color: #4CAF50;
+  margin-bottom: 4px;
+}
+
+.daily-entries {
+  font-size: 12px;
+  color: #999;
+}
+
+/* Mood Distribution Section */
+.mood-distribution-section {
+  margin-bottom: 32px;
+}
+
+.mood-distribution-section h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 16px 0;
+}
+
+.mood-distribution-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.mood-distribution-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-radius: 8px;
+  background: #f8f9fa;
+}
+
+.mood-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mood-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.mood-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+.mood-stats {
+  text-align: right;
+}
+
+.mood-count {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.mood-percentage {
+  font-size: 12px;
+  color: #666;
+}
+
+/* Mood History Section */
+.mood-history-section {
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.mood-history-section h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 24px 0;
+}
+
+.history-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  gap: 16px;
+}
+
+.search-container {
+  flex: 1;
+  max-width: 300px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.filter-controls {
+  display: flex;
+  gap: 12px;
+}
+
+.filter-select {
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+}
+
+.export-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.export-button:hover {
+  background: #45a049;
+}
+
+/* Table Styles */
+.mood-history-table {
+  overflow-x: auto;
+}
+
+.mood-history-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.mood-history-table th {
+  background: #f8f9fa;
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.mood-history-table td {
+  padding: 16px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 14px;
+  color: #333;
+}
+
+.mood-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.mood-indicator.great {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.mood-indicator.good {
+  background: #f1f8e9;
+  color: #558b2f;
+}
+
+.mood-indicator.okay {
+  background: #fff8e1;
+  color: #f57f17;
+}
+
+.mood-indicator.struggling {
+  background: #fff3e0;
+  color: #ef6c00;
+}
+
+.mood-indicator.upset {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.action-button {
+  background: none;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 6px 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.action-button:hover {
+  background: #f5f5f5;
+}
+
+/* Loading and Error States */
+.loading-container, .error-container, .no-data-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #4CAF50;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-container h3, .no-data-container h3 {
+  color: #333;
+  margin-bottom: 12px;
+}
+
+.error-container p, .no-data-container p {
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.retry-button {
+  padding: 10px 20px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.retry-button:hover {
+  background: #45a049;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .mood-checkins-container {
+    padding: 16px;
+  }
+  
+  .mood-checkins-header {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .header-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .daily-overview-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  
+  .daily-item {
+    padding: 12px 4px;
+  }
+  
+  .daily-mood-emoji {
+    font-size: 32px !important;
+  }
+  
+  .mood-distribution-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .history-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .filter-controls {
+    flex-wrap: wrap;
+  }
+  
+  .mood-history-table {
+    font-size: 12px;
+  }
+  
+  .mood-history-table th,
+  .mood-history-table td {
+    padding: 8px;
+  }
+}
