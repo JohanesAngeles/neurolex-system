@@ -278,37 +278,25 @@ app.use(express.urlencoded({ extended: true, limit: isProduction ? '5mb' : '10mb
 
 // Setup CORS
 app.use(cors({
-  origin: function(origin, callback) {
-    if (!origin) return callback(null, true);
-   
-    if (isProduction) {
-      const allowedOrigins = [
-        process.env.CLIENT_URL,
-        process.env.HEROKU_APP_URL,
-        /\.herokuapp\.com$/,
-        /^https:\/\/.*\.herokuapp\.com$/
-      ].filter(Boolean);
-     
-      const isAllowed = allowedOrigins.some(allowedOrigin => {
-        if (typeof allowedOrigin === 'string') {
-          return origin === allowedOrigin;
-        }
-        if (allowedOrigin instanceof RegExp) {
-          return allowedOrigin.test(origin);
-        }
-        return false;
-      });
-     
-      return callback(null, true); // Allow for now during development
-    } else {
-      return callback(null, true);
-    }
-  },
+  origin: [
+    'https://www.neurolex.life',
+    'https://neurolex.life', 
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'https://neurolex-platform-9b4c40c0e2da.herokuapp.com',
+    process.env.CLIENT_URL,
+    process.env.HEROKU_APP_URL
+  ].filter(Boolean),
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-tenant-id']
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'x-tenant-id',
+    'X-Tenant-ID',
+    'X-Tenant-Id'
+  ]
 }));
-
 // Request logging
 if (isProduction) {
   app.use(morgan('combined'));
