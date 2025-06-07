@@ -221,72 +221,8 @@ exports.getDoctorJournalEntries = async (req, res) => {
 
     const doctorId = req.user._id;
     console.log(`🩺 Doctor ${doctorId} requesting journal entries`);
-    console.log(`🔍 Doctor ID type: ${typeof doctorId}, value: ${doctorId}`);
 
-    // ✅ ENSURE PROPER OBJECTID CONVERSION
-    const doctorObjectId = mongoose.Types.ObjectId.isValid(doctorId) 
-      ? new mongoose.Types.ObjectId(doctorId)
-      : doctorId;
-    
-    console.log(`🔍 Converted Doctor ObjectId: ${doctorObjectId}`);
-
-    // ✅ FIXED QUERY: Proper ObjectId handling and logic
-    const query = {
-      $and: [
-        {
-          $or: [
-            { assignedDoctor: doctorObjectId }, // ✅ Use ObjectId for comparison
-            { 
-              isSharedWithDoctor: true,
-              $or: [
-                { assignedDoctor: null },
-                { assignedDoctor: { $exists: false } }
-              ]
-            }
-          ]
-        },
-        { 
-          $or: [
-            { isPrivate: false },
-            { isPrivate: { $exists: false } },
-            { isPrivate: null }
-          ]
-        }
-      ]
-    };
-    
-    if (patient) {
-      const patientObjectId = mongoose.Types.ObjectId.isValid(patient) 
-        ? new mongoose.Types.ObjectId(patient)
-        : patient;
-      query.$and.push({ user: patientObjectId });
-      console.log(`📋 Filtering by patient: ${patient}`);
-    }
-    
-    if (dateFrom || dateTo) {
-      const dateFilter = {};
-      if (dateFrom) dateFilter.$gte = new Date(dateFrom);
-      if (dateTo) dateFilter.$lte = new Date(dateTo);
-      query.$and.push({ createdAt: dateFilter });
-      console.log(`📅 Date filter applied: ${dateFrom} to ${dateTo}`);
-    }
-    
-    if (sentiment) {
-      query.$and.push({ 'sentimentAnalysis.sentiment.type': sentiment });
-      console.log(`😊 Sentiment filter: ${sentiment}`);
-    }
-    
-    if (analyzed === 'analyzed') {
-      query.$and.push({ 'sentimentAnalysis.sentiment': { $exists: true } });
-    } else if (analyzed === 'unanalyzed') {
-      query.$and.push({ 'sentimentAnalysis.sentiment': { $exists: false } });
-    }
-
-    const skip = (page - 1) * limit;
-    
-    console.log('🔍 Final query:', JSON.stringify(query, null, 2));
-    
-    // Get the correct model
+    // Get the correct model first
     let JournalEntry;
     if (req.tenantConnection) {
       JournalEntry = req.tenantConnection.model('JournalEntry');
@@ -295,46 +231,71 @@ exports.getDoctorJournalEntries = async (req, res) => {
       JournalEntry = require('../models/JournalEntry');
       console.log('Using default database for doctor journal entries');
     }
+
+    // ✅ SIMPLE QUERY - Let MongoDB handle the ObjectId comparison naturally
+    const baseQuery = {
+      $or: [
+        { assignedDoctor: doctorId }, // MongoDB will handle ObjectId comparison
+        { 
+          isSharedWithDoctor: true,
+          assignedDoctor: null
+        }
+      ],
+      $and: [
+        {
+          $or: [
+            { isPrivate: { $ne: true } },
+            { isPrivate: { $exists: false } }
+          ]
+        }
+      ]
+    };
     
-    // ✅ DEBUG: Test different query parts
-    console.log('🔍 Testing query parts...');
-    
-    try {
-      // Test 1: Count entries assigned to this doctor
-      const assignedCount = await JournalEntry.countDocuments({ 
-        assignedDoctor: doctorObjectId 
-      });
-      console.log(`🔍 Entries assigned to doctor: ${assignedCount}`);
-      
-      // Test 2: Count shared entries (null assignedDoctor)
-      const sharedCount = await JournalEntry.countDocuments({ 
-        isSharedWithDoctor: true,
-        assignedDoctor: null
-      });
-      console.log(`🔍 Shared entries (null doctor): ${sharedCount}`);
-      
-      // Test 3: Count all shared entries
-      const allSharedCount = await JournalEntry.countDocuments({ 
-        isSharedWithDoctor: true
-      });
-      console.log(`🔍 All shared entries: ${allSharedCount}`);
-      
-      // Test 4: Count non-private entries
-      const nonPrivateCount = await JournalEntry.countDocuments({ 
-        $or: [
-          { isPrivate: false },
-          { isPrivate: { $exists: false } },
-          { isPrivate: null }
-        ]
-      });
-      console.log(`🔍 Non-private entries: ${nonPrivateCount}`);
-      
-    } catch (debugError) {
-      console.log('⚠️ Debug queries failed:', debugError.message);
+    // Add additional filters
+    if (patient) {
+      baseQuery.user = patient;
+      console.log(`📋 Filtering by patient: ${patient}`);
     }
     
-    // Fetch entries with the main query
-    const entries = await JournalEntry.find(query)
+    if (dateFrom || dateTo) {
+      baseQuery.createdAt = {};
+      if (dateFrom) baseQuery.createdAt.$gte = new Date(dateFrom);
+      if (dateTo) baseQuery.createdAt.$lte = new Date(dateTo);
+      console.log(`📅 Date filter applied: ${dateFrom} to ${dateTo}`);
+    }
+    
+    if (sentiment) {
+      baseQuery['sentimentAnalysis.sentiment.type'] = sentiment;
+      console.log(`😊 Sentiment filter: ${sentiment}`);
+    }
+    
+    if (analyzed === 'analyzed') {
+      baseQuery['sentimentAnalysis.sentiment'] = { $exists: true };
+    } else if (analyzed === 'unanalyzed') {
+      baseQuery['sentimentAnalysis.sentiment'] = { $exists: false };
+    }
+
+    const skip = (page - 1) * limit;
+    
+    console.log('🔍 Final query:', JSON.stringify(baseQuery, null, 2));
+    
+    // ✅ SIMPLE DEBUG - Safe operations only
+    try {
+      const totalEntries = await JournalEntry.countDocuments({});
+      console.log(`🔍 Total entries in database: ${totalEntries}`);
+      
+      const doctorEntries = await JournalEntry.countDocuments({ assignedDoctor: doctorId });
+      console.log(`🔍 Entries assigned to this doctor: ${doctorEntries}`);
+      
+      const sharedEntries = await JournalEntry.countDocuments({ isSharedWithDoctor: true });
+      console.log(`🔍 Entries shared with doctors: ${sharedEntries}`);
+      
+    } catch (debugError) {
+      console.log('⚠️ Debug failed:', debugError.message);
+    }
+    
+    // Fetch entries
+    const entries = await JournalEntry.find(baseQuery)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(Number(limit))
@@ -347,48 +308,21 @@ exports.getDoctorJournalEntries = async (req, res) => {
         select: 'firstName lastName'
       });
 
-    const total = await JournalEntry.countDocuments(query);
+    const total = await JournalEntry.countDocuments(baseQuery);
     
-    console.log(`📊 Found ${entries.length} journal entries out of ${total} total for doctor ${doctorId}`);
+    console.log(`📊 Query returned ${entries.length} entries, total count: ${total}`);
     
-    // Enhanced debugging: Log each entry details
+    // Log entry details if found
     if (entries.length > 0) {
-      console.log('🔍 Retrieved entries:');
+      console.log('✅ Found entries:');
       entries.forEach((entry, index) => {
-        console.log(`Entry ${index + 1}:`, {
-          id: entry._id.toString(),
-          patient: entry.user ? `${entry.user.firstName} ${entry.user.lastName}` : 'Unknown',
-          assignedDoctor: entry.assignedDoctor ? entry.assignedDoctor._id.toString() : 'null',
-          assignedDoctorName: entry.assignedDoctor ? `${entry.assignedDoctor.firstName} ${entry.assignedDoctor.lastName}` : 'Unassigned',
-          isShared: entry.isSharedWithDoctor,
-          isPrivate: entry.isPrivate,
-          date: entry.createdAt.toISOString()
-        });
+        console.log(`Entry ${index + 1}: ID ${entry._id}, Patient: ${entry.user?.firstName || 'Unknown'}, Doctor: ${entry.assignedDoctor?.firstName || 'Unassigned'}, Shared: ${entry.isSharedWithDoctor}`);
       });
     } else {
-      console.log('❌ No entries found with main query');
-      
-      // ✅ SIMPLE FALLBACK TEST: Try the most basic query
-      console.log('🔍 Testing simple fallback query...');
-      const fallbackEntries = await JournalEntry.find({
-        isSharedWithDoctor: true
-      }).limit(5);
-      
-      console.log(`🔍 Fallback query found: ${fallbackEntries.length} entries`);
-      if (fallbackEntries.length > 0) {
-        console.log('🔍 Fallback entries:');
-        fallbackEntries.forEach((entry, index) => {
-          console.log(`Fallback Entry ${index + 1}:`, {
-            id: entry._id.toString(),
-            assignedDoctor: entry.assignedDoctor ? entry.assignedDoctor.toString() : 'null',
-            isShared: entry.isSharedWithDoctor,
-            isPrivate: entry.isPrivate
-          });
-        });
-      }
+      console.log('❌ No entries matched the query');
     }
 
-    // Transform entries for doctor view
+    // Transform entries for frontend
     const transformedEntries = entries.map(entry => ({
       _id: entry._id,
       date: entry.createdAt,
@@ -409,24 +343,17 @@ exports.getDoctorJournalEntries = async (req, res) => {
         page: Number(page),
         limit: Number(limit),
         pages: Math.ceil(total / Number(limit))
-      },
-      debug: {
-        doctorId: doctorId.toString(),
-        doctorObjectId: doctorObjectId.toString(),
-        queryUsed: query,
-        totalFound: total
       }
     });
+    
   } catch (error) {
-    console.error('❌ Error fetching doctor journal entries:', error);
+    console.error('❌ Error in getDoctorJournalEntries:', error);
+    console.error('❌ Error stack:', error.stack);
+    
     return res.status(500).json({
       success: false,
       message: 'Error fetching journal entries',
-      error: error.message,
-      debug: {
-        doctorId: req.user?._id?.toString() || 'unknown',
-        hastenantConnection: !!req.tenantConnection
-      }
+      error: error.message
     });
   }
 };
