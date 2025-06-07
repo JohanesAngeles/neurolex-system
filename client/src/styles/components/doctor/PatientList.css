@@ -236,12 +236,12 @@
   margin-bottom: 30px;
 }
 
-/* FIXED TABLE LAYOUT - Single container, no gaps */
+/* Updated Table Layout - 5 columns now */
 .custom-table {
   width: 100%;
-  border-radius: 12px;
-  overflow: hidden;
-  border: 1px solid #A7D7C5;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   margin-bottom: 20px;
 }
 
@@ -249,16 +249,12 @@
   display: grid;
   grid-template-columns: 2fr 2.5fr 1fr 0.8fr 2fr; /* Patient, Email, Gender, Age, Actions */
   grid-gap: 0;
-  border: none;
-  border-bottom: 1px solid #E8F5E9;
+  border-radius: 12px;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid #A7D7C5;
   background-color: #fff;
   min-height: 54px;
-  transition: background-color 0.2s ease;
-}
-
-/* Remove bottom border from last row */
-.table-row:last-child {
-  border-bottom: none;
 }
 
 .header-row {
@@ -266,7 +262,6 @@
   font-size: 14px;
   color: #333;
   font-weight: 600;
-  border-bottom: 1px solid #A7D7C5;
 }
 
 /* Header Row Styling to Match Figma */
@@ -289,11 +284,6 @@
 
 .table-row:nth-child(even):not(.header-row) {
   background-color: rgba(167, 215, 197, 0.02);
-}
-
-/* Hover effect for data rows only */
-.table-row:not(.header-row):hover {
-  background-color: rgba(167, 215, 197, 0.05);
 }
 
 .table-cell {
@@ -382,14 +372,14 @@
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  border: none;
+  border: 1.19518px solid #A7D7C5;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
   position: relative;
-  flex-shrink: 0;
+  flex-shrink: 0; /* Prevent buttons from shrinking */
 }
 
 /* View Button - Light Green Background with Green Icon */
@@ -413,7 +403,7 @@
 /* Delete Button - Red Background with White Icon */
 .btn-icon.delete {
   background: #FF7676;
-  border: none;
+  border: 1.19518px solid #A7D7C5;
 }
 
 .btn-icon.delete:hover {
@@ -589,19 +579,10 @@
     justify-content: center;
   }
   
-  .custom-table {
-    border: none;
-    border-radius: 0;
-    overflow: visible;
-  }
-  
   .table-row {
     grid-template-columns: 1fr;
     gap: 8px;
     padding: 16px;
-    border: 1px solid #A7D7C5;
-    border-radius: 12px;
-    margin-bottom: 10px;
   }
   
   .header-row {
@@ -778,6 +759,7 @@
   cursor: pointer;
   margin: 0;
 }
+
 
 
 .checkbox-text {

@@ -269,45 +269,121 @@ const doctorService = {
   // Journal Entries
   getJournalEntries: async (filters = {}) => {
   try {
+    console.log('🩺 DOCTOR SERVICE: Starting journal entries fetch...');
+    console.log('🔍 Filters:', filters);
+    
+    // Get authentication token
     const token = localStorage.getItem('token');
-    if (!token) throw new Error('No token');
+    if (!token) {
+      console.error('❌ No authentication token found');
+      throw new Error('Authentication required');
+    }
+    console.log('✅ Token found:', token.substring(0, 20) + '...');
     
-    const tenant = localStorage.getItem('tenant');
-    const tenantId = tenant ? JSON.parse(tenant)._id : null;
+    // Get tenant info
+    const tenantStr = localStorage.getItem('tenant');
+    let tenantId = null;
+    if (tenantStr) {
+      const tenant = JSON.parse(tenantStr);
+      tenantId = tenant._id;
+      console.log('🏢 Tenant info:', {
+        id: tenantId,
+        name: tenant.name || 'Unknown'
+      });
+    } else {
+      console.log('⚠️ No tenant found in localStorage');
+    }
     
-    // Build query params
+    // Build query parameters
     const params = new URLSearchParams();
+    
+    // Add filters to params
     Object.entries(filters).forEach(([key, value]) => {
-      if (value && value !== 'all') params.append(key, value);
+      if (value && value !== 'all') {
+        params.append(key, value);
+        console.log(`📋 Added filter: ${key} = ${value}`);
+      }
     });
     
-    // FIXED: Use correct endpoint
-    const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+    // 🔥 CRITICAL FIX: Use the correct API URL structure
+    // Don't use the doctorApi instance, use direct axios call
+    const baseURL = process.env.REACT_APP_API_URL || 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com/api';
     const url = `${baseURL}/journal/doctor?${params.toString()}`;
+    console.log('🌐 Final URL:', url);
     
+    // Set up headers
     const headers = {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
     };
     
+    // Add tenant ID to headers (multiple formats for compatibility)
     if (tenantId) {
       headers['x-tenant-id'] = tenantId;
+      headers['X-Tenant-ID'] = tenantId;  // Try both cases
+      console.log('🏢 Added tenant headers');
     }
     
-    const response = await axios.get(url, { headers });
+    console.log('📡 Request headers:', headers);
     
-    return {
-      success: true,
-      data: response.data.data || response.data || [],
-      pagination: response.data.pagination || { total: 0 }
-    };
+    // 🔥 CRITICAL FIX: Use axios directly instead of doctorApi
+    const response = await axios.get(url, { 
+      headers,
+      timeout: 15000  // 15 second timeout
+    });
+    
+    console.log('📊 Response status:', response.status);
+    console.log('📊 Response data:', response.data);
+    
+    // Check response structure
+    if (response.data && response.data.success) {
+      const entries = response.data.data || [];
+      console.log(`✅ SUCCESS: Fetched ${entries.length} journal entries`);
+      
+      return {
+        success: true,
+        data: entries,
+        pagination: response.data.pagination || { total: entries.length }
+      };
+    } else if (Array.isArray(response.data)) {
+      console.log(`✅ SUCCESS: Fetched ${response.data.length} journal entries (array format)`);
+      return {
+        success: true,
+        data: response.data,
+        pagination: { total: response.data.length }
+      };
+    } else {
+      console.warn('⚠️ Unexpected response format:', response.data);
+      return {
+        success: false,
+        data: [],
+        pagination: { total: 0 },
+        message: 'Unexpected response format'
+      };
+    }
     
   } catch (error) {
-    console.error('Error fetching journal entries:', error);
+    console.error('❌ DOCTOR SERVICE ERROR:', error.message);
+    
+    if (error.response) {
+      console.error('❌ Server responded with:');
+      console.error('   Status:', error.response.status);
+      console.error('   Data:', error.response.data);
+      console.error('   URL:', error.config?.url);
+    } else if (error.request) {
+      console.error('❌ No response received:');
+      console.error('   Request URL:', error.config?.url);
+    } else {
+      console.error('❌ Request setup error:', error.message);
+    }
+    
+    // Return empty result to prevent UI crash
     return {
       success: false,
       data: [],
-      pagination: { total: 0 }
+      pagination: { total: 0 },
+      error: error.message,
+      details: error.response?.data
     };
   }
 },
