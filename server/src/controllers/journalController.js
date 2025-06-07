@@ -221,8 +221,30 @@ exports.getDoctorJournalEntries = async (req, res) => {
       limit = 10 
     } = req.query;
 
-    const doctorId = req.user._id;
-    console.log(`🩺 Doctor ${doctorId} requesting journal entries`);
+    // 🔥 CRITICAL FIX: Handle different user ID formats
+    const doctorId = req.user._id || req.user.id || req.userId;
+    
+    console.log(`🩺 Doctor ID: ${doctorId}`);
+    console.log(`🔍 User object:`, {
+      _id: req.user._id,
+      id: req.user.id,
+      userId: req.userId,
+      userObject: req.user
+    });
+
+    // Check if we have a valid doctor ID
+    if (!doctorId) {
+      console.error('❌ No doctor ID found in request');
+      return res.status(401).json({
+        success: false,
+        message: 'Doctor ID not found in request',
+        debug: {
+          user: req.user,
+          userId: req.userId
+        }
+      });
+    }
+
     console.log(`🔍 Doctor ID type: ${typeof doctorId}`);
 
     // Get the correct model first
@@ -235,10 +257,20 @@ exports.getDoctorJournalEntries = async (req, res) => {
       console.log('Using default database for doctor journal entries');
     }
 
-    // 🔥 CRITICAL FIX: Convert doctorId to proper ObjectId format
-    const doctorObjectId = mongoose.Types.ObjectId(doctorId.toString());
-    console.log(`🔧 Original doctor ID: ${doctorId}`);
-    console.log(`🔧 Converted doctor ID: ${doctorObjectId}`);
+    // 🔥 CRITICAL FIX: Safe ObjectId conversion
+    let doctorObjectId;
+    
+    try {
+      doctorObjectId = mongoose.Types.ObjectId(doctorId.toString());
+      console.log(`🔧 Converted doctor ID: ${doctorObjectId}`);
+    } catch (conversionError) {
+      console.error('❌ Error converting doctor ID to ObjectId:', conversionError);
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid doctor ID format',
+        error: conversionError.message
+      });
+    }
 
     // 🔥 FIXED QUERY: Use ObjectId for proper comparison
     const baseQuery = {
