@@ -707,6 +707,7 @@ exports.getAssignedTemplates = async (req, res) => {
 // Fix for analyzeJournalEntry function in server/src/controllers/journalController.js
 // Replace lines 835-868 with this corrected version:
 
+
 exports.analyzeJournalEntry = async (req, res) => {
   try {
     const doctorId = req.user._id;
@@ -796,11 +797,19 @@ exports.analyzeJournalEntry = async (req, res) => {
           
           console.log('🎉 AI analysis completed:', aiAnalysis ? 'Success' : 'Fallback used');
           
-          // ✅ FIX 1: Save the analysis results with CORRECT SCHEMA STRUCTURE
+          // ✅ DEBUGGING: Let's see what the NLP service actually returns
+          console.log('🔍 RAW AI Analysis Response:', JSON.stringify(aiAnalysis, null, 2));
+          
+          // ✅ Save the analysis results with CORRECT SCHEMA STRUCTURE
           if (applyChanges && aiAnalysis) {
             if (!entry.sentimentAnalysis) {
               entry.sentimentAnalysis = {};
             }
+            
+            // ✅ DEBUGGING: Check what emotions we have
+            console.log('🔍 Emotions from AI:', aiAnalysis.emotions);
+            console.log('🔍 Emotions type:', typeof aiAnalysis.emotions);
+            console.log('🔍 Is emotions array?', Array.isArray(aiAnalysis.emotions));
             
             // ✅ FIXED: Structure sentiment as object with type property (not string)
             entry.sentimentAnalysis.sentiment = {
@@ -821,8 +830,8 @@ exports.analyzeJournalEntry = async (req, res) => {
             // ✅ FIX 2: Use 'ai' instead of 'doctor' (valid enum value)
             entry.sentimentAnalysis.source = 'ai';
             
-            // ✅ DEBUG: Log what emotions we're trying to save
-            console.log('💭 Emotions being saved:', JSON.stringify(aiAnalysis.emotions, null, 2));
+            // ✅ FINAL DEBUG: What are we actually saving?
+            console.log('💾 SAVING emotions:', JSON.stringify(entry.sentimentAnalysis.emotions, null, 2));
             
             await entry.save();
             console.log('💾 Analysis results saved to database');
@@ -834,7 +843,7 @@ exports.analyzeJournalEntry = async (req, res) => {
       }
     }
     
-    // ✅ FIX 3: Handle manual sentiment with correct structure
+    // ✅ Handle manual sentiment with correct structure
     if (sentiment && applyChanges) {
       if (!entry.sentimentAnalysis) {
         entry.sentimentAnalysis = {};
@@ -857,23 +866,20 @@ exports.analyzeJournalEntry = async (req, res) => {
       
       entry.sentimentAnalysis.timestamp = new Date();
       
-      // ✅ FIX 4: Use 'manual' instead of 'doctor' (valid enum value)
+      // ✅ FIX: Use 'manual' instead of 'doctor' (valid enum value)
       entry.sentimentAnalysis.source = 'manual';
     }
     
-    // ✅ FIX 5: Handle doctor notes correctly - check if notes exists and is not empty
+    // ✅ Handle doctor notes correctly
     if (notes && applyChanges) {
-      // Handle notes whether it comes as string or array
       let noteContent = '';
       
       if (Array.isArray(notes)) {
-        // If notes is an array, join it or take first element
         noteContent = notes.length > 0 ? notes.join(' ') : '';
       } else if (typeof notes === 'string') {
         noteContent = notes.trim();
       }
       
-      // Only add note if there's actual content
       if (noteContent && noteContent.length > 0) {
         if (!entry.doctorNotes) {
           entry.doctorNotes = [];
