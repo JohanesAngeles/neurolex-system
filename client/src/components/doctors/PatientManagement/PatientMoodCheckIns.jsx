@@ -92,6 +92,12 @@ const PatientMoodCheckIns = () => {
     return moodColors[moodKey] || '#FFC107';
   };
 
+  // Format day name (Mon, Tue, Wed, etc.)
+  const formatDayName = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { weekday: 'long' });
+  };
+
   // Filter and sort patient mood history
   const getFilteredMoodHistory = () => {
     let filtered = patientMoodHistory.filter(entry => {
@@ -189,30 +195,40 @@ const PatientMoodCheckIns = () => {
         <div className="metrics-grid">
           <div className="metric-card">
             <h3>Total Logs</h3>
+            <div className="metric-card-inside">
             <div className="metric-value">{keyMetrics.totalLogs}</div>
             <div className="metric-label">This Week</div>
+            </div>
           </div>
           <div className="metric-card">
             <h3>Average Logs per Day</h3>
+            <div className="metric-card-inside">
             <div className="metric-value">{keyMetrics.averageLogsPerDay}</div>
             <div className="metric-label">Check-in logs / day</div>
+            </div>
           </div>
           <div className="metric-card">
             <h3>Average Mood Score</h3>
+            <div className="metric-card-inside">
             <div className="metric-value">{keyMetrics.averageMoodScore}</div>
-            <div className="metric-label">out of 5</div>
+            <div className="metric-label">out of {keyMetrics.totalLogs}</div>
+            </div>
           </div>
           <div className="metric-card">
             <h3>Top Emotional Trends</h3>
             <div className="emotional-trends">
               {keyMetrics.topEmotionalTrends.map((trend, index) => (
                 <div key={index} className="trend-item">
+                  <div className="emotional-trends-conainer-inside-emoji">
                   <img 
                     src={getMoodSvg(trend.mood.toLowerCase())} 
                     alt={trend.mood}
                     className="trend-svg"
                   />
+                  </div>
+               <div className="emotional-trends-conainer-inside">
                   <span className="trend-label">{trend.mood}</span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -227,6 +243,7 @@ const PatientMoodCheckIns = () => {
           {dailyOverview.map((day, index) => (
             <div key={index} className="daily-item">
               <div className="daily-date">{day.dateFormatted}</div>
+              <div className="daily-day-name">{formatDayName(day.date)}</div>
               <div className="daily-mood-svg">
                 <img 
                   src={getMoodSvg(day.mostFrequentMood)} 
