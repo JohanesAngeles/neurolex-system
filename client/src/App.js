@@ -85,6 +85,9 @@ import AdminFormTemplates from './components/admin/FormTemplates';
 // 🆕 NEW: Import AdminJournalList component
 import AdminJournalList from './components/admin/AdminJournalList';
 
+// 🆕 NEW: Import AdminMoodCheckIns component
+import AdminMoodCheckIns from './components/admin/AdminMoodCheckIns';
+
 // User Management Components
 import UserManagement from '../src/components/admin/UserManagement';
 import UserForm from '../src/pages/admin/user_management/UserForm';
@@ -478,6 +481,9 @@ const App = () => {
                   <Route path="professionals" element={<ProfessionalVerification />} />
                   <Route path="professionals/:doctorId" element={<DoctorVerificationDetails />} />
                   <Route path="professionals/:doctorId/edit" element={<DoctorEdit />} />
+                  
+                  {/* 🆕 NEW: Admin Mood Check-ins Route - ADDED HERE */}
+                  <Route path="mood-checkins" element={<AdminMoodCheckIns />} />
                   
                   {/* 🆕 NEW: Tenant Management Route */}
                   <Route path="tenants" element={<TenantManagement />} />

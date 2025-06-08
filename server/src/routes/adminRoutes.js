@@ -1,4 +1,4 @@
-// server/src/routes/adminRoutes.js - UPDATED WITH DOCTOR MANAGEMENT ROUTES
+// server/src/routes/adminRoutes.js - UPDATED WITH MOOD ANALYTICS ROUTES
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
@@ -225,10 +225,19 @@ router.get('/journal-entries/export/pdf', adminAuth, adminController.exportJourn
 router.get('/journal-entries/:id', adminAuth, adminController.getJournalEntry);
 router.delete('/journal-entries/:id', adminAuth, adminController.deleteJournalEntry);
 
-
-
 console.log('Admin journal management routes added successfully');
 
-console.log('✅ Admin routes with proper file upload configuration, tenant management, doctor management, and journal management loaded successfully');
+// ===== 🆕 NEW: ADMIN MOOD ANALYTICS ROUTES =====
+console.log('Adding admin mood analytics routes...');
+
+// Mood Analytics Routes
+router.get('/mood/analytics', adminAuth, adminController.getSystemWideMoodAnalytics);
+router.get('/mood/history', adminAuth, adminController.getSystemWideMoodHistory);
+router.get('/mood/export', adminAuth, adminController.exportSystemMoodAnalytics);
+router.get('/mood/patient/:patientId', adminAuth, adminController.getPatientMoodAnalytics);
+
+console.log('Admin mood analytics routes added successfully');
+
+console.log('✅ Admin routes with proper file upload configuration, tenant management, doctor management, journal management, and mood analytics loaded successfully');
 
 module.exports = router;

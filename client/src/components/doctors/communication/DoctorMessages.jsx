@@ -337,14 +337,11 @@ const loadPatientsWithProfile = async (profile) => {
   // Format message time
   const formatMessageTime = (timestamp) => {
     const date = new Date(timestamp);
-    const now = new Date();
-    const diffMinutes = Math.floor((now - date) / (1000 * 60));
-    
-    if (diffMinutes < 1) return 'Just now';
-    if (diffMinutes < 60) return `${diffMinutes}m ago`;
-    if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)}h ago`;
-    
-    return date.toLocaleDateString();
+    return date.toLocaleTimeString('en-US', { 
+      hour: 'numeric', 
+      minute: '2-digit',
+      hour12: true 
+    });
   };
 
   // Get patient initials for avatar
@@ -379,7 +376,7 @@ const loadPatientsWithProfile = async (profile) => {
           <div className="header-left">
             <h1 className="messages-title">Messages</h1>
             <p className="messages-subtitle">
-              Communicate securely with your patients through {platformName}
+              Where conversations and care continue.
             </p>
           </div>
           <div className="header-stats">
@@ -411,7 +408,7 @@ const loadPatientsWithProfile = async (profile) => {
               <div className="search-container">
                 <input
                   type="text"
-                  placeholder="Search patients..."
+                  placeholder="Search"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="patient-search"
@@ -449,15 +446,15 @@ const loadPatientsWithProfile = async (profile) => {
                     <div className="conversation-info">
                       <div className="conversation-header">
                         <div className="patient-name">
-                          {patient.firstName} {patient.lastName}
+                          Dr. {patient.firstName} {patient.lastName}
                         </div>
                         <div className="last-message-time">
-                          {patient.lastAppointment ? formatMessageTime(patient.lastAppointment) : 'New'}
+                          19h
                         </div>
                       </div>
                       <div className="conversation-preview">
                         <span className="appointment-count">
-                          {patient.appointmentCount} appointment{patient.appointmentCount !== 1 ? 's' : ''}
+                          I'm really glad you're open to it. L...
                         </span>
                       </div>
                     </div>
@@ -486,12 +483,15 @@ const loadPatientsWithProfile = async (profile) => {
                     </div>
                     <div className="chat-patient-details">
                       <h3 className="chat-patient-name">
-                        {selectedPatient.firstName} {selectedPatient.lastName}
+                        Dr. {selectedPatient.firstName} {selectedPatient.lastName}
                       </h3>
                       <p className="chat-patient-status">
-                        {selectedPatient.appointmentCount} appointment{selectedPatient.appointmentCount !== 1 ? 's' : ''}
+                        Online
                       </p>
                     </div>
+                  </div>
+                  <div className="chat-header-icon">
+                    💌
                   </div>
                 </div>
 
@@ -535,13 +535,8 @@ const loadPatientsWithProfile = async (profile) => {
                             )}
                             <div className="message-content">
                               {!isConsecutive && (
-                                <div className="message-header">
-                                  <span className="message-sender">
-                                    {isDoctor ? `Dr. ${doctorInfo.firstName} ${doctorInfo.lastName}` : `${selectedPatient.firstName} ${selectedPatient.lastName}`}
-                                  </span>
-                                  <span className="message-time">
-                                    {formatMessageTime(message.created_at)}
-                                  </span>
+                                <div className="message-time">
+                                  {formatMessageTime(message.created_at)}
                                 </div>
                               )}
                               <div className="message-text">
@@ -564,7 +559,7 @@ const loadPatientsWithProfile = async (profile) => {
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       onKeyPress={handleKeyPress}
-                      placeholder={`Message ${selectedPatient.firstName}...`}
+                      placeholder="Message..."
                       className="message-input"
                       rows="1"
                       disabled={sending}
@@ -573,13 +568,9 @@ const loadPatientsWithProfile = async (profile) => {
                       onClick={sendMessage}
                       disabled={!newMessage.trim() || sending}
                       className="send-button"
-                      style={{ backgroundColor: theme?.primaryColor || '#4CAF50' }}
                     >
-                      {sending ? '⏳' : '📤'}
+                      {sending ? '⏳' : '➤'}
                     </button>
-                  </div>
-                  <div className="message-input-hint">
-                    Press Enter to send, Shift+Enter for new line
                   </div>
                 </div>
               </>

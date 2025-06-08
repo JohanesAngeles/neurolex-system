@@ -1370,6 +1370,307 @@ getAllDoctorsForFilter: async () => {
   }
 },
 
+
+/**
+ * Get system-wide mood analytics across all tenants
+ * @param {number} days - Number of days to analyze (default: 7)
+ * @param {Object} filters - Additional filters (tenantId, etc.)
+ * @returns {Promise} API response with system-wide mood analytics
+ */
+getSystemWideMoodAnalytics: async (days = 7, filters = {}) => {
+  try {
+    console.log(`🔍 ADMIN: Fetching system-wide mood analytics for ${days} days`);
+    
+    // Get authentication token
+    const adminToken = localStorage.getItem('adminToken');
+    if (!adminToken) {
+      throw new Error('Admin authentication required');
+    }
+    
+    // Prepare query parameters
+    const queryParams = new URLSearchParams();
+    queryParams.append('days', days);
+    
+    // Add filters
+    if (filters.tenantId) {
+      queryParams.append('tenantId', filters.tenantId);
+    }
+    
+    const response = await api.get(`/admin/mood/analytics?${queryParams.toString()}`, {
+      headers: {
+        'Authorization': `Bearer ${adminToken}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: 15000
+    });
+    
+    console.log('✅ ADMIN system mood analytics response:', response.data);
+    
+    // Process the raw mood data into analytics format if needed
+    if (response.data && response.data.success && response.data.data) {
+      return {
+        success: true,
+        data: response.data.data
+      };
+    }
+    
+    return response.data;
+    
+  } catch (error) {
+    console.error(`❌ ADMIN Error fetching system mood analytics:`, error);
+    
+    // Return mock data for development if API fails
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔧 Returning mock mood analytics data for development');
+      return {
+        success: true,
+        data: {
+          keyMetrics: {
+            totalLogs: 145,
+            averageLogsPerDay: 20.7,
+            averageMoodScore: 3.2,
+            topEmotionalTrends: [
+              { mood: 'Good', count: 58 },
+              { mood: 'Okay', count: 45 }
+            ]
+          },
+          dailyOverview: Array.from({ length: days }, (_, i) => {
+            const date = new Date();
+            date.setDate(date.getDate() - (days - 1 - i));
+            return {
+              date: date.toISOString(),
+              dateFormatted: date.getDate().toString(),
+              totalEntries: Math.floor(Math.random() * 30) + 10,
+              averageMoodScore: (Math.random() * 2 + 2.5).toFixed(1),
+              mostFrequentMood: ['great', 'good', 'okay', 'struggling', 'upset'][Math.floor(Math.random() * 5)]
+            };
+          }),
+          moodDistribution: {
+            great: { count: 28, percentage: '19.3' },
+            good: { count: 58, percentage: '40.0' },
+            okay: { count: 35, percentage: '24.1' },
+            struggling: { count: 18, percentage: '12.4' },
+            upset: { count: 6, percentage: '4.1' }
+          }
+        }
+      };
+    }
+    
+    throw error;
+  }
+},
+
+/**
+ * Get system-wide mood history across all tenants
+ * @param {number} days - Number of days to analyze (default: 7)
+ * @param {Object} filters - Additional filters (search, tenantId, sortBy)
+ * @returns {Promise} API response with system-wide mood history
+ */
+getSystemWideMoodHistory: async (days = 7, filters = {}) => {
+  try {
+    console.log(`🔍 ADMIN: Fetching system-wide mood history for ${days} days`);
+    
+    // Get authentication token
+    const adminToken = localStorage.getItem('adminToken');
+    if (!adminToken) {
+      throw new Error('Admin authentication required');
+    }
+    
+    // Prepare query parameters
+    const queryParams = new URLSearchParams();
+    queryParams.append('days', days);
+    queryParams.append('limit', 100);
+    
+    // Add filters
+    if (filters.search) {
+      queryParams.append('search', filters.search);
+    }
+    if (filters.tenantId) {
+      queryParams.append('tenantId', filters.tenantId);
+    }
+    if (filters.sortBy) {
+      queryParams.append('sortBy', filters.sortBy);
+    }
+    
+    const response = await api.get(`/admin/mood/history?${queryParams.toString()}`, {
+      headers: {
+        'Authorization': `Bearer ${adminToken}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: 15000
+    });
+    
+    console.log('✅ ADMIN system mood history response:', response.data);
+    
+    // Process the raw mood data if needed
+    if (response.data && response.data.success && Array.isArray(response.data.data)) {
+      return {
+        success: true,
+        data: response.data.data
+      };
+    } else if (Array.isArray(response.data)) {
+      return {
+        success: true,
+        data: response.data
+      };
+    }
+    
+    return response.data;
+    
+  } catch (error) {
+    console.error(`❌ ADMIN Error fetching system mood history:`, error);
+    
+    // Return mock data for development if API fails
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔧 Returning mock mood history data for development');
+      return {
+        success: true,
+        data: Array.from({ length: 20 }, (_, i) => {
+          const date = new Date();
+          date.setDate(date.getDate() - i);
+          return {
+            date: date.toISOString(),
+            patientId: `patient_${i + 1}`,
+            patientName: `Patient ${i + 1}`,
+            tenantId: `tenant_${Math.floor(Math.random() * 3) + 1}`,
+            totalLogs: Math.floor(Math.random() * 8) + 1,
+            averageRating: (Math.random() * 3 + 2).toFixed(1),
+            lastMood: {
+              moodKey: ['great', 'good', 'okay', 'struggling', 'upset'][Math.floor(Math.random() * 5)],
+              moodLabel: ['Great', 'Good', 'Okay', 'Struggling', 'Upset'][Math.floor(Math.random() * 5)],
+              moodRating: Math.floor(Math.random() * 5) + 1
+            }
+          };
+        })
+      };
+    }
+    
+    throw error;
+  }
+},
+
+/**
+ * Export system-wide mood analytics as PDF
+ * @param {Object} filters - Export filters (days, tenantId, search)
+ * @returns {Promise} File download response
+ */
+exportSystemMoodAnalytics: async (filters = {}) => {
+  try {
+    console.log('🔍 ADMIN: Exporting system mood analytics with filters:', filters);
+    
+    // Get authentication token
+    const adminToken = localStorage.getItem('adminToken');
+    if (!adminToken) {
+      throw new Error('Admin authentication required');
+    }
+    
+    const response = await api.get('/admin/mood/export', {
+      params: filters,
+      headers: {
+        'Authorization': `Bearer ${adminToken}`
+      },
+      responseType: 'blob', // Important for file downloads
+      timeout: 30000 // Longer timeout for export
+    });
+    
+    // Create download link
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    
+    // Set filename based on filters
+    const timestamp = new Date().toISOString().split('T')[0];
+    const tenantSuffix = filters.tenantId ? '-filtered' : '-all-tenants';
+    const filename = `system-mood-analytics-${timestamp}${tenantSuffix}.pdf`;
+    link.setAttribute('download', filename);
+    
+    // Trigger download
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+    
+    console.log('✅ ADMIN mood analytics exported successfully');
+    
+    return {
+      success: true,
+      message: 'System mood analytics exported successfully',
+      filename
+    };
+    
+  } catch (error) {
+    console.error('❌ ADMIN Error exporting mood analytics:', error);
+    throw error;
+  }
+},
+
+/**
+ * Get mood analytics for a specific patient (admin access across all tenants)
+ * @param {string} patientId - Patient ID
+ * @param {number} days - Number of days to analyze
+ * @returns {Promise} API response with patient mood analytics
+ */
+getPatientMoodAnalytics: async (patientId, days = 30) => {
+  try {
+    console.log(`🔍 ADMIN: Fetching mood analytics for patient ${patientId} (${days} days)`);
+    
+    // Get authentication token
+    const adminToken = localStorage.getItem('adminToken');
+    if (!adminToken) {
+      throw new Error('Admin authentication required');
+    }
+    
+    const response = await api.get(`/admin/mood/patient/${patientId}`, {
+      params: { days },
+      headers: {
+        'Authorization': `Bearer ${adminToken}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: 15000
+    });
+    
+    console.log('✅ ADMIN patient mood analytics response:', response.data);
+    return response.data;
+    
+  } catch (error) {
+    console.error(`❌ ADMIN Error fetching patient mood analytics:`, error);
+    throw error;
+  }
+},
+
+/**
+ * Get mood statistics summary for admin dashboard
+ * @param {Object} filters - Statistics filters
+ * @returns {Promise} API response with mood statistics
+ */
+getMoodStatsSummary: async (filters = {}) => {
+  try {
+    console.log('🔍 ADMIN: Fetching mood statistics summary');
+    
+    // Get authentication token
+    const adminToken = localStorage.getItem('adminToken');
+    if (!adminToken) {
+      throw new Error('Admin authentication required');
+    }
+    
+    const response = await api.get('/admin/mood/stats', {
+      params: filters,
+      headers: {
+        'Authorization': `Bearer ${adminToken}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: 15000
+    });
+    
+    console.log('✅ ADMIN mood statistics response:', response.data);
+    return response.data;
+    
+  } catch (error) {
+    console.error('❌ ADMIN Error fetching mood statistics:', error);
+    throw error;
+  }
+}
+
 };
 
 

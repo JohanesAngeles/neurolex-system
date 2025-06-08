@@ -13,6 +13,8 @@ import doctorIcon from '../../../assets/icons/DoctorManagement_Icon.svg';
 import journalIcon from '../../../assets/icons/JournalManagement_Icon.svg';
 import tenantIcon from '../../../assets/icons/clinic_icon.svg';
 import settingsIcon from '../../../assets/icons/Settings_icon.svg';
+// TODO: Add mood check-ins icon - using journal icon for now
+import moodIcon from '../../../assets/icons/mood_icon.svg';
 
 const AdminLayout = () => {
   const location = useLocation();
@@ -34,15 +36,21 @@ const AdminLayout = () => {
       return location.pathname.startsWith('/admin/templates') || 
              location.pathname.startsWith('/admin/journal-entries');
     }
+
+    // Special case for Mood Check-ins
+    if (menuId === 'mood') {
+      return location.pathname.startsWith('/admin/mood-checkins');
+    }
     
     return location.pathname.startsWith(path);
   };
 
-  // 🆕 UPDATED: Menu items with journal entries route
+  // 🆕 UPDATED: Menu items with mood check-ins route
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', path: '/admin', icon: dashboardIcon },
     { id: 'users', label: 'User Management', path: '/admin/users', icon: usersIcon }, // This handles both users and patients
     { id: 'professionals', label: 'Doctor Management', path: '/admin/professionals', icon: doctorIcon },
+    { id: 'mood', label: 'Mood Analytics', path: '/admin/mood-checkins', icon: moodIcon }, // 🆕 NEW: Mood Check-ins
     { id: 'tenants', label: 'Tenant Management', path: '/admin/tenants', icon: tenantIcon },
     { id: 'journal', label: 'Journal Management', path: '/admin/journal-entries', icon: journalIcon }, 
     { id: 'settings', label: 'System Settings', path: '/admin/settings', icon: settingsIcon }
@@ -69,6 +77,7 @@ const AdminLayout = () => {
                       return shouldBeActive ? "nav-link active" : "nav-link";
                     }}
                     end={item.path === '/admin'}
+                    title={item.label} // Add tooltip for better UX
                   >
                     <img src={item.icon} alt={item.label} className="nav-icon" />
                     <span className="nav-label">{item.label}</span>

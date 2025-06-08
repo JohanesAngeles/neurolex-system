@@ -1,0 +1,941 @@
+/* client/src/styles/components/admin/AdminMoodCheckIns.css */
+
+/* Import fonts */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('../../../assets/fonts/IBMPlexMono-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('../../../assets/fonts/Poppins-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* ========== MOOD DISTRIBUTION SECTION ========== */
+
+.mood-distribution-section {
+  margin-bottom: 32px;
+  position: relative;
+}
+
+.mood-distribution-section h2 {
+  font-family: 'Poppins', sans-serif;
+  font-style: normal;
+  font-weight: 600;
+  font-size: 35px;
+  line-height: 40px;
+  color: #000000;
+  margin: 0 0 16px 0;
+}
+
+/* Main container - matches daily overview container width */
+.mood-distribution-container {
+  box-sizing: border-box;
+  width: 100%;
+  height: 309px;
+  background: rgba(167, 215, 197, 0.1);
+  border: 1px solid #A7D7C5;
+  border-radius: 10px;
+  position: relative;
+  padding: 24px;
+}
+
+.mood-distribution-grid {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 57px 0;
+}
+
+.mood-distribution-item {
+  box-sizing: border-box;
+  flex: 1;
+  max-width: 300px;
+  height: 147px;
+  background: rgba(167, 215, 197, 0.1);
+  border: 1px solid #A7D7C5;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 21px 27px 21px;
+  position: relative;
+}
+
+/* Mood icon and label container */
+.mood-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.mood-distribution-item .mood-svg-icon {
+  width: 29.95px;
+  height: 30px;
+}
+
+.mood-distribution-item .mood-label {
+  font-family: 'Poppins', sans-serif;
+  font-style: normal;
+  font-weight: 400;
+  font-size: 25px;
+  line-height: 50px;
+  display: flex;
+  align-items: center;
+  margin: 0;
+}
+
+/* Mood label colors */
+.mood-distribution-item.great .mood-label {
+  color: #3A8314;
+}
+
+.mood-distribution-item.good .mood-label {
+  color: #7A9241;
+}
+
+.mood-distribution-item.okay .mood-label {
+  color: #9A8C06;
+}
+
+.mood-distribution-item.struggling .mood-label {
+  color: #A26133;
+}
+
+.mood-distribution-item.upset .mood-label {
+  color: #944747;
+}
+
+/* Log count container */
+.mood-stats {
+  box-sizing: border-box;
+  width: 258px;
+  height: 53px;
+  background: #FFFFFF;
+  border: 1px solid #A7D7C5;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: auto;
+}
+
+.mood-distribution-item .mood-count {
+  font-family: 'IBM Plex Mono', monospace;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 20px;
+  line-height: 15px;
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: #000000;
+  margin: 0;
+}
+
+/* ========== MOOD HISTORY SECTION ========== */
+
+.mood-history-section {
+  margin-bottom: 32px;
+}
+
+.mood-history-section h2 {
+  font-family: 'Poppins', sans-serif;
+  font-style: normal;
+  font-weight: 600;
+  font-size: 35px;
+  line-height: 50px;
+  color: #000000;
+  margin: 0 0 16px 0;
+  display: flex;
+  align-items: center;
+}
+
+.history-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  gap: 16px;
+}
+
+.search-container {
+  flex: 1;
+  max-width: 300px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px 16px;
+  border: 1px solid #A7D7C5;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: 'IBM Plex Mono', monospace;
+  background: white;
+}
+
+.search-input::placeholder {
+  color: #999;
+  font-style: italic;
+}
+
+.filter-controls {
+  display: flex;
+  gap: 12px;
+}
+
+.filter-select {
+  padding: 8px 12px;
+  border: 1px solid #A7D7C5;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: 'IBM Plex Mono', monospace;
+  background: white;
+  cursor: pointer;
+  color: #666;
+}
+
+/* ========== ADMIN TABLE STYLES ========== */
+
+.table-container {
+  background: white;
+  border-radius: 10px;
+  border: 1px solid #A7D7C5;
+  overflow: hidden;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.admin-table thead {
+  background: rgba(167, 215, 197, 0.1);
+}
+
+.admin-table th {
+  padding: 16px;
+  text-align: left;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: 'IBM Plex Mono', monospace;
+  color: #548170;
+  border-bottom: 1px solid #A7D7C5;
+}
+
+.admin-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e8f5f0;
+  font-size: 15px;
+  font-family: 'IBM Plex Mono', monospace;
+  color: #000000;
+  min-height: 54px;
+  vertical-align: middle;
+}
+
+.admin-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-table tbody tr:hover {
+  background-color: rgba(167, 215, 197, 0.05);
+}
+
+.admin-table tbody tr:nth-child(even) {
+  background-color: rgba(167, 215, 197, 0.1);
+}
+
+.admin-table tbody tr:nth-child(even):hover {
+  background-color: rgba(167, 215, 197, 0.15);
+}
+
+/* Mood indicator styling */
+.mood-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: 'Poppins', sans-serif;
+}
+
+.mood-indicator.great {
+  background: rgba(58, 131, 20, 0.1);
+  color: #3A8314;
+  border: 1px solid rgba(58, 131, 20, 0.2);
+}
+
+.mood-indicator.good {
+  background: rgba(122, 146, 65, 0.1);
+  color: #7A9241;
+  border: 1px solid rgba(122, 146, 65, 0.2);
+}
+
+.mood-indicator.okay {
+  background: rgba(154, 140, 6, 0.1);
+  color: #9A8C06;
+  border: 1px solid rgba(154, 140, 6, 0.2);
+}
+
+.mood-indicator.struggling {
+  background: rgba(162, 97, 51, 0.1);
+  color: #A26133;
+  border: 1px solid rgba(162, 97, 51, 0.2);
+}
+
+.mood-indicator.upset {
+  background: rgba(148, 71, 71, 0.1);
+  color: #944747;
+  border: 1px solid rgba(148, 71, 71, 0.2);
+}
+
+.mood-svg-small {
+  width: 16px;
+  height: 16px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.action-button {
+  background: white;
+  border: 1px solid #A7D7C5;
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.action-button:hover {
+  background: #f0f8f4;
+  border-color: #548170;
+}
+
+/* ========== LOADING AND ERROR STATES ========== */
+
+.loading-container, .error-container, .no-data-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #548170;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-container h3, .no-data-container h3 {
+  color: #333;
+  margin-bottom: 12px;
+  font-family: 'Poppins', sans-serif;
+}
+
+.error-container p, .no-data-container p {
+  color: #666;
+  margin-bottom: 20px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.retry-button {
+  padding: 10px 20px;
+  background: #548170;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: 'Poppins', sans-serif;
+}
+
+.retry-button:hover {
+  background: #4a6e5d;
+}
+
+/* ========== RESPONSIVE DESIGN ========== */
+
+@media (max-width: 1200px) {
+  .admin-metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .mood-distribution-grid {
+    gap: 12px;
+  }
+  
+  .mood-distribution-item {
+    max-width: 280px;
+  }
+  
+  .mood-stats {
+    width: 100%;
+    max-width: 258px;
+  }
+}
+
+@media (max-width: 768px) {
+  .header-right {
+    right: 0;
+    top: 20px;
+    position: relative;
+    margin-top: 16px;
+  }
+  
+  .rainbow-icon-container {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .rainbow-icon {
+    font-size: 30px;
+  }
+  
+  .header-left h1 {
+    font-size: 28px;
+    line-height: 36px;
+  }
+  
+  .header-left p {
+    font-size: 14px;
+  }
+  
+  .admin-actions-bar .top-actions-row,
+  .admin-actions-bar .bottom-actions-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  
+  .filter-box {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .filter-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .filter-item select {
+    width: 100%;
+    min-width: auto;
+  }
+  
+  .key-metrics-section h2,
+  .daily-overview-section h2,
+  .mood-distribution-section h2,
+  .mood-history-section h2 {
+    font-size: 24px;
+    line-height: 32px;
+  }
+  
+  .admin-metrics-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .admin-metric-card {
+    height: 200px;
+    padding: 16px;
+  }
+  
+  .admin-metric-card .stat-label {
+    font-size: 18px;
+  }
+  
+  .admin-metric-card .stat-value {
+    font-size: 60px;
+  }
+  
+  .daily-overview-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    padding: 16px;
+  }
+  
+  .daily-item {
+    padding: 12px 4px;
+  }
+  
+  .daily-svg {
+    width: 40px !important;
+    height: 40px !important;
+  }
+  
+  .mood-distribution-container {
+    height: auto;
+    padding: 16px;
+  }
+  
+  .mood-distribution-grid {
+    flex-direction: column;
+    padding: 0;
+    gap: 12px;
+    height: auto;
+  }
+  
+  .mood-distribution-item {
+    width: 100%;
+    max-width: none;
+    height: auto;
+    padding: 16px;
+  }
+  
+  .mood-stats {
+    width: 100%;
+    margin-top: 12px;
+  }
+  
+  .history-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  
+  .search-container {
+    max-width: none;
+  }
+  
+  .filter-controls {
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+  
+  .admin-table {
+    font-size: 12px;
+  }
+  
+  .admin-table th,
+  .admin-table td {
+    padding: 8px;
+  }
+  
+  .admin-table th {
+    font-size: 12px;
+  }
+  
+  /* Stack table on mobile */
+  .admin-table thead {
+    display: none;
+  }
+  
+  .admin-table tbody tr {
+    display: block;
+    border: 1px solid #A7D7C5;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    padding: 16px;
+    background: white;
+  }
+  
+  .admin-table tbody td {
+    display: block;
+    border: none;
+    padding: 8px 0;
+    text-align: left;
+    position: relative;
+    padding-left: 40%;
+  }
+  
+  .admin-table tbody td:before {
+    content: attr(data-label) ": ";
+    position: absolute;
+    left: 0;
+    width: 35%;
+    font-weight: bold;
+    color: #548170;
+  }
+}
+
+/*=== MAIN CONTAINER ========== */
+
+.admin-mood-checkins-container {
+  padding: 0;
+  margin: 0;
+  background: #ffffff;
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* ========== HEADER SECTION ========== */
+.admin-mood-header {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 0 24px 0;
+  background: white;
+  border: none;
+  box-shadow: none;
+  margin-bottom: 0;
+}
+
+.header-content {
+  display: block;
+  width: 100%;
+  margin-bottom: 24px;
+}
+
+.header-left {
+  width: 100%;
+  max-width: calc(100% - 120px);
+  display: flex;
+  flex-direction: column;
+}
+
+.header-left h1 {
+  font-family: 'Poppins', sans-serif;
+  font-style: normal;
+  font-weight: 600;
+  font-size: 35px;
+  line-height: 50px;
+  color: #000000;
+  margin: 0 0 8px 0;
+  display: block;
+  width: 100%;
+}
+
+.header-left p {
+  font-family: 'IBM Plex Mono', monospace;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 15px;
+  line-height: 20px;
+  color: #3D6B59;
+  margin: 0;
+  display: block;
+  width: 100%;
+}
+
+/* Rainbow icon container - following admin patterns */
+.rainbow-icon-container {
+  width: 85px;
+  height: 85px;
+  background: rgba(167, 215, 197, 0.1);
+  border: 1px solid #A7D7C5;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rainbow-icon {
+  font-family: 'Poppins', sans-serif;
+  font-style: normal;
+  font-weight: 400;
+  font-size: 51.8519px;
+  line-height: 104px;
+  color: #000000;
+  display: flex;
+  align-items: center;
+  text-align: center;
+}
+
+.header-right {
+  position: absolute;
+  top: 20px;
+  right: 0;
+  display: block;
+}
+
+/* Divider line */
+.header-divider {
+  width: 100%;
+  height: 1px;
+  border: none;
+  background-color: #A7D7C5;
+  margin: 24px 0;
+}
+
+/* ========== ADMIN ACTIONS BAR ========== */
+.admin-actions-bar {
+  margin-bottom: 32px;
+}
+
+.top-actions-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 16px;
+}
+
+.bottom-actions-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.time-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.time-filter label {
+  font-size: 14px;
+  font-family: 'IBM Plex Mono', monospace;
+  color: #666;
+  font-weight: 500;
+}
+
+.days-select {
+  padding: 8px 12px;
+  border: 1px solid #A7D7C5;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: 'IBM Plex Mono', monospace;
+  background: white;
+  cursor: pointer;
+  color: #333;
+}
+
+.export-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #548170;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.export-button:hover {
+  background: #4a6e5d;
+}
+
+/* Filter box - following admin patterns */
+.filter-box {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.filter-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-item label {
+  font-size: 14px;
+  font-family: 'IBM Plex Mono', monospace;
+  color: #666;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.filter-item select {
+  padding: 8px 12px;
+  border: 1px solid #A7D7C5;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: 'IBM Plex Mono', monospace;
+  background: white;
+  cursor: pointer;
+  color: #333;
+  min-width: 120px;
+}
+
+/* ========== KEY METRICS SECTION ========== */
+.key-metrics-section {
+  margin-bottom: 32px;
+}
+
+.key-metrics-section h2 {
+  font-family: 'Poppins', sans-serif;
+  font-style: normal;
+  font-weight: 600;
+  font-size: 35px;
+  line-height: 40px;
+  color: #000000;
+  margin: 0 0 24px 0;
+}
+
+/* Admin-style metrics grid - matches AdminDashboard.css */
+.admin-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-bottom: 40px;
+}
+
+.admin-metric-card {
+  background-color: rgba(167, 215, 197, 0.1);
+  border: 1px solid #A7D7C5;
+  border-radius: 10px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  height: 300px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.admin-metric-card .stat-label {
+  font-size: 25px;
+  font-weight: 700;
+  color: #000000;
+  font-family: 'Poppins', sans-serif;
+  margin-bottom: 12px;
+}
+
+.admin-metric-card .stat-value-container {
+  background-color: rgba(167, 215, 197, 0.1);
+  border: 1px solid #A7D7C5;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-grow: 1;
+}
+
+.admin-metric-card .stat-value {
+  font-size: 100px;
+  font-weight: 600;
+  margin: 0;
+  text-align: center;
+  background: linear-gradient(180deg, #548170 0%, #A7D7C5 67%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  line-height: 1;
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Top trend display */
+.top-trend {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.trend-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.trend-display img {
+  width: 60px;
+  height: 60px;
+}
+
+.trend-display span {
+  font-size: 16px;
+  font-weight: 600;
+  color: #548170;
+  font-family: 'Poppins', sans-serif;
+}
+
+/* ========== DAILY OVERVIEW SECTION ========== */
+.daily-overview-section {
+  margin-bottom: 32px;
+}
+
+.daily-overview-section h2 {
+  font-family: 'Poppins', sans-serif;
+  font-style: normal;
+  font-weight: 600;
+  font-size: 35px;
+  line-height: 40px;
+  color: #000000;
+  margin: 0 0 16px 0;
+}
+
+.daily-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 12px;
+  background: transparent;
+  border: solid 1px #A7D7C5;
+  padding: 24px;
+  border-radius: 10px;
+}
+
+.daily-item {
+  text-align: center;
+  padding: 16px 8px;
+  border-radius: 10px;
+  border: solid 1px #A7D7C5;
+  background: transparent;
+}
+
+.daily-date {
+  font-size: 17px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 700;
+  color: #000000;
+  margin-bottom: 4px;
+}
+
+.daily-day-name {
+  font-size: 15px;
+  font-family: 'IBM Plex Mono', monospace;
+  color: #000000;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.daily-mood-svg {
+  margin: 12px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.daily-svg {
+  width: 100px;
+  height: 100px;
+}
+
+.daily-stats {
+  margin-top: 12px;
+}
+
+.daily-score {
+  font-size: 17px;
+  font-weight: 600;
+  color: #000000;
+  margin-bottom: 4px;
+}
+
+.daily-entries {
+  font-size: 15px;
+  color: #000000;
+}
+

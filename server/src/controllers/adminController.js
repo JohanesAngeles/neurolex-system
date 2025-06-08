@@ -5494,3 +5494,1213 @@ exports.getAllDoctorsForFilter = async (req, res) => {
     });
   }
 };
+
+
+// ===== ADMIN MOOD ANALYTICS METHODS =====
+/**
+ * @desc    Get system-wide mood analytics across all tenants (admin function)
+ * @route   GET /api/admin/mood/analytics
+ * @access  Private (Admin only)
+ */
+exports.getSystemWideMoodAnalytics = async (req, res) => {
+  try {
+    console.log('🔍 ADMIN: Getting system-wide mood analytics');
+    console.log('Query params:', req.query);
+    
+    const { days = 7, tenantId } = req.query;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - parseInt(days));
+    
+    console.log(`📊 Analyzing mood data for ${days} days, from: ${startDate.toISOString()}`);
+    
+    let allMoodEntries = [];
+    let totalPatients = 0;
+    let searchedTenants = 0;
+    
+    // If multi-tenant enabled, search across tenants
+    if (process.env.ENABLE_MULTI_TENANT === 'true') {
+      const masterConn = getMasterConnection();
+      if (!masterConn) {
+        throw new Error('Failed to connect to master database');
+      }
+      
+      const Tenant = masterConn.model('Tenant');
+      
+      // Build tenant query
+      let tenantQuery = { active: true };
+      if (tenantId && tenantId !== 'all') {
+        tenantQuery._id = tenantId;
+      }
+      
+      const tenants = await Tenant.find(tenantQuery);
+      console.log(`🏢 Found ${tenants.length} tenants to search`);
+      
+      // Search each tenant for mood data
+      for (const tenant of tenants) {
+        try {
+          const tenantConn = await dbManager.connectTenant(tenant._id.toString());
+          if (!tenantConn) {
+            console.warn(`⚠️ Could not connect to tenant: ${tenant.name}`);
+            continue;
+          }
+          
+          searchedTenants++;
+          const Mood = tenantConn.model('Mood');
+          const User = tenantConn.model('User');
+          
+          // Count patients in this tenant
+          const patientCount = await User.countDocuments({ role: 'patient' });
+          totalPatients += patientCount;
+          
+          // Get mood entries from this tenant
+          const moodEntries = await Mood.find({
+            timestamp: { $gte: startDate }
+          }).sort({ timestamp: -1 }).lean();
+          
+          console.log(`📝 Tenant ${tenant.name}: ${moodEntries.length} mood entries, ${patientCount} patients`);
+          
+          // Add tenant info to each entry
+          const entriesWithTenant = moodEntries.map(entry => ({
+            ...entry,
+            tenantId: tenant._id,
+            tenantName: tenant.name
+          }));
+          
+          allMoodEntries = [...allMoodEntries, ...entriesWithTenant];
+          
+        } catch (tenantError) {
+          console.error(`❌ Error searching tenant ${tenant.name}:`, tenantError);
+          continue;
+        }
+      }
+    } else {
+      // Single tenant mode
+      const Mood = require('../models/Mood');
+      const User = require('../models/User');
+      
+      searchedTenants = 1;
+      totalPatients = await User.countDocuments({ role: 'patient' });
+      
+      allMoodEntries = await Mood.find({
+        timestamp: { $gte: startDate }
+      }).sort({ timestamp: -1 }).lean();
+      
+      console.log(`📝 Single tenant: ${allMoodEntries.length} mood entries, ${totalPatients} patients`);
+    }
+    
+    console.log(`📊 Total mood entries found: ${allMoodEntries.length} across ${searchedTenants} tenants`);
+    
+    // Process the data into analytics format
+    const analyticsData = processSystemMoodData(allMoodEntries, parseInt(days), totalPatients);
+    
+    res.status(200).json({
+      success: true,
+      data: analyticsData,
+      searchInfo: {
+        searchedTenants,
+        totalPatients,
+        totalMoodEntries: allMoodEntries.length,
+        dateRange: {
+          from: startDate.toISOString(),
+          to: new Date().toISOString(),
+          days: parseInt(days)
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ ADMIN Error getting system mood analytics:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch system mood analytics',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+};
+
+/**
+ * @desc    Get system-wide mood history across all tenants (admin function)
+ * @route   GET /api/admin/mood/history
+ * @access  Private (Admin only)
+ */
+exports.getSystemWideMoodHistory = async (req, res) => {
+  try {
+    console.log('🔍 ADMIN: Getting system-wide mood history');
+    console.log('Query params:', req.query);
+    
+    const { 
+      days = 7, 
+      limit = 100, 
+      search, 
+      tenantId, 
+      sortBy = 'date_desc' 
+    } = req.query;
+    
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - parseInt(days));
+    
+    let allPatientMoodData = [];
+    let searchedTenants = 0;
+    
+    // If multi-tenant enabled, search across tenants
+    if (process.env.ENABLE_MULTI_TENANT === 'true') {
+      const masterConn = getMasterConnection();
+      if (!masterConn) {
+        throw new Error('Failed to connect to master database');
+      }
+      
+      const Tenant = masterConn.model('Tenant');
+      
+      // Build tenant query
+      let tenantQuery = { active: true };
+      if (tenantId && tenantId !== 'all') {
+        tenantQuery._id = tenantId;
+      }
+      
+      const tenants = await Tenant.find(tenantQuery);
+      console.log(`🏢 Found ${tenants.length} tenants to search for mood history`);
+      
+      // Search each tenant for mood history
+      for (const tenant of tenants) {
+        try {
+          const tenantConn = await dbManager.connectTenant(tenant._id.toString());
+          if (!tenantConn) {
+            console.warn(`⚠️ Could not connect to tenant: ${tenant.name}`);
+            continue;
+          }
+          
+          searchedTenants++;
+          const Mood = tenantConn.model('Mood');
+          const User = tenantConn.model('User');
+          
+          // Get all patients in this tenant
+          let patientQuery = { role: 'patient' };
+          if (search) {
+            patientQuery.$or = [
+              { firstName: { $regex: search, $options: 'i' } },
+              { lastName: { $regex: search, $options: 'i' } },
+              { email: { $regex: search, $options: 'i' } }
+            ];
+          }
+          
+          const patients = await User.find(patientQuery)
+            .select('_id firstName lastName email')
+            .lean();
+          
+          console.log(`👥 Tenant ${tenant.name}: ${patients.length} patients found`);
+          
+          // Get mood entries for these patients
+          if (patients.length > 0) {
+            const patientIds = patients.map(p => p._id);
+            
+            const moodEntries = await Mood.find({
+              userId: { $in: patientIds },
+              timestamp: { $gte: startDate }
+            }).sort({ timestamp: -1 }).lean();
+            
+            console.log(`📝 Tenant ${tenant.name}: ${moodEntries.length} mood entries found`);
+            
+            // Group mood entries by patient and calculate stats
+            const patientMoodMap = {};
+            
+            // Initialize patient data
+            patients.forEach(patient => {
+              patientMoodMap[patient._id] = {
+                patientId: patient._id,
+                patientName: `${patient.firstName} ${patient.lastName}`,
+                patientEmail: patient.email,
+                tenantId: tenant._id,
+                tenantName: tenant.name,
+                moods: [],
+                totalLogs: 0,
+                averageRating: 0,
+                lastMood: null,
+                date: new Date()
+              };
+            });
+            
+            // Process mood entries
+            moodEntries.forEach(entry => {
+              const patientId = entry.userId.toString();
+              
+              if (patientMoodMap[patientId]) {
+                patientMoodMap[patientId].moods.push(entry);
+                patientMoodMap[patientId].totalLogs++;
+                
+                // Update last mood (most recent)
+                if (!patientMoodMap[patientId].lastMood || 
+                    entry.timestamp > patientMoodMap[patientId].lastMood.timestamp) {
+                  patientMoodMap[patientId].lastMood = {
+                    moodKey: entry.moodKey,
+                    moodLabel: entry.moodLabel,
+                    moodRating: entry.moodRating,
+                    timestamp: entry.timestamp
+                  };
+                  patientMoodMap[patientId].date = entry.timestamp;
+                }
+              }
+            });
+            
+            // Calculate averages and add to results
+            Object.values(patientMoodMap).forEach(patientData => {
+              if (patientData.moods.length > 0) {
+                const totalRating = patientData.moods.reduce((sum, mood) => sum + mood.moodRating, 0);
+                patientData.averageRating = totalRating / patientData.moods.length;
+                
+                // Remove raw moods array to save space
+                delete patientData.moods;
+                
+                allPatientMoodData.push(patientData);
+              }
+            });
+          }
+          
+        } catch (tenantError) {
+          console.error(`❌ Error searching tenant ${tenant.name}:`, tenantError);
+          continue;
+        }
+      }
+    } else {
+      // Single tenant mode
+      const Mood = require('../models/Mood');
+      const User = require('../models/User');
+      
+      searchedTenants = 1;
+      
+      // Get all patients
+      let patientQuery = { role: 'patient' };
+      if (search) {
+        patientQuery.$or = [
+          { firstName: { $regex: search, $options: 'i' } },
+          { lastName: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } }
+        ];
+      }
+      
+      const patients = await User.find(patientQuery)
+        .select('_id firstName lastName email')
+        .lean();
+      
+      console.log(`👥 Single tenant: ${patients.length} patients found`);
+      
+      // Get mood entries
+      if (patients.length > 0) {
+        const patientIds = patients.map(p => p._id);
+        
+        const moodEntries = await Mood.find({
+          userId: { $in: patientIds },
+          timestamp: { $gte: startDate }
+        }).sort({ timestamp: -1 }).lean();
+        
+        console.log(`📝 Single tenant: ${moodEntries.length} mood entries found`);
+        
+        // Process mood data (same logic as multi-tenant)
+        const patientMoodMap = {};
+        
+        patients.forEach(patient => {
+          patientMoodMap[patient._id] = {
+            patientId: patient._id,
+            patientName: `${patient.firstName} ${patient.lastName}`,
+            patientEmail: patient.email,
+            moods: [],
+            totalLogs: 0,
+            averageRating: 0,
+            lastMood: null,
+            date: new Date()
+          };
+        });
+        
+        moodEntries.forEach(entry => {
+          const patientId = entry.userId.toString();
+          
+          if (patientMoodMap[patientId]) {
+            patientMoodMap[patientId].moods.push(entry);
+            patientMoodMap[patientId].totalLogs++;
+            
+            if (!patientMoodMap[patientId].lastMood || 
+                entry.timestamp > patientMoodMap[patientId].lastMood.timestamp) {
+              patientMoodMap[patientId].lastMood = {
+                moodKey: entry.moodKey,
+                moodLabel: entry.moodLabel,
+                moodRating: entry.moodRating,
+                timestamp: entry.timestamp
+              };
+              patientMoodMap[patientId].date = entry.timestamp;
+            }
+          }
+        });
+        
+        Object.values(patientMoodMap).forEach(patientData => {
+          if (patientData.moods.length > 0) {
+            const totalRating = patientData.moods.reduce((sum, mood) => sum + mood.moodRating, 0);
+            patientData.averageRating = totalRating / patientData.moods.length;
+            
+            delete patientData.moods;
+            allPatientMoodData.push(patientData);
+          }
+        });
+      }
+    }
+    
+    // Sort the results
+    allPatientMoodData.sort((a, b) => {
+      switch (sortBy) {
+        case 'date_asc':
+          return new Date(a.date) - new Date(b.date);
+        case 'date_desc':
+          return new Date(b.date) - new Date(a.date);
+        case 'mood':
+          return (a.lastMood?.moodRating || 0) - (b.lastMood?.moodRating || 0);
+        case 'average':
+          return a.averageRating - b.averageRating;
+        case 'tenant':
+          return (a.tenantName || '').localeCompare(b.tenantName || '');
+        default:
+          return new Date(b.date) - new Date(a.date);
+      }
+    });
+    
+    // Apply limit
+    const limitedData = allPatientMoodData.slice(0, parseInt(limit));
+    
+    console.log(`📊 Returning ${limitedData.length} patient mood history records`);
+    
+    res.status(200).json({
+      success: true,
+      data: limitedData,
+      searchInfo: {
+        searchedTenants,
+        totalRecords: allPatientMoodData.length,
+        returnedRecords: limitedData.length,
+        dateRange: {
+          from: startDate.toISOString(),
+          to: new Date().toISOString(),
+          days: parseInt(days)
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ ADMIN Error getting system mood history:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch system mood history',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+};
+
+/**
+ * @desc    Export system-wide mood analytics as PDF (admin function)
+ * @route   GET /api/admin/mood/export
+ * @access  Private (Admin only)
+ */
+exports.exportSystemMoodAnalytics = async (req, res) => {
+  try {
+    console.log('📄 ADMIN: Exporting system mood analytics to PDF');
+    console.log('Export filters:', req.query);
+    
+    const { 
+      days = 7, 
+      tenantId, 
+      search, 
+      format = 'pdf' 
+    } = req.query;
+    
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - parseInt(days));
+    
+    let allMoodEntries = [];
+    let allPatientMoodData = [];
+    let searchedTenants = 0;
+    let totalPatients = 0;
+    let tenantNames = [];
+    
+    // Get mood data using same logic as analytics endpoint
+    if (process.env.ENABLE_MULTI_TENANT === 'true') {
+      const masterConn = getMasterConnection();
+      if (!masterConn) {
+        throw new Error('Failed to connect to master database');
+      }
+      
+      const Tenant = masterConn.model('Tenant');
+      
+      let tenantQuery = { active: true };
+      if (tenantId && tenantId !== 'all') {
+        tenantQuery._id = tenantId;
+      }
+      
+      const tenants = await Tenant.find(tenantQuery);
+      console.log(`🏢 Exporting from ${tenants.length} tenants`);
+      
+      for (const tenant of tenants) {
+        try {
+          const tenantConn = await dbManager.connectTenant(tenant._id.toString());
+          if (!tenantConn) {
+            console.warn(`⚠️ Could not connect to tenant: ${tenant.name}`);
+            continue;
+          }
+          
+          searchedTenants++;
+          tenantNames.push(tenant.name);
+          
+          const Mood = tenantConn.model('Mood');
+          const User = tenantConn.model('User');
+          
+          // Count patients
+          const patientCount = await User.countDocuments({ role: 'patient' });
+          totalPatients += patientCount;
+          
+          // Get mood entries
+          const moodEntries = await Mood.find({
+            timestamp: { $gte: startDate }
+          }).sort({ timestamp: -1 }).lean();
+          
+          console.log(`📊 Tenant ${tenant.name}: ${moodEntries.length} entries, ${patientCount} patients`);
+          
+          // Add tenant info to entries
+          const entriesWithTenant = moodEntries.map(entry => ({
+            ...entry,
+            tenantId: tenant._id,
+            tenantName: tenant.name
+          }));
+          
+          allMoodEntries = [...allMoodEntries, ...entriesWithTenant];
+          
+          // Get patient mood history for export
+          const patients = await User.find({ role: 'patient' })
+            .select('_id firstName lastName email')
+            .lean();
+          
+          if (patients.length > 0) {
+            const patientIds = patients.map(p => p._id);
+            
+            // Group mood entries by patient
+            const patientMoodMap = {};
+            patients.forEach(patient => {
+              patientMoodMap[patient._id] = {
+                patientName: `${patient.firstName} ${patient.lastName}`,
+                patientEmail: patient.email,
+                tenantName: tenant.name,
+                moods: [],
+                totalLogs: 0,
+                averageRating: 0,
+                lastMood: null
+              };
+            });
+            
+            moodEntries.forEach(entry => {
+              const patientId = entry.userId?.toString();
+              if (patientMoodMap[patientId]) {
+                patientMoodMap[patientId].moods.push(entry);
+                patientMoodMap[patientId].totalLogs++;
+                
+                if (!patientMoodMap[patientId].lastMood || 
+                    entry.timestamp > patientMoodMap[patientId].lastMood.timestamp) {
+                  patientMoodMap[patientId].lastMood = {
+                    moodKey: entry.moodKey,
+                    moodLabel: entry.moodLabel,
+                    moodRating: entry.moodRating,
+                    timestamp: entry.timestamp
+                  };
+                }
+              }
+            });
+            
+            // Calculate averages and add to export data
+            Object.values(patientMoodMap).forEach(patientData => {
+              if (patientData.moods.length > 0) {
+                const totalRating = patientData.moods.reduce((sum, mood) => sum + mood.moodRating, 0);
+                patientData.averageRating = (totalRating / patientData.moods.length).toFixed(1);
+                delete patientData.moods; // Remove to save space
+                allPatientMoodData.push(patientData);
+              }
+            });
+          }
+          
+        } catch (tenantError) {
+          console.error(`❌ Error exporting from tenant ${tenant.name}:`, tenantError);
+          continue;
+        }
+      }
+    } else {
+      // Single tenant mode
+      const Mood = require('../models/Mood');
+      const User = require('../models/User');
+      
+      searchedTenants = 1;
+      tenantNames = ['Single Tenant'];
+      totalPatients = await User.countDocuments({ role: 'patient' });
+      
+      allMoodEntries = await Mood.find({
+        timestamp: { $gte: startDate }
+      }).sort({ timestamp: -1 }).lean();
+      
+      // Get patient data for single tenant
+      const patients = await User.find({ role: 'patient' })
+        .select('_id firstName lastName email')
+        .lean();
+      
+      if (patients.length > 0) {
+        const patientMoodMap = {};
+        patients.forEach(patient => {
+          patientMoodMap[patient._id] = {
+            patientName: `${patient.firstName} ${patient.lastName}`,
+            patientEmail: patient.email,
+            moods: [],
+            totalLogs: 0,
+            averageRating: 0,
+            lastMood: null
+          };
+        });
+        
+        allMoodEntries.forEach(entry => {
+          const patientId = entry.userId?.toString();
+          if (patientMoodMap[patientId]) {
+            patientMoodMap[patientId].moods.push(entry);
+            patientMoodMap[patientId].totalLogs++;
+            
+            if (!patientMoodMap[patientId].lastMood || 
+                entry.timestamp > patientMoodMap[patientId].lastMood.timestamp) {
+              patientMoodMap[patientId].lastMood = {
+                moodKey: entry.moodKey,
+                moodLabel: entry.moodLabel,
+                moodRating: entry.moodRating,
+                timestamp: entry.timestamp
+              };
+            }
+          }
+        });
+        
+        Object.values(patientMoodMap).forEach(patientData => {
+          if (patientData.moods.length > 0) {
+            const totalRating = patientData.moods.reduce((sum, mood) => sum + mood.moodRating, 0);
+            patientData.averageRating = (totalRating / patientData.moods.length).toFixed(1);
+            delete patientData.moods;
+            allPatientMoodData.push(patientData);
+          }
+        });
+      }
+    }
+    
+    // Process analytics data
+    const analyticsData = processSystemMoodData(allMoodEntries, parseInt(days), totalPatients);
+    
+    console.log(`📊 Generating PDF with ${allMoodEntries.length} mood entries from ${searchedTenants} tenants`);
+    
+    // Generate PDF using PDFKit
+    const doc = new PDFDocument();
+    
+    // Set response headers for PDF download
+    const timestamp = new Date().toISOString().split('T')[0];
+    const tenantSuffix = tenantId && tenantId !== 'all' ? '-filtered' : '-all-tenants';
+    const filename = `system-mood-analytics-${timestamp}${tenantSuffix}.pdf`;
+    
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+    
+    // Pipe the PDF to the response
+    doc.pipe(res);
+    
+    // Add PDF content
+    doc.fontSize(20).text('System Mood Analytics Report', { align: 'center' });
+    doc.moveDown();
+    
+    // Report info
+    doc.fontSize(12);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`);
+    doc.text(`Analysis Period: ${days} days (${startDate.toLocaleDateString()} - ${new Date().toLocaleDateString()})`);
+    doc.text(`Tenants Analyzed: ${tenantNames.join(', ')}`);
+    doc.text(`Total Patients: ${totalPatients}`);
+    doc.text(`Total Mood Entries: ${allMoodEntries.length}`);
+    doc.moveDown();
+    
+    // Filters applied
+    doc.fontSize(14).text('Filters Applied:');
+    doc.fontSize(10);
+    if (tenantId && tenantId !== 'all') {
+      doc.text(`Specific Tenant: ${tenantId}`);
+    } else {
+      doc.text('Tenants: All Active Tenants');
+    }
+    if (search) {
+      doc.text(`Search: "${search}"`);
+    }
+    doc.moveDown();
+    
+    // Key Metrics Section
+    doc.fontSize(16).text('📊 Key Metrics', { underline: true });
+    doc.fontSize(12);
+    doc.text(`Total Mood Logs: ${analyticsData.keyMetrics.totalLogs}`);
+    doc.text(`Average Logs per Day: ${analyticsData.keyMetrics.averageLogsPerDay}`);
+    doc.text(`Average Mood Score: ${analyticsData.keyMetrics.averageMoodScore}/5`);
+    doc.moveDown();
+    
+    // Top Emotional Trends
+    doc.fontSize(14).text('Top Emotional Trends:');
+    analyticsData.keyMetrics.topEmotionalTrends.forEach((trend, index) => {
+      doc.text(`${index + 1}. ${trend.mood}: ${trend.count} logs (${trend.percentage}%)`);
+    });
+    doc.moveDown();
+    
+    // Mood Distribution Section
+    doc.fontSize(16).text('🎭 Mood Distribution', { underline: true });
+    doc.fontSize(12);
+    Object.entries(analyticsData.moodDistribution).forEach(([mood, data]) => {
+      doc.text(`${mood.charAt(0).toUpperCase() + mood.slice(1)}: ${data.count} logs (${data.percentage}%)`);
+    });
+    doc.moveDown();
+    
+    // Daily Overview Section
+    doc.fontSize(16).text('📅 Daily Overview', { underline: true });
+    doc.fontSize(10);
+    
+    // Table header
+    const tableTop = doc.y;
+    doc.text('Date', 50, tableTop);
+    doc.text('Entries', 120, tableTop);
+    doc.text('Avg Score', 180, tableTop);
+    doc.text('Top Mood', 250, tableTop);
+    
+    // Draw header line
+    doc.moveTo(50, tableTop + 15)
+       .lineTo(350, tableTop + 15)
+       .stroke();
+    
+    // Daily data rows
+    let rowTop = tableTop + 20;
+    analyticsData.dailyOverview.forEach(day => {
+      if (rowTop > doc.page.height - 100) {
+        doc.addPage();
+        rowTop = 50;
+      }
+      
+      doc.text(new Date(day.date).toLocaleDateString(), 50, rowTop);
+      doc.text(day.totalEntries.toString(), 120, rowTop);
+      doc.text(day.averageMoodScore.toString(), 180, rowTop);
+      doc.text(day.mostFrequentMood, 250, rowTop);
+      
+      rowTop += 15;
+    });
+    
+    // Patient Summary Section (if we have data)
+    if (allPatientMoodData.length > 0) {
+      doc.addPage();
+      doc.fontSize(16).text('👥 Patient Summary', { underline: true });
+      doc.fontSize(10);
+      
+      // Limit to top 20 patients by activity
+      const topPatients = allPatientMoodData
+        .sort((a, b) => b.totalLogs - a.totalLogs)
+        .slice(0, 20);
+      
+      doc.text(`Showing top ${topPatients.length} most active patients:`);
+      doc.moveDown();
+      
+      // Patient table header
+      const patientTableTop = doc.y;
+      doc.text('Patient Name', 50, patientTableTop);
+      doc.text('Clinic', 180, patientTableTop);
+      doc.text('Logs', 280, patientTableTop);
+      doc.text('Avg', 320, patientTableTop);
+      doc.text('Last Mood', 360, patientTableTop);
+      
+      doc.moveTo(50, patientTableTop + 15)
+         .lineTo(500, patientTableTop + 15)
+         .stroke();
+      
+      let patientRowTop = patientTableTop + 20;
+      topPatients.forEach(patient => {
+        if (patientRowTop > doc.page.height - 100) {
+          doc.addPage();
+          patientRowTop = 50;
+        }
+        
+        doc.text(patient.patientName, 50, patientRowTop, { width: 120 });
+        doc.text(patient.tenantName || 'N/A', 180, patientRowTop, { width: 90 });
+        doc.text(patient.totalLogs.toString(), 280, patientRowTop);
+        doc.text(patient.averageRating, 320, patientRowTop);
+        doc.text(patient.lastMood?.moodLabel || 'N/A', 360, patientRowTop, { width: 100 });
+        
+        patientRowTop += 15;
+      });
+    }
+    
+    // Footer
+    doc.addPage();
+    doc.fontSize(10);
+    doc.text('Report generated by Neurolex Admin System', { align: 'center' });
+    doc.text(`Export completed at ${new Date().toLocaleString()}`, { align: 'center' });
+    
+    // Finalize the PDF
+    doc.end();
+    
+    console.log('✅ PDF export completed successfully');
+    
+  } catch (error) {
+    console.error('❌ ADMIN Error exporting mood analytics:', error);
+    
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to export mood analytics',
+        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      });
+    }
+  }
+};
+
+/**
+ * @desc    Get mood analytics for a specific patient across all tenants (admin function)
+ * @route   GET /api/admin/mood/patient/:patientId
+ * @access  Private (Admin only)
+ */
+exports.getPatientMoodAnalytics = async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    const { days = 30 } = req.query;
+    
+    console.log(`🔍 ADMIN: Getting mood analytics for patient ${patientId} (${days} days)`);
+    
+    if (!patientId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Patient ID is required'
+      });
+    }
+    
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - parseInt(days));
+    
+    let patientInfo = null;
+    let moodEntries = [];
+    let foundInTenant = null;
+    
+    // Search across tenants to find the patient
+    if (process.env.ENABLE_MULTI_TENANT === 'true') {
+      const masterConn = getMasterConnection();
+      if (!masterConn) {
+        throw new Error('Failed to connect to master database');
+      }
+      
+      const Tenant = masterConn.model('Tenant');
+      const tenants = await Tenant.find({ active: true });
+      
+      console.log(`🏢 Searching ${tenants.length} tenants for patient ${patientId}`);
+      
+      // Search each tenant for the patient
+      for (const tenant of tenants) {
+        try {
+          const tenantConn = await dbManager.connectTenant(tenant._id.toString());
+          if (!tenantConn) {
+            console.warn(`⚠️ Could not connect to tenant: ${tenant.name}`);
+            continue;
+          }
+          
+          const User = tenantConn.model('User');
+          const Mood = tenantConn.model('Mood');
+          
+          // Try to find the patient in this tenant
+          const patient = await User.findOne({
+            _id: patientId,
+            role: 'patient'
+          }).select('firstName lastName email createdAt').lean();
+          
+          if (patient) {
+            console.log(`👤 Found patient in tenant: ${tenant.name}`);
+            foundInTenant = tenant.name;
+            
+            patientInfo = {
+              ...patient,
+              tenantId: tenant._id,
+              tenantName: tenant.name
+            };
+            
+            // Get mood entries for this patient
+            moodEntries = await Mood.find({
+              userId: patientId,
+              timestamp: { $gte: startDate }
+            }).sort({ timestamp: -1 }).lean();
+            
+            console.log(`📊 Found ${moodEntries.length} mood entries for patient`);
+            break; // Found the patient, stop searching
+          }
+        } catch (tenantError) {
+          console.error(`❌ Error searching tenant ${tenant.name}:`, tenantError);
+          continue;
+        }
+      }
+    } else {
+      // Single tenant mode
+      const User = require('../models/User');
+      const Mood = require('../models/Mood');
+      
+      foundInTenant = 'Single Tenant';
+      
+      // Find patient
+      patientInfo = await User.findOne({
+        _id: patientId,
+        role: 'patient'
+      }).select('firstName lastName email createdAt').lean();
+      
+      if (patientInfo) {
+        // Get mood entries
+        moodEntries = await Mood.find({
+          userId: patientId,
+          timestamp: { $gte: startDate }
+        }).sort({ timestamp: -1 }).lean();
+        
+        console.log(`📊 Found ${moodEntries.length} mood entries for patient`);
+      }
+    }
+    
+    // Check if patient was found
+    if (!patientInfo) {
+      console.log(`❌ Patient ${patientId} not found in any tenant`);
+      return res.status(404).json({
+        success: false,
+        message: 'Patient not found in any tenant database'
+      });
+    }
+    
+    // Process mood data for this patient
+    const analytics = processPatientMoodData(moodEntries, parseInt(days));
+    
+    // Add patient info to response
+    const response = {
+      patient: {
+        id: patientId,
+        name: `${patientInfo.firstName} ${patientInfo.lastName}`,
+        email: patientInfo.email,
+        tenantName: foundInTenant,
+        memberSince: patientInfo.createdAt
+      },
+      analytics,
+      searchInfo: {
+        foundInTenant,
+        totalMoodEntries: moodEntries.length,
+        analysisDate: new Date().toISOString(),
+        periodDays: parseInt(days)
+      }
+    };
+    
+    console.log(`✅ Patient mood analytics completed for ${patientInfo.firstName} ${patientInfo.lastName}`);
+    
+    res.status(200).json({
+      success: true,
+      data: response
+    });
+    
+  } catch (error) {
+    console.error(`❌ ADMIN Error getting patient mood analytics:`, error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch patient mood analytics',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+};
+
+// ===== HELPER FUNCTIONS FOR PROCESSING MOOD DATA =====
+
+/**
+ * Process system-wide mood data into analytics format
+ * @param {Array} moodEntries - All mood entries from all tenants
+ * @param {number} days - Number of days analyzed
+ * @param {number} totalPatients - Total number of patients across all tenants
+ * @returns {Object} Processed analytics data
+ */
+const processSystemMoodData = (moodEntries, days, totalPatients) => {
+  console.log(`🔄 Processing ${moodEntries.length} mood entries for ${days} days`);
+  
+  if (!Array.isArray(moodEntries) || moodEntries.length === 0) {
+    console.log('⚠️ No mood entries to process, returning empty analytics');
+    return {
+      keyMetrics: {
+        totalLogs: 0,
+        averageLogsPerDay: 0,
+        averageMoodScore: 0,
+        topEmotionalTrends: []
+      },
+      dailyOverview: Array.from({ length: days }, (_, i) => {
+        const date = new Date();
+        date.setDate(date.getDate() - (days - 1 - i));
+        return {
+          date: date.toISOString().split('T')[0],
+          dateFormatted: date.getDate().toString(),
+          totalEntries: 0,
+          averageMoodScore: 0,
+          mostFrequentMood: 'okay'
+        };
+      }),
+      moodDistribution: {
+        great: { count: 0, percentage: '0' },
+        good: { count: 0, percentage: '0' },
+        okay: { count: 0, percentage: '0' },
+        struggling: { count: 0, percentage: '0' },
+        upset: { count: 0, percentage: '0' }
+      }
+    };
+  }
+
+  // 1. KEY METRICS CALCULATION
+  const totalLogs = moodEntries.length;
+  const averageLogsPerDay = Math.round((totalLogs / days) * 10) / 10;
+  
+  // Calculate average mood score (1-5 scale)
+  const averageMoodRating = totalLogs > 0 
+    ? moodEntries.reduce((sum, entry) => sum + (entry.moodRating || 0), 0) / totalLogs 
+    : 0;
+  const averageMoodScore = Math.round(averageMoodRating * 10) / 10;
+
+  // Get top emotional trends (most frequent mood keys)
+  const moodKeyCount = moodEntries.reduce((acc, entry) => {
+    const moodKey = entry.moodKey || 'okay';
+    acc[moodKey] = (acc[moodKey] || 0) + 1;
+    return acc;
+  }, {});
+  
+  const topEmotionalTrends = Object.entries(moodKeyCount)
+    .sort(([,a], [,b]) => b - a)
+    .slice(0, 3)
+    .map(([mood, count]) => ({
+      mood: mood.charAt(0).toUpperCase() + mood.slice(1),
+      count,
+      percentage: Math.round((count / totalLogs) * 100)
+    }));
+
+  // 2. DAILY OVERVIEW (for the specified number of days)
+  const dailyOverview = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    const dayStart = new Date(date.setHours(0, 0, 0, 0));
+    const dayEnd = new Date(date.setHours(23, 59, 59, 999));
+    const dateStr = dayStart.toISOString().split('T')[0];
+    
+    // Filter entries for this day
+    const dayMoods = moodEntries.filter(entry => {
+      const entryDate = new Date(entry.timestamp || entry.createdAt);
+      return entryDate >= dayStart && entryDate <= dayEnd;
+    });
+    
+    // Find most frequent mood for the day
+    const dayMoodCount = dayMoods.reduce((acc, entry) => {
+      const moodKey = entry.moodKey || 'okay';
+      acc[moodKey] = (acc[moodKey] || 0) + 1;
+      return acc;
+    }, {});
+    
+    const mostFrequentMood = Object.entries(dayMoodCount)
+      .sort(([,a], [,b]) => b - a)[0];
+    
+    // Calculate average mood score for the day
+    const dayAverageMoodRating = dayMoods.length > 0
+      ? dayMoods.reduce((sum, entry) => sum + (entry.moodRating || 0), 0) / dayMoods.length
+      : 0;
+    const dayAverageMoodScore = Math.round(dayAverageMoodRating * 10) / 10;
+    
+    dailyOverview.push({
+      date: dateStr,
+      dateFormatted: dayStart.getDate().toString(),
+      mostFrequentMood: mostFrequentMood ? mostFrequentMood[0] : 'okay',
+      moodCount: mostFrequentMood ? mostFrequentMood[1] : 0,
+      totalEntries: dayMoods.length,
+      averageMoodScore: dayAverageMoodScore
+    });
+  }
+
+  // 3. MOOD DISTRIBUTION (All 5 moods with counts and percentages)
+  const moodDistribution = {
+    great: { count: 0, percentage: '0' },
+    good: { count: 0, percentage: '0' },
+    okay: { count: 0, percentage: '0' },
+    struggling: { count: 0, percentage: '0' },
+    upset: { count: 0, percentage: '0' }
+  };
+  
+  // Count each mood type
+  moodEntries.forEach(entry => {
+    const moodKey = entry.moodKey || 'okay';
+    if (moodDistribution[moodKey]) {
+      moodDistribution[moodKey].count++;
+    }
+  });
+  
+  // Calculate percentages
+  Object.keys(moodDistribution).forEach(moodKey => {
+    moodDistribution[moodKey].percentage = totalLogs > 0 
+      ? ((moodDistribution[moodKey].count / totalLogs) * 100).toFixed(1)
+      : '0.0';
+  });
+
+  const result = {
+    keyMetrics: {
+      totalLogs,
+      averageLogsPerDay,
+      averageMoodScore,
+      topEmotionalTrends
+    },
+    dailyOverview,
+    moodDistribution,
+    systemInfo: {
+      totalPatients,
+      analysisDate: new Date().toISOString(),
+      periodDays: days
+    }
+  };
+  
+  console.log('✅ Mood data processing completed');
+  console.log(`📊 Key metrics: ${totalLogs} logs, ${averageLogsPerDay} avg/day, ${averageMoodScore} avg score`);
+  
+  return result;
+};
+
+/**
+ * Process individual patient mood data into analytics format
+ * @param {Array} moodEntries - Mood entries for a specific patient
+ * @param {number} days - Number of days analyzed
+ * @returns {Object} Processed patient analytics data
+ */
+const processPatientMoodData = (moodEntries, days) => {
+  console.log(`🔄 Processing ${moodEntries.length} mood entries for individual patient`);
+  
+  if (!Array.isArray(moodEntries) || moodEntries.length === 0) {
+    console.log('⚠️ No mood entries for this patient, returning empty analytics');
+    return {
+      summary: {
+        totalEntries: 0,
+        averageRating: 0,
+        moodScore: 0,
+        periodDays: days,
+        firstEntry: null,
+        lastEntry: null
+      },
+      moodDistribution: {
+        great: { count: 0, percentage: 0 },
+        good: { count: 0, percentage: 0 },
+        okay: { count: 0, percentage: 0 },
+        struggling: { count: 0, percentage: 0 },
+        upset: { count: 0, percentage: 0 }
+      },
+      trends: {
+        weeklyAverage: 0,
+        improvementTrend: 'stable',
+        consistencyScore: 0
+      },
+      recentEntries: []
+    };
+  }
+
+  // Sort entries by timestamp (newest first)
+  const sortedEntries = moodEntries.sort((a, b) => 
+    new Date(b.timestamp || b.createdAt) - new Date(a.timestamp || a.createdAt)
+  );
+
+  // 1. SUMMARY CALCULATIONS
+  const totalEntries = sortedEntries.length;
+  const averageRating = totalEntries > 0 
+    ? sortedEntries.reduce((sum, entry) => sum + (entry.moodRating || 0), 0) / totalEntries 
+    : 0;
+  const moodScore = Math.round(((averageRating - 1) / 4) * 100); // Convert to 0-100 scale
+  
+  const firstEntry = sortedEntries[sortedEntries.length - 1]; // Oldest
+  const lastEntry = sortedEntries[0]; // Newest
+
+  // 2. MOOD DISTRIBUTION
+  const moodCounts = sortedEntries.reduce((acc, entry) => {
+    const moodKey = entry.moodKey || 'okay';
+    acc[moodKey] = (acc[moodKey] || 0) + 1;
+    return acc;
+  }, {});
+
+  const moodDistribution = {
+    great: { count: moodCounts.great || 0, percentage: 0 },
+    good: { count: moodCounts.good || 0, percentage: 0 },
+    okay: { count: moodCounts.okay || 0, percentage: 0 },
+    struggling: { count: moodCounts.struggling || 0, percentage: 0 },
+    upset: { count: moodCounts.upset || 0, percentage: 0 }
+  };
+
+  // Calculate percentages
+  Object.keys(moodDistribution).forEach(mood => {
+    moodDistribution[mood].percentage = totalEntries > 0 
+      ? Math.round((moodDistribution[mood].count / totalEntries) * 100)
+      : 0;
+  });
+
+  // 3. TRENDS ANALYSIS
+  const weeklyAverage = totalEntries > 0 ? (totalEntries / days) * 7 : 0;
+  
+  // Calculate improvement trend (compare first half vs second half of period)
+  let improvementTrend = 'stable';
+  if (totalEntries >= 4) {
+    const midPoint = Math.floor(totalEntries / 2);
+    const recentHalf = sortedEntries.slice(0, midPoint);
+    const olderHalf = sortedEntries.slice(midPoint);
+    
+    const recentAvg = recentHalf.reduce((sum, entry) => sum + (entry.moodRating || 0), 0) / recentHalf.length;
+    const olderAvg = olderHalf.reduce((sum, entry) => sum + (entry.moodRating || 0), 0) / olderHalf.length;
+    
+    const difference = recentAvg - olderAvg;
+    if (difference > 0.3) {
+      improvementTrend = 'improving';
+    } else if (difference < -0.3) {
+      improvementTrend = 'declining';
+    }
+  }
+  
+  // Calculate consistency score (how consistent the mood ratings are)
+  let consistencyScore = 0;
+  if (totalEntries > 1) {
+    const variance = sortedEntries.reduce((sum, entry) => {
+      const diff = (entry.moodRating || 0) - averageRating;
+      return sum + (diff * diff);
+    }, 0) / totalEntries;
+    
+    const standardDeviation = Math.sqrt(variance);
+    // Convert to 0-100 scale (lower deviation = higher consistency)
+    consistencyScore = Math.max(0, Math.round((1 - (standardDeviation / 2)) * 100));
+  }
+
+  // 4. RECENT ENTRIES (last 10)
+  const recentEntries = sortedEntries.slice(0, 10).map(entry => ({
+    date: entry.timestamp || entry.createdAt,
+    moodKey: entry.moodKey,
+    moodLabel: entry.moodLabel,
+    moodRating: entry.moodRating,
+    reflection: entry.reflection || '',
+    hasReflection: !!(entry.reflection && entry.reflection.trim())
+  }));
+
+  const result = {
+    summary: {
+      totalEntries,
+      averageRating: Math.round(averageRating * 10) / 10,
+      moodScore,
+      periodDays: days,
+      firstEntry: firstEntry ? {
+        date: firstEntry.timestamp || firstEntry.createdAt,
+        moodKey: firstEntry.moodKey,
+        moodRating: firstEntry.moodRating
+      } : null,
+      lastEntry: lastEntry ? {
+        date: lastEntry.timestamp || lastEntry.createdAt,
+        moodKey: lastEntry.moodKey,
+        moodRating: lastEntry.moodRating
+      } : null
+    },
+    moodDistribution,
+    trends: {
+      weeklyAverage: Math.round(weeklyAverage * 10) / 10,
+      improvementTrend,
+      consistencyScore
+    },
+    recentEntries
+  };
+  
+  console.log(`✅ Patient mood data processing completed`);
+  console.log(`📊 Summary: ${totalEntries} entries, ${averageRating.toFixed(1)} avg rating, ${improvementTrend} trend`);
+  
+  return result;
+};
