@@ -279,23 +279,6 @@ const Login = () => {
           {isLoading ? 'Signing in...' : 'Sign In'}
         </button>
         
-        <div className="divider">
-          <span>or</span>
-        </div>
-        
-        <div className="google-auth">
-          <GoogleLogin
-            onSuccess={handleGoogleLogin}
-            onError={() => {
-              toast.error('Google login failed. Please try again.');
-            }}
-            useOneTap
-            type="icon"
-            size="large"
-          />
-          <span>Sign in with Google</span>
-        </div>
-        
         <div className="auth-link">
           <p>Don't have an account? <Link to="/register">Sign Up</Link></p>
         </div>

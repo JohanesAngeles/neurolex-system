@@ -450,12 +450,9 @@ const DoctorAppointments = () => {
 const openRescheduleModal = (appointment) => {
   setSelectedAppointment(appointment);
   
-  // ✅ FIXED: Convert UTC to Philippine time for editing
-  const utcDate = new Date(appointment.appointmentDate);
-  const philippineTime = new Date(utcDate.getTime() + (8 * 60 * 60 * 1000));
-  
-  setNewDate(format(philippineTime, 'yyyy-MM-dd'));
-  setNewTime(format(philippineTime, 'HH:mm'));
+  const appointmentDate = new Date(appointment.appointmentDate);
+  setNewDate(format(appointmentDate, 'yyyy-MM-dd'));
+  setNewTime(format(appointmentDate, 'HH:mm'));
   setShowRescheduleModal(true);
 };
 
@@ -467,27 +464,18 @@ const openRescheduleModal = (appointment) => {
   };
 
   const formatAppointmentTime = (dateString) => {
-  // ✅ FIXED: Convert UTC to Philippine time (UTC+8)
-  const utcDate = new Date(dateString);
-  const philippineTime = new Date(utcDate.getTime() + (8 * 60 * 60 * 1000));
-  
-  console.log('🕐 Time conversion:', {
-    original: dateString,
-    utc: utcDate.toISOString(),
-    philippine: philippineTime.toISOString(),
-    displayTime: philippineTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
-  });
+  const date = new Date(dateString);
   
   let dayDisplay;
-  if (isToday(philippineTime)) {
+  if (isToday(date)) {
     dayDisplay = 'Today';
-  } else if (isTomorrow(philippineTime)) {
+  } else if (isTomorrow(date)) {
     dayDisplay = 'Tomorrow';
   } else {
-    dayDisplay = format(philippineTime, 'MMM d, yyyy');
+    dayDisplay = format(date, 'MMM d, yyyy');
   }
   
-  const timeDisplay = format(philippineTime, 'h:mm a');
+  const timeDisplay = format(date, 'h:mm a');
   return `${dayDisplay} at ${timeDisplay}`;
 };
   const getStatusColor = (status) => {
@@ -549,14 +537,8 @@ const openRescheduleModal = (appointment) => {
                 <div className="doctor-appointments-date-time-info">
                   
 <span className="doctor-appointments-time-range">
-  {(() => {
-    // Convert to Philippine time for display
-    const utcDate = new Date(appointment.appointmentDate);
-    const philippineTime = new Date(utcDate.getTime() + (8 * 60 * 60 * 1000));
-    const endTime = addMinutes(philippineTime, appointment.duration || 30);
-    
-    return `${format(philippineTime, 'h:mm a')} - ${format(endTime, 'h:mm a')}`;
-  })()}
+  {format(new Date(appointment.appointmentDate), 'h:mm a')} - 
+  {format(addMinutes(new Date(appointment.appointmentDate), appointment.duration || 30), 'h:mm a')}
 </span>
                 </div>
               </div>
