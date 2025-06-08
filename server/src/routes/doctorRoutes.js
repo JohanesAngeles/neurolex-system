@@ -1,4 +1,4 @@
-// server/src/routes/doctorRoutes.js - COMPLETE VERSION WITH ALL FUNCTIONALITY
+// server/src/routes/doctorRoutes.js - COMPLETE VERSION WITH HUGGING FACE AI INTEGRATION
 const express = require('express');
 const router = express.Router();
 const doctorController = require('../controllers/doctorController');
@@ -520,16 +520,13 @@ router.post('/templates/assign/:id', doctorController.assignTemplate);
 router.get('/journal-entries', journalController.getDoctorJournalEntries || doctorController.getJournalEntries);
 router.get('/journal-entries/:id', journalController.getDoctorJournalEntry || doctorController.getJournalEntry);
 
-router.get('/journal-entries', journalController.getDoctorJournalEntries || doctorController.getJournalEntries);
-router.get('/journal-entries/:id', journalController.getDoctorJournalEntry || doctorController.getJournalEntry);
-
-// ✅ IMMEDIATE FIX: AI Analysis route
+// ✅ FIXED: AI Analysis route with HUGGING FACE INTEGRATION
 router.post('/journal-entries/:entryId/analyze', async (req, res) => {
   try {
     const doctorId = req.user?.id || req.user?._id;
     const entryId = req.params.entryId;
     
-    console.log(`🩺 Doctor ${doctorId} analyzing entry ${entryId}`);
+    console.log(`🩺 Doctor ${doctorId} analyzing entry ${entryId} with HUGGING FACE AI`);
     
     if (!doctorId) {
       return res.status(401).json({
@@ -538,76 +535,27 @@ router.post('/journal-entries/:entryId/analyze', async (req, res) => {
       });
     }
 
-    // Map parameters for controller compatibility
+    // ✅ FIXED: Map parameters and add doctor info for the journal controller
     req.params.id = entryId;
     req.doctorId = doctorId;
-    
-    // Get the appropriate model based on tenant connection
-    let JournalEntry;
-    if (req.tenantConnection) {
-      JournalEntry = req.tenantConnection.model('JournalEntry');
-    } else {
-      JournalEntry = require('../models/JournalEntry');
-    }
-    
-    // Find the journal entry
-    const journalEntry = await JournalEntry.findById(entryId);
-    
-    if (!journalEntry) {
-      return res.status(404).json({
-        success: false,
-        message: 'Journal entry not found'
-      });
-    }
-
-    console.log(`✅ Found journal entry: ${journalEntry.title || 'Untitled'}`);
-
-    // Simple analysis response (immediate working solution)
-    const analysisResult = {
-      sentiment: {
-        type: 'neutral',
-        score: 0.5,
-        confidence: 0.8
-      },
-      emotions: ['contemplative'],
-      insights: [
-        'This entry shows thoughtful reflection.',
-        'Consider exploring these themes further in therapy.'
-      ],
-      recommendedActions: [
-        'Follow up in next session',
-        'Encourage continued journaling'
-      ]
-    };
-
-    // Update the journal entry with analysis
-    journalEntry.aiAnalysis = {
-      ...analysisResult,
-      analyzedBy: doctorId,
-      analyzedAt: new Date(),
-      status: 'completed'
+    req.body = {
+      ...req.body,
+      useAI: true,           // ✅ ENABLE HUGGING FACE AI
+      applyChanges: true,    // ✅ SAVE THE RESULTS
+      sentiment: req.body.sentiment,
+      notes: req.body.notes
     };
     
-    await journalEntry.save();
-
-    console.log(`✅ Analysis completed for entry ${entryId}`);
-
-    return res.status(200).json({
-      success: true,
-      message: 'Journal entry analyzed successfully',
-      data: {
-        entryId: entryId,
-        analysis: analysisResult,
-        analyzedAt: new Date(),
-        analyzedBy: doctorId
-      }
-    });
-
+    console.log('🤖 Calling journalController.analyzeJournalEntry with Hugging Face...');
+    
+    // ✅ CALL THE REAL HUGGING FACE ANALYSIS FUNCTION
+    return await journalController.analyzeJournalEntry(req, res);
+    
   } catch (error) {
-    console.error('❌ Analysis error:', error);
+    console.error('❌ Error in Hugging Face doctor analyze route:', error);
     return res.status(500).json({
       success: false,
-      message: 'Analysis failed',
+      message: 'Hugging Face analysis failed',
       error: error.message
     });
   }

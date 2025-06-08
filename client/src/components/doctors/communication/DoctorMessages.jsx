@@ -387,40 +387,38 @@ const loadPatientsWithProfile = async (profile) => {
         </div>
       )}
 
-      {/* Sidebar Container - simplified with integrated header */}
+      {/* Sidebar Container - simplified layout */}
       <div className="sidebar-container">
-        {/* Combined Header with Search */}
+        {/* Simplified Header without search */}
         <div className="messages-header">
-          <div className="header-top">
-            <div className="header-left">
-              <h1 className="messages-title">Messages</h1>
-              <p className="messages-subtitle">
-                Communicate securely with your patients through {platformName}
-              </p>
-            </div>
-            <div className="header-stats">
-              <div className="stat-item">
-                <span className="stat-number">{patients.length}</span>
-                <span className="stat-label">Patients</span>
-              </div>
-            </div>
+          <div className="header-left">
+            <h1 className="messages-title">Messages</h1>
+            <p className="messages-subtitle">
+              Communicate securely with your patients through {platformName}
+            </p>
           </div>
-          
-          <div className="header-search">
-            <h3 className="conversations-title">Conversations</h3>
-            <div className="search-container">
-              <input
-                type="text"
-                placeholder="Search patients..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="patient-search"
-              />
+          <div className="header-stats">
+            <div className="stat-item">
+              <span className="stat-number">{patients.length}</span>
+              <span className="stat-label">Patients</span>
             </div>
           </div>
         </div>
 
-        {/* Conversations List - directly under header */}
+        {/* Search Section - separate from header */}
+        <div className="search-section">
+          <div className="search-container">
+            <input
+              type="text"
+              placeholder="Search patients..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="patient-search"
+            />
+          </div>
+        </div>
+
+        {/* Conversations List - directly under search */}
         <div className="conversations-list">
           {filteredPatients.length === 0 ? (
             <div className="no-patients">
@@ -575,7 +573,7 @@ const loadPatientsWithProfile = async (profile) => {
                   onClick={sendMessage}
                   disabled={!newMessage.trim() || sending}
                   className="send-button"
-                  style={{ backgroundColor: theme?.primaryColor || '#4CAF50' }}
+                  style={{ backgroundColor: '#A7D7C5' }}
                 >
                   {sending ? '⏳' : '📤'}
                 </button>
