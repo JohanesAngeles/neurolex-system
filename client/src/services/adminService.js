@@ -1045,7 +1045,7 @@ getTemplateStats: async () => {
 
 getIndividualPatientMoodAnalytics: async (patientId, days = 7, tenantId = null) => {
   try {
-    console.log(`🔍 ADMIN: Fetching mood analytics for patient: ${patientId} (${days} days), Tenant: ${tenantId || 'not specified'}`);
+    console.log(`🔍 ADMIN: Fetching mood analytics for patient: ${patientId} (${days} days) - ALL TENANTS`);
     
     // Get authentication token
     const adminToken = localStorage.getItem('adminToken');
@@ -1053,60 +1053,36 @@ getIndividualPatientMoodAnalytics: async (patientId, days = 7, tenantId = null) 
       throw new Error('Admin authentication required');
     }
     
-    // ✅ CRITICAL FIX: Use the SAME working endpoint that doctors use!
-    const baseURL = process.env.REACT_APP_API_URL || 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com/api';
-    const url = `${baseURL}/mood/user/${patientId}?days=${days}&limit=100`;
-    
-    console.log('🌐 ADMIN: Using WORKING doctor endpoint:', url);
-    
-    // Set up headers like the doctor service does
-    const headers = {
-      'Authorization': `Bearer ${adminToken}`,
-      'Content-Type': 'application/json'
-    };
-    
-    // Add tenant ID to headers if available (copy doctor approach)
-    if (tenantId) {
-      headers['x-tenant-id'] = tenantId;
-      headers['X-Tenant-ID'] = tenantId;  // Try both cases like doctor service
-      console.log('🏢 ADMIN: Added tenant headers like doctor service');
-    }
-    
-    console.log('📡 ADMIN: Request headers:', headers);
-    
-    // ✅ CRITICAL FIX: Use axios directly like doctor service does
-    const response = await axios.get(url, { 
-      headers,
-      timeout: 15000  // Same timeout as doctor service
+    // ✅ Use the ADMIN endpoint that searches all tenants
+    const response = await api.get(`/admin/mood/user/${patientId}`, {
+      params: { 
+        days: days,
+        limit: 100
+      },
+      headers: {
+        'Authorization': `Bearer ${adminToken}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: 15000
     });
     
-    console.log('✅ ADMIN mood response:', response.data);
+    console.log('✅ ADMIN mood response (all tenants):', response.data);
     console.log('📊 ADMIN mood entries count:', response.data?.data?.length || 0);
-    console.log('📋 ADMIN mood pagination:', response.data?.pagination);
+    console.log('🏢 ADMIN searched tenants:', response.data?.searchInfo?.searchedTenants);
     
-    // Process the raw mood data into analytics format (same as doctor)
+    // Process the raw mood data into analytics format
     let moodEntries = [];
     
     if (response.data && response.data.success && Array.isArray(response.data.data)) {
       moodEntries = response.data.data;
-      console.log('📝 ADMIN: Processing response.data.data array');
+      console.log('📝 ADMIN: Processing mood data from all tenants');
     } else if (Array.isArray(response.data)) {
       moodEntries = response.data;
-      console.log('📝 ADMIN: Processing direct response.data array');
-    } else {
-      console.log('⚠️ ADMIN: Unexpected response format:', response.data);
     }
     
-    console.log('📊 ADMIN processing mood entries:', moodEntries.length, 'entries found');
+    console.log('📊 ADMIN processing mood entries:', moodEntries.length, 'entries found across all tenants');
     
-    // 🔍 DEBUG: Log first mood entry structure if available
-    if (moodEntries.length > 0) {
-      console.log('🔍 ADMIN: First mood entry structure:', moodEntries[0]);
-    } else {
-      console.log('🔍 ADMIN: No mood entries found - patient may not have mood data');
-    }
-    
-    // Transform raw mood data into analytics format (same function as doctor)
+    // Transform raw mood data into analytics format
     const analyticsData = processMoodDataToAnalytics(moodEntries, days);
     
     console.log('📈 ADMIN analytics data generated:', analyticsData);
@@ -1118,13 +1094,6 @@ getIndividualPatientMoodAnalytics: async (patientId, days = 7, tenantId = null) 
     
   } catch (error) {
     console.error(`❌ ADMIN Error fetching mood analytics for patient ${patientId}:`, error);
-    
-    if (error.response) {
-      console.error('❌ ADMIN Server error details:');
-      console.error('   Status:', error.response.status);
-      console.error('   Data:', error.response.data);
-      console.error('   URL:', error.config?.url);
-    }
     
     // Return empty result instead of throwing to prevent UI crash
     return {

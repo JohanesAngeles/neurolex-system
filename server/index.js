@@ -703,122 +703,194 @@ console.log('🔄 Adding admin-specific mood routes...');
 if (moodRoutes) {
   // Create admin-specific mood endpoint
   app.get('/api/admin/mood/user/:userId', async (req, res) => {
-    try {
-      const { userId } = req.params;
-      const { days = 7, limit = 50, page = 1 } = req.query;
-      
-      console.log(`🔍 ADMIN: Accessing mood data for user ${userId}`);
-      
-      // Check if user has admin token
-      const token = req.headers.authorization?.replace('Bearer ', '');
-      if (!token) {
-        return res.status(401).json({
-          success: false,
-          message: 'Admin authentication required'
-        });
-      }
-      
-      let decoded;
-      try {
-        decoded = jwt.verify(token, process.env.JWT_SECRET);
-      } catch (error) {
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid admin token'
-        });
-      }
-      
-      // Verify admin role
-      const isAdmin = decoded.role === 'admin' || decoded.id === 'admin_default';
-      if (!isAdmin) {
-        return res.status(403).json({
-          success: false,
-          message: 'Admin access required'
-        });
-      }
-      
-      console.log(`✅ ADMIN: Access granted to ${decoded.email || decoded.id}`);
-      
-      // ✅ FINAL FIX: Build query filters with correct field names from schema
-      const queryFilters = {
-        userId: new mongoose.Types.ObjectId(userId)  // Convert to ObjectId
-      };
-      
-      // ✅ CRITICAL: Handle tenant filtering properly
-      if (decoded.tenantId) {
-        queryFilters.tenantId = new mongoose.Types.ObjectId(decoded.tenantId);
-        console.log(`🏢 ADMIN: Filtering by tenant: ${decoded.tenantId}`);
-      } else {
-        // ✅ If no tenant in token, search across all tenants (admin access)
-        console.log(`🌐 ADMIN: Searching across all tenants (super admin)`);
-      }
-      
-      // ✅ Add date filter using correct timestamp field
-      if (days && days !== 'all') {
-        const daysAgo = new Date();
-        daysAgo.setDate(daysAgo.getDate() - parseInt(days));
-        queryFilters.timestamp = { $gte: daysAgo };
-        console.log(`📅 ADMIN: Filtering by days: ${days} (since ${daysAgo.toISOString()})`);
-      }
-      
-      console.log('🔍 ADMIN: Final query filters:', JSON.stringify(queryFilters, null, 2));
-      
-      // ✅ Get mood entries using correct schema fields
-      const moodEntries = await Mood.find(queryFilters)
-        .sort({ timestamp: -1 })  // Use timestamp field from schema
-        .limit(parseInt(limit))
-        .skip((parseInt(page) - 1) * parseInt(limit))
-        .select('moodRating moodKey moodLabel moodSvgUrl reflection timestamp tenantId userId metadata')
-        .lean();
-      
-      console.log(`📊 ADMIN: Found ${moodEntries.length} mood entries`);
-      
-      // ✅ DEBUG: Log first entry structure and database stats
-      if (moodEntries.length > 0) {
-        console.log('🔍 ADMIN: First mood entry structure:', moodEntries[0]);
-      } else {
-        // Check if mood data exists for this user without tenant filter
-        const anyUserMood = await Mood.find({ userId: new mongoose.Types.ObjectId(userId) }).limit(3).lean();
-        console.log(`🔍 ADMIN: Mood entries for this user (any tenant): ${anyUserMood.length}`);
-        if (anyUserMood.length > 0) {
-          console.log('🔍 ADMIN: Sample user mood entry:', anyUserMood[0]);
-        }
-        
-        // Check total mood entries in database
-        const totalMoodEntries = await Mood.countDocuments({});
-        console.log(`🔍 ADMIN: Total mood entries in database: ${totalMoodEntries}`);
-      }
-      
-      // Get total count for pagination
-      const totalEntries = await Mood.countDocuments(queryFilters);
-      
-      // Return response in format expected by frontend
-      res.status(200).json({
-        success: true,
-        data: moodEntries,
-        pagination: {
-          currentPage: parseInt(page),
-          totalPages: Math.ceil(totalEntries / parseInt(limit)),
-          totalEntries,
-          limit: parseInt(limit)
-        },
-        message: `Retrieved ${moodEntries.length} mood entries`,
-        debug: {
-          queryFilters,
-          totalEntriesInDb: await Mood.countDocuments({}),
-          userEntriesAnyTenant: await Mood.countDocuments({ userId: new mongoose.Types.ObjectId(userId) })
-        }
-      });
-      
-    } catch (error) {
-      console.error('❌ ADMIN: Error getting mood data:', error);
-      res.status(500).json({
+  try {
+    const { userId } = req.params;
+    const { days = 7, limit = 50, page = 1 } = req.query;
+    
+    console.log(`🔍 ADMIN: Accessing mood data for user ${userId} across ALL tenants`);
+    
+    // Check if user has admin token
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return res.status(401).json({
         success: false,
-        message: 'Server error occurred while retrieving mood data',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        message: 'Admin authentication required'
       });
     }
-  });
+    
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid admin token'
+      });
+    }
+    
+    // Verify admin role
+    const isAdmin = decoded.role === 'admin' || decoded.id === 'admin_default';
+    if (!isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'Admin access required'
+      });
+    }
+    
+    console.log(`✅ ADMIN: Access granted to ${decoded.email || decoded.id}`);
+    
+    // ✅ SEARCH ACROSS ALL TENANTS for mood data
+    let allMoodEntries = [];
+    let searchedTenants = [];
+    
+    if (process.env.ENABLE_MULTI_TENANT === 'true') {
+      try {
+        // Get master connection to access tenants
+        const masterConn = getMasterConnection();
+        if (masterConn) {
+          const Tenant = masterConn.model('Tenant');
+          const tenants = await Tenant.find({ active: true });
+          
+          console.log(`🔍 ADMIN: Searching ${tenants.length} tenants for user ${userId} mood data`);
+          
+          // Search each tenant database
+          for (const tenant of tenants) {
+            try {
+              const tenantConn = await dbManager.connectTenant(tenant._id.toString());
+              if (!tenantConn) {
+                console.warn(`Could not connect to tenant database: ${tenant.name}`);
+                continue;
+              }
+              
+              const Mood = tenantConn.model('Mood');
+              
+              // Build query for this tenant
+              const queryFilters = {
+                userId: new mongoose.Types.ObjectId(userId)
+              };
+              
+              // Add date filter if specified
+              if (days && days !== 'all') {
+                const daysAgo = new Date();
+                daysAgo.setDate(daysAgo.getDate() - parseInt(days));
+                queryFilters.timestamp = { $gte: daysAgo };
+              }
+              
+              // Get mood entries from this tenant
+              const tenantMoodEntries = await Mood.find(queryFilters)
+                .sort({ timestamp: -1 })
+                .limit(parseInt(limit))
+                .select('moodRating moodKey moodLabel moodSvgUrl reflection timestamp userId metadata')
+                .lean();
+              
+              // Add tenant info to each entry
+              const entriesWithTenant = tenantMoodEntries.map(entry => ({
+                ...entry,
+                tenantId: tenant._id.toString(),
+                tenantName: tenant.name
+              }));
+              
+              allMoodEntries = [...allMoodEntries, ...entriesWithTenant];
+              
+              if (tenantMoodEntries.length > 0) {
+                searchedTenants.push({
+                  tenantId: tenant._id.toString(),
+                  tenantName: tenant.name,
+                  moodEntriesFound: tenantMoodEntries.length
+                });
+                console.log(`✅ Found ${tenantMoodEntries.length} mood entries in tenant: ${tenant.name}`);
+              }
+              
+            } catch (tenantError) {
+              console.error(`Error searching tenant ${tenant.name}:`, tenantError.message);
+              continue;
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error in multi-tenant mood search:', error);
+      }
+    }
+    
+    // ✅ FALLBACK: Search default database if no multi-tenant or no results
+    if (allMoodEntries.length === 0) {
+      try {
+        console.log('🔍 ADMIN: Searching default database for mood data');
+        
+        const queryFilters = {
+          userId: new mongoose.Types.ObjectId(userId)
+        };
+        
+        if (days && days !== 'all') {
+          const daysAgo = new Date();
+          daysAgo.setDate(daysAgo.getDate() - parseInt(days));
+          queryFilters.timestamp = { $gte: daysAgo };
+        }
+        
+        const defaultMoodEntries = await Mood.find(queryFilters)
+          .sort({ timestamp: -1 })
+          .limit(parseInt(limit))
+          .select('moodRating moodKey moodLabel moodSvgUrl reflection timestamp userId metadata')
+          .lean();
+        
+        if (defaultMoodEntries.length > 0) {
+          allMoodEntries = defaultMoodEntries.map(entry => ({
+            ...entry,
+            tenantId: 'default',
+            tenantName: 'Default Database'
+          }));
+          
+          searchedTenants.push({
+            tenantId: 'default',
+            tenantName: 'Default Database',
+            moodEntriesFound: defaultMoodEntries.length
+          });
+          
+          console.log(`✅ Found ${defaultMoodEntries.length} mood entries in default database`);
+        }
+      } catch (defaultError) {
+        console.error('Error searching default database:', defaultError);
+      }
+    }
+    
+    // Sort all entries by timestamp (most recent first)
+    allMoodEntries.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    
+    // Apply pagination to combined results
+    const startIndex = (parseInt(page) - 1) * parseInt(limit);
+    const paginatedEntries = allMoodEntries.slice(startIndex, startIndex + parseInt(limit));
+    
+    console.log(`📊 ADMIN: Total mood entries found: ${allMoodEntries.length}`);
+    console.log(`📋 ADMIN: Returning ${paginatedEntries.length} entries for page ${page}`);
+    console.log(`🏢 ADMIN: Searched tenants:`, searchedTenants);
+    
+    // Return response
+    res.status(200).json({
+      success: true,
+      data: paginatedEntries,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(allMoodEntries.length / parseInt(limit)),
+        totalEntries: allMoodEntries.length,
+        limit: parseInt(limit)
+      },
+      searchInfo: {
+        searchedTenants,
+        totalTenantsSearched: searchedTenants.length,
+        multiTenantEnabled: process.env.ENABLE_MULTI_TENANT === 'true'
+      },
+      message: `Retrieved ${paginatedEntries.length} mood entries from ${searchedTenants.length} data sources`
+    });
+    
+  } catch (error) {
+    console.error('❌ ADMIN: Error getting mood data:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error occurred while retrieving mood data',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+});
   
   console.log('✅ Admin mood route added: GET /api/admin/mood/user/:userId');
 } else {
