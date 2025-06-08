@@ -1,4 +1,4 @@
-// server/src/routes/adminRoutes.js - UPDATED WITH TENANT MANAGEMENT
+// server/src/routes/adminRoutes.js - UPDATED WITH DOCTOR MANAGEMENT ROUTES
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
@@ -68,6 +68,23 @@ router.get('/doctors/rejected', adminAuth, adminController.getRejectedDoctors);
 router.get('/doctors/:id', adminAuth, adminController.getDoctorDetails);
 router.post('/doctors/:id/verify', adminAuth, adminController.verifyDoctor);
 router.get('/doctor-verification-stats', adminAuth, adminController.getDoctorVerificationStats);
+
+// 🆕 NEW: ADMIN DOCTOR MANAGEMENT ROUTES (Added to fix 404 error)
+console.log('Adding admin doctor management routes...');
+
+// POST /admin/doctors - Add new doctor (admin function)
+router.post('/doctors', adminAuth, adminController.addDoctor);
+
+// PUT /admin/doctors/:id - Update doctor (admin function)  
+router.put('/doctors/:id', adminAuth, adminController.updateDoctor);
+
+// DELETE /admin/doctors/:id - Delete doctor (admin function)
+router.delete('/doctors/:id', adminAuth, adminController.deleteDoctor);
+
+// GET /admin/doctors - Get all doctors (for listing, optional)
+router.get('/doctors', adminAuth, adminController.getAllDoctors);
+
+console.log('Admin doctor management routes added successfully');
 
 // User Management
 router.get('/users', adminAuth, adminController.getAllUsers);
@@ -180,7 +197,7 @@ router.use((error, req, res, next) => {
   });
 });
 
-  // ===== TEMPLATE MANAGEMENT ROUTES =====
+// ===== TEMPLATE MANAGEMENT ROUTES =====
 console.log('Adding template management routes...');
 
 // Templates
@@ -194,6 +211,6 @@ router.post('/templates/:id/assign', adminController.assignTemplate);
 
 console.log('Template management routes added successfully');
 
-console.log('✅ Admin routes with proper file upload configuration and tenant management loaded successfully');
+console.log('✅ Admin routes with proper file upload configuration, tenant management, and doctor management loaded successfully');
 
 module.exports = router;

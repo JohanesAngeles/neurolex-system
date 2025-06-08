@@ -4212,3 +4212,148 @@ exports.deleteDoctor = async (req, res) => {
     });
   }
 };
+
+exports.getAllDoctors = async (req, res) => {
+  try {
+    console.log('Admin getting all doctors');
+    
+    const { page = 1, limit = 10, tenantId, status, search } = req.query;
+    
+    // If multi-tenant enabled, search across tenants
+    if (process.env.ENABLE_MULTI_TENANT === 'true') {
+      const masterConn = getMasterConnection();
+      if (!masterConn) {
+        throw new Error('Failed to connect to master database');
+      }
+      
+      const Tenant = masterConn.model('Tenant');
+      
+      let tenantQuery = { active: true };
+      if (tenantId && tenantId !== 'all') {
+        tenantQuery._id = tenantId;
+      }
+      
+      const tenants = await Tenant.find(tenantQuery);
+      let allDoctors = [];
+      
+      for (const tenant of tenants) {
+        try {
+          const tenantConn = await dbManager.connectTenant(tenant._id.toString());
+          if (!tenantConn) {
+            console.warn(`Could not connect to tenant database: ${tenant.name}`);
+            continue;
+          }
+          
+          const User = tenantConn.model('User');
+          
+          // Build doctor query
+          let doctorQuery = { role: 'doctor' };
+          
+          // Add status filter
+          if (status && status !== 'all') {
+            doctorQuery.verificationStatus = status;
+          }
+          
+          // Add search filter
+          if (search) {
+            doctorQuery.$or = [
+              { firstName: { $regex: search, $options: 'i' } },
+              { lastName: { $regex: search, $options: 'i' } },
+              { email: { $regex: search, $options: 'i' } },
+              { specialty: { $regex: search, $options: 'i' } }
+            ];
+          }
+          
+          const doctors = await User.find(doctorQuery)
+            .select('-password -resetToken -resetTokenExpires')
+            .sort({ createdAt: -1 });
+          
+          // Add tenant information to each doctor
+          const doctorsWithTenant = doctors.map(doctor => {
+            const doctorObj = doctor.toObject();
+            doctorObj.tenantId = tenant._id;
+            doctorObj.tenantName = tenant.name;
+            return doctorObj;
+          });
+          
+          allDoctors = [...allDoctors, ...doctorsWithTenant];
+        } catch (error) {
+          console.error(`Error fetching doctors from tenant ${tenant.name}:`, error);
+          // Continue with other tenants even if one fails
+        }
+      }
+      
+      // Sort all doctors by creation date
+      allDoctors.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      
+      // Apply pagination
+      const startIndex = (page - 1) * limit;
+      const endIndex = page * limit;
+      const paginatedDoctors = allDoctors.slice(startIndex, endIndex);
+      
+      return res.json({
+        success: true,
+        data: paginatedDoctors,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: allDoctors.length,
+          pages: Math.ceil(allDoctors.length / limit)
+        },
+        searchInfo: {
+          searchedTenants: tenants.length,
+          totalDoctorsFound: allDoctors.length
+        }
+      });
+    } else {
+      // Single tenant mode
+      const User = require('../models/User');
+      
+      // Build doctor query
+      let doctorQuery = { role: 'doctor' };
+      
+      // Add status filter
+      if (status && status !== 'all') {
+        doctorQuery.verificationStatus = status;
+      }
+      
+      // Add search filter
+      if (search) {
+        doctorQuery.$or = [
+          { firstName: { $regex: search, $options: 'i' } },
+          { lastName: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } },
+          { specialty: { $regex: search, $options: 'i' } }
+        ];
+      }
+      
+      // Get total count for pagination
+      const total = await User.countDocuments(doctorQuery);
+      
+      // Get doctors with pagination
+      const doctors = await User.find(doctorQuery)
+        .select('-password -resetToken -resetTokenExpires')
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(parseInt(limit));
+      
+      return res.json({
+        success: true,
+        data: doctors,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          pages: Math.ceil(total / limit)
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error getting all doctors:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch doctors',
+      error: error.message
+    });
+  }
+};
