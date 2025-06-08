@@ -20,7 +20,9 @@
 .mood-distribution-section {
   margin-bottom: 32px;
   position: relative;
+  max-width: 100%;
 }
+
 
 .mood-distribution-section h2 {
   font-family: 'Poppins', sans-serif;

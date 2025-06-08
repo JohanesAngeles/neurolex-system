@@ -663,4 +663,21 @@ input::placeholder {
   text-align: center;
 }
 
+.professional-registration-right {
+  padding-top: 40px;
+}
+form-group.checkbox label {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  background-image: none !important;
+}
+
+
+
+/* Remove any potential dropdown styling */
+.form-group.checkbox label:after {
+  border: none !important;
+  background: none !important;
+}
 

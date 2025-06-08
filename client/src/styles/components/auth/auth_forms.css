@@ -190,3 +190,10 @@
   .text-link:hover {
     text-decoration: underline;
   }
+  .text-link:hover {
+  text-decoration: underline;
+}
+
+.auth-link {
+  padding-top: 20px;
+}
