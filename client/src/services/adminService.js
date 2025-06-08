@@ -711,7 +711,80 @@ verifyDoctor: async (doctorId, verificationData, tenantId = null) => {
   }
 },
 
-  
+addDoctor: async (doctorData) => {
+  try {
+    console.log('adminService.addDoctor called with data:', doctorData);
+    
+    // Ensure the doctor is marked as admin-added and auto-approved
+    const submissionData = {
+      ...doctorData,
+      role: 'doctor',
+      verificationStatus: 'approved',
+      verificationDate: new Date().toISOString(),
+      isAdminAdded: true,
+      verificationNotes: doctorData.verificationNotes || 'Added by admin - automatically approved'
+    };
+    
+    console.log('Submitting admin doctor data:', submissionData);
+    
+    // Use the admin endpoint for adding doctors
+    const response = await api.post('/admin/doctors', submissionData);
+    
+    console.log('✅ Admin addDoctor response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('❌ Error adding doctor via admin:', error);
+    throw error;
+  }
+},
+
+// Update doctor (admin function)
+updateDoctor: async (doctorId, doctorData, tenantId = null) => {
+  try {
+    console.log(`adminService.updateDoctor called for ID: ${doctorId}, Tenant ID: ${tenantId || 'not specified'}`);
+    
+    // Prepare query parameters
+    const params = {};
+    if (tenantId) {
+      params.tenantId = tenantId;
+    }
+    
+    const response = await api.put(`/admin/doctors/${doctorId}`, doctorData, { 
+      params 
+    });
+    
+    console.log('updateDoctor response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('adminService.updateDoctor error:', error);
+    throw error;
+  }
+},
+
+// Delete doctor (admin function)
+deleteDoctor: async (doctorId, tenantId = null) => {
+  try {
+    console.log(`adminService.deleteDoctor called for ID: ${doctorId}, Tenant ID: ${tenantId || 'not specified'}`);
+    
+    // Prepare query parameters
+    const params = {};
+    if (tenantId) {
+      params.tenantId = tenantId;
+    }
+    
+    const response = await api.delete(`/admin/doctors/${doctorId}`, { 
+      params 
+    });
+    
+    console.log('deleteDoctor response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('adminService.deleteDoctor error:', error);
+    throw error;
+  }
+},
+
+
   // ===== SYSTEM SETTINGS AND ANALYTICS =====
   
   // Get system metrics (for advanced reports and analytics)

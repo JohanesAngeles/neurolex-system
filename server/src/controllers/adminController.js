@@ -3893,3 +3893,322 @@ exports.assignTemplate = async (req, res) => {
     });
   }
 };
+
+
+// ===== ADMIN DOCTOR MANAGEMENT FUNCTIONS =====
+
+// POST /api/admin/doctors - Add new doctor (admin function)
+exports.addDoctor = async (req, res) => {
+  try {
+    console.log('🔄 Admin adding doctor:', req.body);
+    
+    const {
+      tenantId,
+      firstName,
+      lastName,
+      email,
+      password,
+      personalContactNumber,
+      clinicLocation,
+      clinicContactNumber,
+      specialty,
+      title,
+      areasOfExpertise,
+      experience,
+      licenseNumber,
+      licenseIssuingAuthority,
+      licenseExpiryDate,
+      education,
+      verificationNotes,
+      role = 'doctor'
+    } = req.body;
+
+    // Validate required fields
+    if (!tenantId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tenant ID is required'
+      });
+    }
+
+    if (!firstName || !lastName || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'First name, last name, email, and password are required'
+      });
+    }
+
+    if (!specialty || !experience) {
+      return res.status(400).json({
+        success: false,
+        message: 'Specialty and experience are required'
+      });
+    }
+
+    if (!licenseNumber || !licenseIssuingAuthority) {
+      return res.status(400).json({
+        success: false,
+        message: 'License number and issuing authority are required'
+      });
+    }
+
+    // Connect to the specific tenant database
+    const tenantConn = await dbManager.connectTenant(tenantId);
+    if (!tenantConn) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to connect to tenant database'
+      });
+    }
+
+    // Get User model from tenant connection
+    const User = tenantConn.model('User');
+
+    // Check if user already exists in this tenant
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'A user with this email already exists in this clinic'
+      });
+    }
+
+    // Hash password
+    const saltRounds = 12;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    // Prepare user data
+    const userData = {
+      firstName,
+      lastName,
+      email: email.toLowerCase(),
+      password: hashedPassword,
+      role,
+      tenantId,
+      
+      // Contact information
+      personalContactNumber,
+      clinicLocation,
+      clinicContactNumber,
+      
+      // Professional information
+      specialty,
+      specialization: specialty, // For compatibility
+      title,
+      areasOfExpertise,
+      experience,
+      
+      // License information
+      licenseNumber,
+      licenseIssuingAuthority,
+      licenseExpiryDate: licenseExpiryDate ? new Date(licenseExpiryDate) : null,
+      
+      // Education (simple text format for admin-added doctors)
+      education: education ? [{ degree: education, institution: '', year: '' }] : [],
+      
+      // Verification status - AUTO APPROVED for admin-added doctors
+      verificationStatus: 'approved',
+      verificationDate: new Date(),
+      verificationNotes: verificationNotes || 'Added by admin - automatically approved',
+      isAdminAdded: true,
+      isVerified: true,
+      
+      // Account status
+      accountStatus: 'active',
+      isEmailVerified: true, // Skip email verification for admin-added doctors
+      
+      // Timestamps
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    console.log('🔄 Creating doctor with data:', userData);
+
+    // Create the user
+    const newDoctor = new User(userData);
+    await newDoctor.save();
+
+    console.log('✅ Doctor created successfully:', newDoctor._id);
+
+    // Remove password from response
+    const responseDoctor = newDoctor.toObject();
+    delete responseDoctor.password;
+
+    // Log admin action
+    console.log(`✅ Admin ${req.user?.email} added doctor: ${email}`);
+
+    res.status(201).json({
+      success: true,
+      message: 'Doctor added and approved successfully',
+      data: responseDoctor
+    });
+
+  } catch (error) {
+    console.error('❌ Error adding doctor:', error);
+    
+    // Handle duplicate key error
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      return res.status(400).json({
+        success: false,
+        message: `A doctor with this ${field} already exists`
+      });
+    }
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: validationErrors
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error while adding doctor',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// PUT /api/admin/doctors/:id - Update doctor (admin function)
+exports.updateDoctor = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { tenantId } = req.query;
+    const updateData = req.body;
+
+    console.log(`🔄 Admin updating doctor ${id}:`, updateData);
+
+    if (!tenantId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tenant ID is required'
+      });
+    }
+
+    // Connect to the specific tenant database
+    const tenantConn = await dbManager.connectTenant(tenantId);
+    if (!tenantConn) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to connect to tenant database'
+      });
+    }
+
+    // Get User model from tenant connection
+    const User = tenantConn.model('User');
+
+    // Find the doctor
+    const doctor = await User.findOne({ _id: id, role: 'doctor' });
+    if (!doctor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Doctor not found'
+      });
+    }
+
+    // Hash new password if provided
+    if (updateData.password) {
+      const saltRounds = 12;
+      updateData.password = await bcrypt.hash(updateData.password, saltRounds);
+    }
+
+    // Update timestamps
+    updateData.updatedAt = new Date();
+
+    // Update the doctor
+    const updatedDoctor = await User.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    console.log('✅ Doctor updated successfully:', updatedDoctor._id);
+
+    res.json({
+      success: true,
+      message: 'Doctor updated successfully',
+      data: updatedDoctor
+    });
+
+  } catch (error) {
+    console.error('❌ Error updating doctor:', error);
+    
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: validationErrors
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error while updating doctor'
+    });
+  }
+};
+
+// DELETE /api/admin/doctors/:id - Delete doctor (admin function)
+exports.deleteDoctor = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { tenantId } = req.query;
+
+    console.log(`🔄 Admin deleting doctor ${id}, tenant: ${tenantId || 'any'}`);
+
+    if (!tenantId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tenant ID is required'
+      });
+    }
+
+    // Connect to the specific tenant database
+    const tenantConn = await dbManager.connectTenant(tenantId);
+    if (!tenantConn) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to connect to tenant database'
+      });
+    }
+
+    // Get User model from tenant connection
+    const User = tenantConn.model('User');
+
+    // Find and delete the doctor
+    const deletedDoctor = await User.findOneAndDelete({ 
+      _id: id, 
+      role: 'doctor' 
+    });
+    
+    if (!deletedDoctor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Doctor not found'
+      });
+    }
+
+    console.log('✅ Doctor deleted successfully:', deletedDoctor._id);
+
+    // Log admin action
+    console.log(`✅ Admin ${req.user?.email} deleted doctor: ${deletedDoctor.email}`);
+
+    res.json({
+      success: true,
+      message: 'Doctor deleted successfully',
+      data: { deletedId: deletedDoctor._id }
+    });
+
+  } catch (error) {
+    console.error('❌ Error deleting doctor:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error while deleting doctor'
+    });
+  }
+};

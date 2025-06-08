@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom'; // 🆕 ADDED
+import { useNavigate } from 'react-router-dom';
 import { 
   Tab, Tabs, Box, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField,
   Select, MenuItem, FormControl, InputLabel, FormHelperText, CircularProgress,
@@ -7,11 +7,12 @@ import {
 } from '@mui/material';
 import { toast } from 'react-toastify';
 import adminService from '../../services/adminService';
+import AddDoctorModal from './AddDoctorModal'; // 🆕 NEW IMPORT
 import '../../styles/components/admin/AdminLayout.css';
 import '../../styles/components/admin/UserManagement.css';
-import '../../styles/components/admin/ProfessionalVerification.css'; // Add this import
+import '../../styles/components/admin/ProfessionalVerification.css';
 
-// Import icons from assets (adjust these paths based on your project structure)
+// Import icons from assets
 import PlusIcon from '../../assets/icons/appointment_icon.svg';
 import SearchIcon from '../../assets/icons/search_icon.svg';
 import EditIcon from '../../assets/icons/edit_icon.svg';
@@ -20,8 +21,6 @@ import EyeIcon from '../../assets/icons/view_icon.svg';
 import DownloadIcon from '../../assets/icons/appointment_icon.svg';
 import CheckCircleIcon from '../../assets/icons/view_icon.svg';
 import XCircleIcon from '../../assets/icons/DoctorManagement_Icon.svg';
-//import LocalHospitalIcon from '../../assets/icons/LocalHospital.svg';
-//import ArrowBackIcon from '../../assets/icons/arrow_back.svg';
 
 // Tab panel component
 function TabPanel(props) {
@@ -53,7 +52,7 @@ function a11yProps(index) {
 }
 
 const ProfessionalVerification = () => {
-  const navigate = useNavigate(); // 🆕 ADDED
+  const navigate = useNavigate();
   
   // State variables
   const [pendingDoctors, setPendingDoctors] = useState([]);
@@ -71,6 +70,7 @@ const ProfessionalVerification = () => {
   // Modals
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [showAddDoctorModal, setShowAddDoctorModal] = useState(false); // 🆕 NEW STATE
   const [approving, setApproving] = useState(false);
   
   // Form fields
@@ -91,7 +91,7 @@ const ProfessionalVerification = () => {
   const [tabTotalPages, setTabTotalPages] = useState(1);
   const [approvedTotalPages, setApprovedTotalPages] = useState(1);
   
-  // Available specializations (you can fetch this from your API if available)
+  // Available specializations
   const specializations = [
     'Psychiatrist',
     'Psychologist',
@@ -152,13 +152,10 @@ const ProfessionalVerification = () => {
     } catch (error) {
       console.error('Error loading verification data:', error);
       
-      // Improved error handling
       if (error.response) {
         const status = error.response.status;
         if (status === 401) {
           toast.error('Session expired. Please log in again.');
-          // Optional: Redirect to login page
-          // window.location.href = '/login';
         } else if (status === 403) {
           toast.error('You do not have permission to access this page.');
         } else {
@@ -174,21 +171,18 @@ const ProfessionalVerification = () => {
   
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
-    setCurrentTabPage(1); // Reset to first page when changing tabs
+    setCurrentTabPage(1);
   };
   
-  // 🆕 UPDATED: Now navigates to the new route instead of opening modal
   const viewDoctorDetails = (doctorId, tenantId) => {
     console.log('🔍 Navigating to doctor details:', doctorId);
     navigate(`/admin/professionals/${doctorId}`);
   };
 
-
-
   const handleEditDoctor = (doctorId, tenantId) => {
-  console.log('🔧 Navigating to edit doctor:', doctorId);
-  navigate(`/admin/professionals/${doctorId}/edit`);
-};
+    console.log('🔧 Navigating to edit doctor:', doctorId);
+    navigate(`/admin/professionals/${doctorId}/edit`);
+  };
   
   const openVerifyModal = (doctor) => {
     setCurrentDoctor(doctor);
@@ -203,7 +197,6 @@ const ProfessionalVerification = () => {
     e.preventDefault();
     setFormError('');
     
-    // Validate form
     if (verificationStatus === 'rejected' && !rejectionReason.trim()) {
       setFormError('Rejection reason is required');
       return;
@@ -212,7 +205,6 @@ const ProfessionalVerification = () => {
     setApproving(true);
     
     try {
-      // Create verification data
       const verificationData = {
         verificationStatus,
         verificationNotes,
@@ -225,22 +217,18 @@ const ProfessionalVerification = () => {
         tenantId: currentDoctor.tenantId || null
       });
       
-      // Get the tenant ID from the doctor object
       const tenantId = currentDoctor.tenantId || null;
       
-      // Submit verification with tenant ID
       await adminService.verifyDoctor(currentDoctor._id, verificationData, tenantId);
       
       toast.success(`Doctor ${verificationStatus === 'approved' ? 'approved' : 'rejected'} successfully`);
       setShowVerifyModal(false);
       
-      // Reload data to update lists
       loadData();
       
     } catch (error) {
       console.error('Error verifying doctor:', error);
       
-      // Show more descriptive error message
       if (error.response) {
         const status = error.response.status;
         if (status === 404) {
@@ -298,11 +286,16 @@ const ProfessionalVerification = () => {
     setCurrentApprovedPage(pageNumber);
   };
   
-  // Handle add new doctor (you can implement this later)
+  // 🆕 UPDATED: Handle add new doctor
   const handleAddDoctor = () => {
-    // Navigate to add doctor page
-    // For now, we'll just log
-    console.log('Add new doctor clicked');
+    console.log('Opening Add Doctor modal');
+    setShowAddDoctorModal(true);
+  };
+
+  // 🆕 NEW: Handle when a doctor is successfully added
+  const handleDoctorAdded = () => {
+    console.log('Doctor added successfully, refreshing data...');
+    loadData(); // Refresh the data to show the new doctor
   };
   
   if (loading && !pendingDoctors.length && !approvedDoctors.length && !rejectedDoctors.length) {
@@ -420,7 +413,6 @@ const ProfessionalVerification = () => {
             </div>
           )}
           
-          {/* Pagination for Pending tab */}
           {tabTotalPages > 1 && (
             <Stack spacing={2} sx={{ mt: 3, display: 'flex', alignItems: 'center' }}>
               <Pagination 
@@ -495,7 +487,6 @@ const ProfessionalVerification = () => {
             </div>
           )}
           
-          {/* Pagination for Rejected tab */}
           {tabTotalPages > 1 && (
             <Stack spacing={2} sx={{ mt: 3, display: 'flex', alignItems: 'center' }}>
               <Pagination 
@@ -515,7 +506,6 @@ const ProfessionalVerification = () => {
         
         {/* Search and Filter Bar */}
         <div className="admin-actions-bar">
-          {/* Top row with search and add button */}
           <div className="top-actions-row">
             <div className="search-box">
               <img src={SearchIcon} alt="Search" className="search-icon" />
@@ -532,10 +522,8 @@ const ProfessionalVerification = () => {
             </button>
           </div>
           
-          {/* Bottom row with filters */}
           <div className="bottom-actions-row">
             <div className="filter-box">
-              {/* Status Filter */}
               <div className="filter-item">
                 <label htmlFor="status-filter">Status:</label>
                 <select 
@@ -549,7 +537,6 @@ const ProfessionalVerification = () => {
                 </select>
               </div>
               
-              {/* Specialization Filter */}
               <div className="filter-item">
                 <label htmlFor="specialization-filter">Specialization:</label>
                 <select 
@@ -632,13 +619,13 @@ const ProfessionalVerification = () => {
                           alt="View"
                         />
                         <img 
-                            src={EditIcon} 
-                            className="action-icon edit" 
-                            onClick={() => handleEditDoctor(doctor._id, doctor.tenantId)}
-                            title="Edit Doctor" 
-                            alt="Edit"
-                            style={{ cursor: 'pointer' }}
-                          />
+                          src={EditIcon} 
+                          className="action-icon edit" 
+                          onClick={() => handleEditDoctor(doctor._id, doctor.tenantId)}
+                          title="Edit Doctor" 
+                          alt="Edit"
+                          style={{ cursor: 'pointer' }}
+                        />
                         <img 
                           src={TrashIcon} 
                           className="action-icon delete" 
@@ -654,7 +641,6 @@ const ProfessionalVerification = () => {
           </div>
         )}
         
-        {/* Pagination for Approved Doctors */}
         {approvedTotalPages > 1 && (
           <Stack spacing={2} sx={{ mt: 3, display: 'flex', alignItems: 'center' }}>
             <Pagination 
@@ -666,132 +652,6 @@ const ProfessionalVerification = () => {
           </Stack>
         )}
       </div>
-      
-      {/* Doctor Details Dialog */}
-      <Dialog
-        open={showDetailsModal}
-        onClose={() => setShowDetailsModal(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>Doctor Details</DialogTitle>
-        <DialogContent>
-          {currentDoctor && (
-            <Box sx={{ pt: 1 }}>
-              <div className="doctor-profile-header">
-                <div className="doctor-info">
-                  <h3>{currentDoctor.firstName} {currentDoctor.lastName}</h3>
-                  <p className="doctor-email">{currentDoctor.email}</p>
-                  <span className={`status-badge ${getStatusColor(currentDoctor.verificationStatus)}`}>
-                    {getStatusDisplayText(currentDoctor.verificationStatus)}
-                  </span>
-                </div>
-                <div className="doctor-avatar">
-                  {currentDoctor.profilePicture ? (
-                    <img 
-                      src={currentDoctor.profilePicture} 
-                      alt={`${currentDoctor.firstName} ${currentDoctor.lastName}`}
-                    />
-                  ) : (
-                    <div className="user-initials large">
-                      {currentDoctor.firstName?.[0]}{currentDoctor.lastName?.[0]}
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              <div className="info-section">
-                <h4>Professional Information</h4>
-                <div className="info-grid">
-                  <div className="info-item">
-                    <strong>Title:</strong> {currentDoctor.title || 'Not provided'}
-                  </div>
-                  <div className="info-item">
-                    <strong>Specialization:</strong> {currentDoctor.specialization || 'Not provided'}
-                  </div>
-                  <div className="info-item">
-                    <strong>Years of Experience:</strong> {currentDoctor.yearsOfExperience || 'Not provided'}
-                  </div>
-                  <div className="info-item">
-                    <strong>Practice Address:</strong> {currentDoctor.practiceAddress || 'Not provided'}
-                  </div>
-                  <div className="info-item">
-                    <strong>Languages:</strong> {currentDoctor.languages && currentDoctor.languages.length ? currentDoctor.languages.join(', ') : 'Not provided'}
-                  </div>
-                  <div className="info-item">
-                    <strong>Available for Emergency:</strong> {currentDoctor.availableForEmergency ? 'Yes' : 'No'}
-                  </div>
-                </div>
-              </div>
-              
-              <div className="info-section">
-                <h4>License Information</h4>
-                <div className="info-grid">
-                  <div className="info-item">
-                    <strong>License Number:</strong> {currentDoctor.licenseNumber || 'Not provided'}
-                  </div>
-                  <div className="info-item">
-                    <strong>Issuing Authority:</strong> {currentDoctor.licenseIssuingAuthority || 'Not provided'}
-                  </div>
-                  <div className="info-item">
-                    <strong>Expiry Date:</strong> {formatDate(currentDoctor.licenseExpiryDate) || 'Not provided'}
-                  </div>
-                  {currentDoctor.licenseDocumentUrl && (
-                    <div className="info-item">
-                      <Button 
-                        variant="outlined"
-                        size="small"
-                        href={currentDoctor.licenseDocumentUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        sx={{ mt: 1 }}
-                      >
-                        View License Document
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              <div className="info-section">
-                <h4>Bio</h4>
-                <p className="doctor-bio">{currentDoctor.bio || 'No bio provided'}</p>
-              </div>
-              
-              {currentDoctor.verificationStatus === 'rejected' && (
-                <Box sx={{ bgcolor: '#FFEBEE', p: 2, borderLeft: '4px solid #F44336', borderRadius: 1, mt: 2 }}>
-                  <strong>Rejection Reason:</strong> 
-                  <p>{currentDoctor.rejectionReason || 'No reason provided'}</p>
-                </Box>
-              )}
-              
-              {currentDoctor.verificationNotes && (
-                <Box sx={{ bgcolor: '#E3F2FD', p: 2, borderLeft: '4px solid #2196F3', borderRadius: 1, mt: 2 }}>
-                  <strong>Verification Notes:</strong>
-                  <p>{currentDoctor.verificationNotes}</p>
-                </Box>
-              )}
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          {currentDoctor && (currentDoctor.verificationStatus === 'pending' || !currentDoctor.verificationStatus) && (
-            <Button 
-              color="primary" 
-              variant="contained"
-              onClick={() => {
-                setShowDetailsModal(false);
-                openVerifyModal(currentDoctor);
-              }}
-            >
-              Verify Now
-            </Button>
-          )}
-          <Button onClick={() => setShowDetailsModal(false)} color="inherit">
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
       
       {/* Verification Dialog */}
       <Dialog
@@ -875,6 +735,13 @@ const ProfessionalVerification = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* 🆕 Add Doctor Modal */}
+      <AddDoctorModal
+        isOpen={showAddDoctorModal}
+        onClose={() => setShowAddDoctorModal(false)}
+        onDoctorAdded={handleDoctorAdded}
+      />
     </div>
   );
 };
