@@ -387,28 +387,27 @@ const loadPatientsWithProfile = async (profile) => {
         </div>
       )}
 
-      {/* Sidebar Container - includes header and conversations */}
+      {/* Sidebar Container - simplified with integrated header */}
       <div className="sidebar-container">
-        {/* Header - now only for sidebar */}
+        {/* Combined Header with Search */}
         <div className="messages-header">
-          <div className="header-left">
-            <h1 className="messages-title">Messages</h1>
-            <p className="messages-subtitle">
-              Communicate securely with your patients through {platformName}
-            </p>
-          </div>
-          <div className="header-stats">
-            <div className="stat-item">
-              <span className="stat-number">{patients.length}</span>
-              <span className="stat-label">Patients</span>
+          <div className="header-top">
+            <div className="header-left">
+              <h1 className="messages-title">Messages</h1>
+              <p className="messages-subtitle">
+                Communicate securely with your patients through {platformName}
+              </p>
+            </div>
+            <div className="header-stats">
+              <div className="stat-item">
+                <span className="stat-number">{patients.length}</span>
+                <span className="stat-label">Patients</span>
+              </div>
             </div>
           </div>
-        </div>
-
-        {/* Conversations Sidebar */}
-        <div className="conversations-sidebar">
-          <div className="sidebar-header">
-            <h3 className="sidebar-title">Conversations</h3>
+          
+          <div className="header-search">
+            <h3 className="conversations-title">Conversations</h3>
             <div className="search-container">
               <input
                 type="text"
@@ -419,60 +418,61 @@ const loadPatientsWithProfile = async (profile) => {
               />
             </div>
           </div>
-          
-          <div className="conversations-list">
-            {filteredPatients.length === 0 ? (
-              <div className="no-patients">
-                <p className="no-patients-text">
-                  {searchTerm ? 'No patients found matching your search.' : 'No patients with appointments found.'}
+        </div>
+
+        {/* Conversations List - directly under header */}
+        <div className="conversations-list">
+          {filteredPatients.length === 0 ? (
+            <div className="no-patients">
+              <p className="no-patients-text">
+                {searchTerm ? 'No patients found matching your search.' : 'No patients with appointments found.'}
+              </p>
+              {!searchTerm && (
+                <p className="no-patients-subtitle">
+                  Patients will appear here after they book appointments with you.
                 </p>
-                {!searchTerm && (
-                  <p className="no-patients-subtitle">
-                    Patients will appear here after they book appointments with you.
-                  </p>
-                )}
-              </div>
-            ) : (
-              filteredPatients.map((patient) => (
-                <div
-                  key={patient._id}
-                  className={`conversation-item ${selectedPatient?._id === patient._id ? 'selected' : ''}`}
-                  onClick={() => selectPatient(patient)}
-                >
-                  <div className="conversation-avatar">
-                    {patient.profilePicture ? (
-                      <img src={patient.profilePicture} alt={`${patient.firstName} ${patient.lastName}`} />
-                    ) : (
-                      <div className="avatar-initials">{getPatientInitials(patient)}</div>
-                    )}
-                    <div className="online-indicator"></div>
-                  </div>
-                  <div className="conversation-info">
-                    <div className="conversation-header">
-                      <div className="patient-name">
-                        {patient.firstName} {patient.lastName}
-                      </div>
-                      <div className="last-message-time">
-                        {patient.lastAppointment ? formatMessageTime(patient.lastAppointment) : 'New'}
-                      </div>
+              )}
+            </div>
+          ) : (
+            filteredPatients.map((patient) => (
+              <div
+                key={patient._id}
+                className={`conversation-item ${selectedPatient?._id === patient._id ? 'selected' : ''}`}
+                onClick={() => selectPatient(patient)}
+              >
+                <div className="conversation-avatar">
+                  {patient.profilePicture ? (
+                    <img src={patient.profilePicture} alt={`${patient.firstName} ${patient.lastName}`} />
+                  ) : (
+                    <div className="avatar-initials">{getPatientInitials(patient)}</div>
+                  )}
+                  <div className="online-indicator"></div>
+                </div>
+                <div className="conversation-info">
+                  <div className="conversation-header">
+                    <div className="patient-name">
+                      {patient.firstName} {patient.lastName}
                     </div>
-                    <div className="conversation-preview">
-                      <span className="appointment-count">
-                        {patient.appointmentCount} appointment{patient.appointmentCount !== 1 ? 's' : ''}
-                      </span>
+                    <div className="last-message-time">
+                      {patient.lastAppointment ? formatMessageTime(patient.lastAppointment) : 'New'}
                     </div>
                   </div>
-                  <div className="conversation-badge">
-                    <div className="unread-count">●</div>
+                  <div className="conversation-preview">
+                    <span className="appointment-count">
+                      {patient.appointmentCount} appointment{patient.appointmentCount !== 1 ? 's' : ''}
+                    </span>
                   </div>
                 </div>
-              ))
-            )}
-          </div>
+                <div className="conversation-badge">
+                  <div className="unread-count">●</div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
-      {/* Chat Area - starts from top */}
+      {/* Chat Area */}
       <div className="chat-area">
         {selectedPatient ? (
           <>

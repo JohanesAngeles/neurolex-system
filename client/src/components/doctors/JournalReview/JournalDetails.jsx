@@ -202,41 +202,78 @@ const JournalEntryDetail = () => {
       let analysisData = null;
       
       if (response.data && response.data.success === true) {
-        if (response.data.data && response.data.data.sentimentAnalysis) {
+        // ✅ FIXED: Check for the correct data structure
+        if (response.data.data && response.data.data.analysis) {
+          // New backend format: data.analysis
+          analysisData = response.data.data.analysis;
+          console.log('Found analysis in data.analysis:', analysisData);
+        } else if (response.data.data && response.data.data.sentimentAnalysis) {
+          // Legacy format: data.sentimentAnalysis
           analysisData = response.data.data.sentimentAnalysis;
+          console.log('Found analysis in data.sentimentAnalysis:', analysisData);
         } else if (response.data.aiAnalysis) {
+          // Alternative format: aiAnalysis
           analysisData = response.data.aiAnalysis;
+          console.log('Found analysis in aiAnalysis:', analysisData);
         } else if (response.data.data) {
+          // Fallback: use data directly
           analysisData = response.data.data;
+          console.log('Using data directly:', analysisData);
         } else {
+          // Last resort: use entire response data
           analysisData = response.data;
+          console.log('Using response.data:', analysisData);
         }
       }
       
+      console.log('Final analysisData:', analysisData);
+      
       if (analysisData) {
+        // ✅ FIXED: Set AI analysis with proper data structure
         setAiAnalysis({
-          ...analysisData,
-          highlights: analysisData.highlights || 
-                    (response.data.data?.sentimentAnalysis?.highlights) ||
-                    (response.data.aiAnalysis?.highlights) || []
+          sentiment: analysisData.sentiment || { type: 'neutral', score: 0.5 },
+          emotions: analysisData.emotions || [],
+          insights: analysisData.insights || [],
+          recommendedActions: analysisData.recommendedActions || [],
+          highlights: analysisData.highlights || [],
+          keywords: analysisData.keywords || []
         });
         
+        // ✅ FIXED: Update the form fields with the analysis results
         setAnalysis(prev => {
           const updatedAnalysis = { ...prev };
           
+          // Set sentiment
           if (analysisData.sentiment && analysisData.sentiment.type) {
             updatedAnalysis.sentiment = analysisData.sentiment.type;
           }
           
+          // Set emotions
           if (analysisData.emotions && Array.isArray(analysisData.emotions)) {
             updatedAnalysis.emotions = analysisData.emotions.map(e => 
-              typeof e === 'object' ? e.name : e
+              typeof e === 'object' ? (e.name || e.label || e) : e
             );
+          }
+          
+          // Set notes from insights
+          if (analysisData.insights && Array.isArray(analysisData.insights)) {
+            updatedAnalysis.notes = analysisData.insights.join('\n');
+          }
+          
+          // Set flags from recommendedActions
+          if (analysisData.recommendedActions && Array.isArray(analysisData.recommendedActions)) {
+            updatedAnalysis.flags = ['progress']; // Default flag when AI analysis is complete
           }
           
           console.log('Updated analysis state:', updatedAnalysis);
           return updatedAnalysis;
         });
+        
+        // ✅ SUCCESS MESSAGE
+        setError(null);
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3000);
+        
       } else {
         throw new Error('Could not extract analysis data from response');
       }
