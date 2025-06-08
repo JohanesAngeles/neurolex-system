@@ -1103,8 +1103,69 @@ getIndividualPatientMoodAnalytics: async (patientId, days = 7, tenantId = null) 
     };
   }
 },
-};
 
+getIndividualPatientJournalEntries: async (patientId, days = 30, tenantId = null) => {
+  try {
+    console.log(`🔍 ADMIN: Fetching journal entries for patient: ${patientId} (${days} days) - ALL TENANTS`);
+    
+    // Get authentication token
+    const adminToken = localStorage.getItem('adminToken');
+    if (!adminToken) {
+      throw new Error('Admin authentication required');
+    }
+    
+    // ✅ Use the ADMIN endpoint that searches all tenants
+    const response = await api.get(`/admin/journal/user/${patientId}`, {
+      params: { 
+        days: days,
+        limit: 100
+      },
+      headers: {
+        'Authorization': `Bearer ${adminToken}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: 15000
+    });
+    
+    console.log('✅ ADMIN journal response (all tenants):', response.data);
+    console.log('📊 ADMIN journal entries count:', response.data?.data?.length || 0);
+    console.log('🏢 ADMIN searched sources:', response.data?.searchInfo?.searchedSources);
+    
+    // Process the raw journal data into structured format
+    let journalEntries = [];
+    
+    if (response.data && response.data.success && Array.isArray(response.data.data)) {
+      journalEntries = response.data.data;
+      console.log('📝 ADMIN: Processing journal data from all tenants');
+    } else if (Array.isArray(response.data)) {
+      journalEntries = response.data;
+    }
+    
+    console.log('📊 ADMIN processing journal entries:', journalEntries.length, 'entries found across all tenants');
+    
+    // Transform raw journal data into analytics format using the helper function
+    const analyticsData = processJournalDataToAnalytics(journalEntries, days);
+    
+    console.log('📈 ADMIN journal analytics data generated:', analyticsData);
+    
+    return {
+      success: true,
+      data: analyticsData
+    };
+    
+  } catch (error) {
+    console.error(`❌ ADMIN Error fetching journal entries for patient ${patientId}:`, error);
+    
+    // Return empty result instead of throwing to prevent UI crash
+    return {
+      success: false,
+      data: null,
+      error: error.message
+    };
+  }
+},
+
+};
 
 
 // Helper function to process mood data (same as doctor service)
@@ -1195,5 +1256,56 @@ const processMoodDataToAnalytics = (moodEntries, days) => {
     moodHistory: moodEntries.slice(0, 20) // Latest 20 entries
   };
 };
+
+const processJournalDataToAnalytics = (journalEntries, days) => {
+  if (!Array.isArray(journalEntries) || journalEntries.length === 0) {
+    return {
+      entries: [],
+      summary: {
+        totalEntries: 0,
+        averagePerWeek: 0,
+        mostCommonSentiment: 'neutral',
+        totalWords: 0
+      }
+    };
+  }
+
+  // Calculate summary metrics
+  const totalEntries = journalEntries.length;
+  const averagePerWeek = Math.round((totalEntries / days) * 7 * 10) / 10;
+  
+  // Calculate total words
+  const totalWords = journalEntries.reduce((total, entry) => {
+    const content = entry.content || entry.rawText || entry.text || '';
+    return total + content.split(' ').length;
+  }, 0);
+
+  // Calculate most common sentiment
+  const sentimentCounts = {};
+  journalEntries.forEach(entry => {
+    const sentiment = entry.sentiment?.type || entry.sentimentType || 'neutral';
+    sentimentCounts[sentiment] = (sentimentCounts[sentiment] || 0) + 1;
+  });
+
+  const mostCommonSentiment = Object.entries(sentimentCounts).reduce((a, b) => 
+    sentimentCounts[a[0]] > sentimentCounts[b[0]] ? a : b
+  )?.[0] || 'neutral';
+
+  // Sort entries by date (most recent first)
+  const sortedEntries = journalEntries.sort((a, b) => 
+    new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date)
+  );
+
+  return {
+    entries: sortedEntries,
+    summary: {
+      totalEntries,
+      averagePerWeek,
+      mostCommonSentiment,
+      totalWords
+    }
+  };
+};
+
 
 export default adminService;

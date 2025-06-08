@@ -16,13 +16,18 @@ const AdminPatientDetails = () => {
   const [activeTab, setActiveTab] = useState('registration');
   const [tenant, setTenant] = useState(null);
 
-  // 🆕 NEW: Mood check-ins related states
+  // Mood check-ins related states
   const [moodData, setMoodData] = useState(null);
   const [moodLoading, setMoodLoading] = useState(false);
   const [moodError, setMoodError] = useState(null);
   const [selectedDays, setSelectedDays] = useState(7);
 
-  // 🆕 NEW: Mood SVG URLs and colors
+  // 🆕 NEW: Journal related states
+  const [journalData, setJournalData] = useState(null);
+  const [journalLoading, setJournalLoading] = useState(false);
+  const [journalError, setJournalError] = useState(null);
+
+  // Mood SVG URLs and colors
   const moodSvgUrls = {
     great: 'https://res.cloudinary.com/dm7qxemrt/image/upload/v1749199687/Face_Im_Great_anfp2e.svg',
     good: 'https://res.cloudinary.com/dm7qxemrt/image/upload/v1749199687/Face_Im_good_ldcpo4.svg',
@@ -80,7 +85,7 @@ const AdminPatientDetails = () => {
           }
         }
 
-        // Fetch patient details - we need to add this method to adminService
+        // Fetch patient details
         const response = await adminService.getPatientById(id, tenantId);
         
         console.log('🔍 ADMIN PATIENT DETAILS RESPONSE:', response);
@@ -110,7 +115,7 @@ const AdminPatientDetails = () => {
     fetchPatientDetails();
   }, [id, tenantId]);
 
-  // 🆕 NEW: Fetch patient mood data
+  // Fetch patient mood data
   const fetchPatientMoodData = async () => {
     try {
       setMoodLoading(true);
@@ -136,10 +141,43 @@ const AdminPatientDetails = () => {
     }
   };
 
-  // 🆕 NEW: Fetch mood data when tab becomes active or days filter changes
+  // 🆕 NEW: Fetch patient journal data
+  const fetchPatientJournalData = async () => {
+    try {
+      setJournalLoading(true);
+      setJournalError(null);
+      
+      console.log(`🔍 ADMIN: Fetching journal data for patient ${id} (${selectedDays} days)`);
+      
+      const response = await adminService.getIndividualPatientJournalEntries(id, selectedDays, tenantId);
+      
+      if (response.success && response.data) {
+        console.log('✅ ADMIN: Journal data received:', response.data);
+        setJournalData(response.data);
+      } else {
+        console.log('📝 ADMIN: No journal data found');
+        setJournalData(null);
+      }
+    } catch (error) {
+      console.error('❌ ADMIN: Error fetching journal data:', error);
+      setJournalError('Failed to load journal entries');
+      setJournalData(null);
+    } finally {
+      setJournalLoading(false);
+    }
+  };
+
+  // Fetch mood data when tab becomes active or days filter changes
   useEffect(() => {
     if (activeTab === 'mood-checkins' && patient) {
       fetchPatientMoodData();
+    }
+  }, [activeTab, patient, selectedDays]);
+
+  // 🆕 NEW: Fetch journal data when tab becomes active or days filter changes
+  useEffect(() => {
+    if (activeTab === 'journal' && patient) {
+      fetchPatientJournalData();
     }
   }, [activeTab, patient, selectedDays]);
 
@@ -269,6 +307,13 @@ const AdminPatientDetails = () => {
         >
           Mood Check-ins
         </button>
+        {/* 🆕 NEW: Journal tab button */}
+        <button 
+          className={`admin-tab-button ${activeTab === 'journal' ? 'active' : ''}`}
+          onClick={() => setActiveTab('journal')}
+        >
+          Journal Entries
+        </button>
         <button 
           className={`admin-tab-button ${activeTab === 'activity' ? 'active' : ''}`}
           onClick={() => setActiveTab('activity')}
@@ -302,6 +347,18 @@ const AdminPatientDetails = () => {
             fetchPatientMoodData={fetchPatientMoodData}
             moodSvgUrls={moodSvgUrls}
             moodColors={moodColors}
+          />
+        )}
+        {/* 🆕 NEW: Journal tab content */}
+        {activeTab === 'journal' && (
+          <AdminJournalTab 
+            patient={patient}
+            journalData={journalData}
+            journalLoading={journalLoading}
+            journalError={journalError}
+            selectedDays={selectedDays}
+            setSelectedDays={setSelectedDays}
+            fetchPatientJournalData={fetchPatientJournalData}
           />
         )}
         {activeTab === 'activity' && (
@@ -390,7 +447,7 @@ const AdminRegistrationTab = ({ patient, displayValue }) => {
   );
 };
 
-// Onboarding Tab Component (same as doctor side but with admin styling)
+// Onboarding Tab Component
 const AdminOnboardingTab = ({ patient, displayValue }) => {
   return (
     <div className="admin-tab-panel">
@@ -538,7 +595,7 @@ const AdminOnboardingTab = ({ patient, displayValue }) => {
   );
 };
 
-// 🆕 NEW: Admin Mood Check-ins Tab Component
+// Admin Mood Check-ins Tab Component
 const AdminMoodCheckinsTab = ({ 
   patient,
   moodData,
@@ -865,6 +922,425 @@ const AdminMoodCheckinsTab = ({
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// 🆕 NEW: Admin Journal Tab Component
+const AdminJournalTab = ({ 
+  patient,
+  journalData,
+  journalLoading,
+  journalError,
+  selectedDays,
+  setSelectedDays,
+  fetchPatientJournalData
+}) => {
+  // Helper functions
+  const formatDateSafe = (dateString) => {
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (error) {
+      return 'Invalid Date';
+    }
+  };
+
+  const formatTimeSafe = (dateString) => {
+    try {
+      return new Date(dateString).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return 'Invalid Time';
+    }
+  };
+
+  const getSentimentColor = (sentiment) => {
+    const sentimentLower = sentiment?.toLowerCase() || 'neutral';
+    switch (sentimentLower) {
+      case 'positive': return '#4CAF50';
+      case 'negative': return '#F44336';
+      case 'neutral': return '#FFC107';
+      default: return '#FFC107';
+    }
+  };
+
+  const getSentimentEmoji = (sentiment) => {
+    const sentimentLower = sentiment?.toLowerCase() || 'neutral';
+    switch (sentimentLower) {
+      case 'positive': return '😊';
+      case 'negative': return '😔';
+      case 'neutral': return '😐';
+      default: return '😐';
+    }
+  };
+
+  const getMoodEmoji = (mood) => {
+    const moodLower = mood?.toLowerCase() || 'okay';
+    switch (moodLower) {
+      case 'great': return '😄';
+      case 'good': return '😊';
+      case 'okay': return '😐';
+      case 'struggling': return '😟';
+      case 'upset': return '😔';
+      case 'positive': return '😊';
+      case 'negative': return '😔';
+      default: return '😐';
+    }
+  };
+
+  const truncateText = (text, maxLength = 100) => {
+    if (!text) return 'No content available';
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
+  };
+
+  const getEmotionTags = (entry) => {
+    if (!entry.sentiment || !entry.sentiment.emotions) {
+      return [];
+    }
+    
+    return entry.sentiment.emotions.map(emotion => 
+      typeof emotion === 'string' ? emotion : emotion.name
+    ).filter(Boolean);
+  };
+
+  if (journalLoading) {
+    return (
+      <div className="admin-tab-panel">
+        <div className="admin-loading-container">
+          <div className="admin-loading-spinner"></div>
+          <p>Loading journal entries...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (journalError) {
+    return (
+      <div className="admin-tab-panel">
+        <div className="admin-error-container">
+          <div className="admin-error-alert">
+            <span className="admin-error-icon">⚠️</span>
+            <span className="admin-error-message">{journalError}</span>
+          </div>
+          <button className="admin-primary-button" onClick={fetchPatientJournalData}>
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!journalData || !journalData.entries || journalData.entries.length === 0) {
+    return (
+      <div className="admin-tab-panel">
+        <div className="admin-journal-container">
+          {/* Header */}
+          <div className="admin-journal-header">
+            <div className="admin-header-left">
+              <h1>{patient.firstName}'s Journal Entries</h1>
+              <p>Monitor {patient.firstName}'s written reflections and emotional insights over time.</p>
+            </div>
+            <div className="admin-header-right">
+              <div className="admin-time-filter">
+                <label>Show data for</label>
+                <select 
+                  value={selectedDays} 
+                  onChange={(e) => setSelectedDays(parseInt(e.target.value))}
+                  className="admin-days-select"
+                >
+                  <option value={7}>Last 7 days</option>
+                  <option value={14}>Last 14 days</option>
+                  <option value={30}>Last 30 days</option>
+                  <option value={90}>Last 90 days</option>
+                </select>
+              </div>
+              <div className="admin-rainbow-icon">📝</div>
+            </div>
+          </div>
+
+          <div className="admin-empty-state">
+            <h3>No Journal Entries Available</h3>
+            <p>{patient.firstName} hasn't written any journal entries during the selected time period.</p>
+            <p style={{ fontSize: '14px', color: '#666', marginTop: '8px' }}>
+              Journal entries will appear here once {patient.firstName} starts using the journaling feature.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const { entries, summary } = journalData;
+
+  return (
+    <div className="admin-tab-panel">
+      <div className="admin-journal-container">
+        {/* Header */}
+        <div className="admin-journal-header">
+          <div className="admin-header-left">
+            <h1>{patient.firstName}'s Journal Entries</h1>
+            <p>Monitor {patient.firstName}'s written reflections and emotional insights over time.</p>
+          </div>
+          <div className="admin-header-right">
+            <div className="admin-time-filter">
+              <label>Show data for</label>
+              <select 
+                value={selectedDays} 
+                onChange={(e) => setSelectedDays(parseInt(e.target.value))}
+                className="admin-days-select"
+              >
+                <option value={7}>Last 7 days</option>
+                <option value={14}>Last 14 days</option>
+                <option value={30}>Last 30 days</option>
+                <option value={90}>Last 90 days</option>
+              </select>
+            </div>
+            <div className="admin-rainbow-icon">📝</div>
+          </div>
+        </div>
+
+        {/* Summary Metrics */}
+        {summary && (
+          <div className="admin-key-metrics-section">
+            <h2>Journal Summary</h2>
+            <div className="admin-metrics-grid">
+              <div className="admin-metric-card">
+                <h3>Total Entries</h3>
+                <div className="admin-metric-card-inside">
+                  <div className="admin-metric-value">{summary.totalEntries || entries.length}</div>
+                  <div className="admin-metric-label">This Period</div>
+                </div>
+              </div>
+              <div className="admin-metric-card">
+                <h3>Average per Week</h3>
+                <div className="admin-metric-card-inside">
+                  <div className="admin-metric-value">
+                    {summary.averagePerWeek || Math.round((entries.length / selectedDays) * 7 * 10) / 10}
+                  </div>
+                  <div className="admin-metric-label">Entries / week</div>
+                </div>
+              </div>
+              <div className="admin-metric-card">
+                <h3>Most Common Sentiment</h3>
+                <div className="admin-metric-card-inside">
+                  <div className="admin-metric-value" style={{ fontSize: '18px' }}>
+                    {getSentimentEmoji(summary.mostCommonSentiment || 'neutral')}
+                  </div>
+                  <div className="admin-metric-label">
+                    {summary.mostCommonSentiment || 'Neutral'}
+                  </div>
+                </div>
+              </div>
+              <div className="admin-metric-card">
+                <h3>Words Written</h3>
+                <div className="admin-metric-card-inside">
+                  <div className="admin-metric-value">
+                    {summary.totalWords || entries.reduce((total, entry) => 
+                      total + (entry.content ? entry.content.split(' ').length : 0), 0
+                    )}
+                  </div>
+                  <div className="admin-metric-label">Total words</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Journal Entries Table */}
+        <div className="admin-journal-entries-section">
+          <h2>Journal Entries History</h2>
+          
+          <div className="admin-appointments-table">
+            {/* Table Header */}
+            <div className="admin-table-header">
+              <div className="admin-header-cell">Date</div>
+              <div className="admin-header-cell">Time</div>
+              <div className="admin-header-cell">Title</div>
+              <div className="admin-header-cell">Sentiment</div>
+              <div className="admin-header-cell">Mood</div>
+              <div className="admin-header-cell">Preview</div>
+              <div className="admin-header-cell">Emotions</div>
+              <div className="admin-header-cell">Actions</div>
+            </div>
+
+            {/* Table Rows */}
+            {entries.map((entry, index) => {
+              const sentimentType = entry.sentiment?.type || entry.sentimentType || 'neutral';
+              const sentimentLabel = sentimentType.charAt(0).toUpperCase() + sentimentType.slice(1);
+              const moodType = entry.mood?.label || entry.moodType || sentimentType;
+              const emotions = getEmotionTags(entry);
+              
+              return (
+                <div key={entry._id || index} className="admin-table-row">
+                  <div className="admin-table-cell">
+                    {formatDateSafe(entry.createdAt || entry.date)}
+                  </div>
+                  <div className="admin-table-cell">
+                    {formatTimeSafe(entry.createdAt || entry.date)}
+                  </div>
+                  <div className="admin-table-cell">
+                    <div className="admin-journal-title">
+                      <strong>{entry.title || entry.templateName || 'Untitled Entry'}</strong>
+                      {entry.templateName && (
+                        <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>
+                          Template: {entry.templateName}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="admin-table-cell">
+                    <div className="admin-sentiment-indicator">
+                      <span 
+                        className="admin-sentiment-dot"
+                        style={{ 
+                          backgroundColor: getSentimentColor(sentimentType),
+                          width: '12px',
+                          height: '12px',
+                          borderRadius: '50%',
+                          display: 'inline-block',
+                          marginRight: '8px'
+                        }}
+                      ></span>
+                      <span>{sentimentLabel}</span>
+                    </div>
+                  </div>
+                  <div className="admin-table-cell">
+                    <div className="admin-mood-indicator">
+                      <span style={{ fontSize: '16px', marginRight: '6px' }}>
+                        {getMoodEmoji(moodType)}
+                      </span>
+                      <span style={{ fontSize: '14px' }}>
+                        {moodType.charAt(0).toUpperCase() + moodType.slice(1)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="admin-table-cell">
+                    <div className="admin-journal-preview">
+                      {truncateText(entry.content || entry.rawText || entry.text, 80)}
+                    </div>
+                  </div>
+                  <div className="admin-table-cell">
+                    <div className="admin-emotion-tags">
+                      {emotions.slice(0, 3).map((emotion, i) => (
+                        <span
+                          key={i}
+                          className="admin-emotion-tag"
+                          style={{
+                            display: 'inline-block',
+                            padding: '2px 6px',
+                            borderRadius: '8px',
+                            backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                            color: '#4CAF50',
+                            fontSize: '11px',
+                            marginRight: '4px',
+                            marginBottom: '2px'
+                          }}
+                        >
+                          {emotion.charAt(0).toUpperCase() + emotion.slice(1)}
+                        </span>
+                      ))}
+                      {emotions.length > 3 && (
+                        <span style={{ fontSize: '11px', color: '#666' }}>
+                          +{emotions.length - 3} more
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="admin-table-cell">
+                    <div className="admin-actions-cell">
+                      <button
+                        className="admin-action-btn admin-view-btn"
+                        onClick={() => {
+                          console.log('View journal entry details:', entry);
+                          // Add navigation to detailed view if needed
+                        }}
+                        style={{
+                          padding: '4px 8px',
+                          backgroundColor: '#4CAF50',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        👁️ View
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Sentiment Analysis Section */}
+        {entries.length > 0 && (
+          <div className="admin-sentiment-analysis-section">
+            <h2>Sentiment Analysis Overview</h2>
+            
+            <div className="admin-sentiment-grid">
+              {/* Sentiment Distribution */}
+              <div className="admin-sentiment-card">
+                <h3>Sentiment Distribution</h3>
+                {(() => {
+                  const sentimentCounts = entries.reduce((acc, entry) => {
+                    const sentiment = entry.sentiment?.type || entry.sentimentType || 'neutral';
+                    acc[sentiment] = (acc[sentiment] || 0) + 1;
+                    return acc;
+                  }, {});
+                  
+                  return Object.entries(sentimentCounts).map(([sentiment, count]) => (
+                    <div key={sentiment} className="admin-sentiment-item" style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      padding: '8px 0',
+                      borderBottom: '1px solid #eee'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span 
+                          style={{ 
+                            width: '12px', 
+                            height: '12px', 
+                            borderRadius: '50%', 
+                            backgroundColor: getSentimentColor(sentiment) 
+                          }}
+                        ></span>
+                        <span>{sentiment.charAt(0).toUpperCase() + sentiment.slice(1)}</span>
+                      </div>
+                      <div>
+                        <strong>{count}</strong>
+                        <span style={{ fontSize: '12px', color: '#666', marginLeft: '4px' }}>
+                          ({Math.round((count / entries.length) * 100)}%)
+                        </span>
+                      </div>
+                    </div>
+                  ));
+                })()}
+              </div>
+
+              {/* Recent Trends */}
+              <div className="admin-sentiment-card">
+                <h3>Recent Activity</h3>
+                <div style={{ fontSize: '14px', color: '#666' }}>
+                  <p>Last entry: {entries.length > 0 ? formatDateSafe(entries[0].createdAt || entries[0].date) : 'N/A'}</p>
+                  <p>Total entries this period: {entries.length}</p>
+                  <p>Average entry length: {Math.round(entries.reduce((total, entry) => 
+                    total + ((entry.content || entry.rawText || '').length), 0) / entries.length)} characters</p>
+                </div>
+              </div>
             </div>
           </div>
         )}

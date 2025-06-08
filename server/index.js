@@ -1006,6 +1006,334 @@ app.get('/api/admin/mood/user/:userId', async (req, res) => {
   console.log('⚠️ Cannot add admin mood route - moodRoutes not available');
 }
 
+app.get('/api/admin/journal/user/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { days = 30, limit = 50, page = 1 } = req.query;
+    
+    console.log(`🔍 ADMIN: Accessing journal data for user ${userId} across ALL data sources (DYNAMIC)`);
+    
+    // 1. AUTHENTICATION CHECK
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: 'Admin authentication required'
+      });
+    }
+    
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid admin token'
+      });
+    }
+    
+    // 2. ADMIN ROLE VERIFICATION
+    const isAdmin = decoded.role === 'admin' || decoded.id === 'admin_default';
+    if (!isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'Admin access required'
+      });
+    }
+    
+    console.log(`✅ ADMIN: Access granted to ${decoded.email || decoded.id}`);
+    
+    // 3. BUILD QUERY FILTERS
+    const buildJournalQuery = (userId, days) => {
+      const query = { user: new mongoose.Types.ObjectId(userId) };
+      
+      if (days && days !== 'all') {
+        const daysAgo = new Date();
+        daysAgo.setDate(daysAgo.getDate() - parseInt(days));
+        query.createdAt = { $gte: daysAgo };
+      }
+      
+      return query;
+    };
+    
+    const queryFilters = buildJournalQuery(userId, days);
+    console.log('🔍 ADMIN: Journal query filters:', queryFilters);
+    
+    // 4. DYNAMIC MULTI-SOURCE DATA AGGREGATION
+    let allJournalEntries = [];
+    let searchedSources = [];
+    let totalSearched = 0;
+    
+    // 4A. PRIMARY SEARCH - Default Database (Always search this first)
+    try {
+      console.log('🔍 ADMIN: Searching primary database for journal entries...');
+      
+      const primaryJournalEntries = await JournalEntry.find(queryFilters)
+        .sort({ createdAt: -1 })
+        .limit(parseInt(limit) * 2) // Get more for pagination
+        .select('title rawText content createdAt sentimentAnalysis user templateName')
+        .lean();
+      
+      console.log(`📊 ADMIN: Found ${primaryJournalEntries.length} journal entries in primary database`);
+      
+      if (primaryJournalEntries.length > 0) {
+        const entriesWithSource = primaryJournalEntries.map(entry => ({
+          ...entry,
+          sourceId: 'primary',
+          sourceName: 'Primary Database',
+          sourceType: 'default'
+        }));
+        
+        allJournalEntries = [...allJournalEntries, ...entriesWithSource];
+        
+        searchedSources.push({
+          sourceId: 'primary',
+          sourceName: 'Primary Database',
+          sourceType: 'default',
+          journalEntriesFound: primaryJournalEntries.length,
+          status: 'success'
+        });
+        
+        console.log(`✅ Primary database: ${primaryJournalEntries.length} journal entries found`);
+      } else {
+        searchedSources.push({
+          sourceId: 'primary',
+          sourceName: 'Primary Database',
+          sourceType: 'default',
+          journalEntriesFound: 0,
+          status: 'no_data'
+        });
+        console.log(`📊 Primary database: 0 journal entries found`);
+      }
+      
+      totalSearched++;
+    } catch (primaryError) {
+      console.error('❌ Primary database journal search failed:', primaryError.message);
+      searchedSources.push({
+        sourceId: 'primary',
+        sourceName: 'Primary Database',
+        sourceType: 'default',
+        journalEntriesFound: 0,
+        status: 'error',
+        error: primaryError.message
+      });
+    }
+    
+    // 4B. DYNAMIC TENANT SEARCH - Uses the WORKING getAllTenants() method
+    if (process.env.ENABLE_MULTI_TENANT === 'true' && dbManager) {
+      try {
+        console.log('🔍 ADMIN: Multi-tenant journal search enabled - discovering tenants DYNAMICALLY...');
+        
+        // Initialize master connection if needed
+        if (connectMaster) {
+          await connectMaster();
+        }
+        
+        // ✅ CRITICAL FIX: Use the WORKING getAllTenants() method (from dbManager.js)
+        const activeTenants = await dbManager.getAllTenants();
+        console.log(`🔍 ADMIN: Found ${activeTenants.length} active tenants dynamically`);
+        console.log(`🔍 ADMIN: Active tenants:`, activeTenants.map(t => ({ id: t._id, name: t.name, dbName: t.dbName })));
+        
+        // Search each active tenant database dynamically
+        for (const tenant of activeTenants) {
+          try {
+            const tenantId = tenant._id.toString();
+            console.log(`🔍 ADMIN: Searching tenant journal entries: ${tenant.name} (${tenantId}) - DB: ${tenant.dbName}`);
+            totalSearched++;
+            
+            // Connect to tenant database using the working method
+            const tenantConn = await dbManager.connectTenant(tenantId);
+            if (!tenantConn) {
+              console.warn(`⚠️ Could not connect to tenant: ${tenant.name} (${tenantId})`);
+              searchedSources.push({
+                sourceId: tenantId,
+                sourceName: tenant.name,
+                sourceType: 'tenant',
+                journalEntriesFound: 0,
+                status: 'connection_failed',
+                dbName: tenant.dbName
+              });
+              continue;
+            }
+            
+            console.log(`✅ ADMIN: Successfully connected to tenant ${tenant.name} (${tenantId})`);
+            
+            // Get JournalEntry model for this tenant
+            const TenantJournalEntry = tenantConn.model('JournalEntry');
+            
+            // Search journal data in this tenant using the same query
+            const tenantJournalEntries = await TenantJournalEntry.find(queryFilters)
+              .sort({ createdAt: -1 })
+              .limit(parseInt(limit))
+              .select('title rawText content createdAt sentimentAnalysis user templateName')
+              .lean();
+            
+            console.log(`📊 ADMIN: Found ${tenantJournalEntries.length} journal entries in tenant ${tenant.name}`);
+            
+            if (tenantJournalEntries.length > 0) {
+              // Add tenant metadata to each entry
+              const entriesWithTenant = tenantJournalEntries.map(entry => ({
+                ...entry,
+                sourceId: tenantId,
+                sourceName: tenant.name,
+                sourceType: 'tenant',
+                dbName: tenant.dbName
+              }));
+              
+              allJournalEntries = [...allJournalEntries, ...entriesWithTenant];
+              
+              searchedSources.push({
+                sourceId: tenantId,
+                sourceName: tenant.name,
+                sourceType: 'tenant',
+                journalEntriesFound: tenantJournalEntries.length,
+                status: 'success',
+                dbName: tenant.dbName
+              });
+              
+              console.log(`✅ Tenant ${tenant.name}: ${tenantJournalEntries.length} journal entries found`);
+            } else {
+              searchedSources.push({
+                sourceId: tenantId,
+                sourceName: tenant.name,
+                sourceType: 'tenant',
+                journalEntriesFound: 0,
+                status: 'no_data',
+                dbName: tenant.dbName
+              });
+              console.log(`📊 Tenant ${tenant.name}: 0 journal entries found`);
+            }
+            
+          } catch (tenantError) {
+            console.error(`❌ Error searching tenant ${tenant.name} journal entries:`, tenantError.message);
+            searchedSources.push({
+              sourceId: tenant._id.toString(),
+              sourceName: tenant.name,
+              sourceType: 'tenant',
+              journalEntriesFound: 0,
+              status: 'error',
+              error: tenantError.message,
+              dbName: tenant.dbName
+            });
+            continue;
+          }
+        }
+        
+      } catch (multiTenantError) {
+        console.error('❌ Multi-tenant journal search failed:', multiTenantError.message);
+        searchedSources.push({
+          sourceId: 'multi_tenant_system',
+          sourceName: 'Multi-Tenant Discovery',
+          sourceType: 'system',
+          journalEntriesFound: 0,
+          status: 'system_error',
+          error: multiTenantError.message
+        });
+      }
+    } else {
+      console.log('ℹ️ ADMIN: Multi-tenant mode disabled or dbManager unavailable');
+    }
+    
+    // 5. DATA PROCESSING & PAGINATION
+    // Sort all entries by timestamp (most recent first)
+    allJournalEntries.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    
+    // Apply pagination to combined results
+    const startIndex = (parseInt(page) - 1) * parseInt(limit);
+    const endIndex = startIndex + parseInt(limit);
+    const paginatedEntries = allJournalEntries.slice(startIndex, endIndex);
+    
+    // 6. PROCESS SENTIMENT ANALYSIS
+    const processedEntries = paginatedEntries.map(entry => {
+      // Extract sentiment information
+      let sentiment = null;
+      if (entry.sentimentAnalysis) {
+        if (entry.sentimentAnalysis.sentiment) {
+          sentiment = {
+            type: entry.sentimentAnalysis.sentiment.type || 'neutral',
+            score: entry.sentimentAnalysis.sentiment.score || 0
+          };
+        }
+        
+        // Extract emotions
+        if (entry.sentimentAnalysis.emotions && Array.isArray(entry.sentimentAnalysis.emotions)) {
+          sentiment = sentiment || {};
+          sentiment.emotions = entry.sentimentAnalysis.emotions.map(emotion => 
+            typeof emotion === 'string' ? emotion : (emotion.name || emotion.label || 'unknown')
+          );
+        }
+      }
+      
+      return {
+        ...entry,
+        content: entry.rawText || entry.content || '',
+        sentiment: sentiment,
+        date: entry.createdAt
+      };
+    });
+    
+    // 7. RESPONSE PREPARATION
+    const responseData = {
+      success: true,
+      data: processedEntries,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(allJournalEntries.length / parseInt(limit)),
+        totalEntries: allJournalEntries.length,
+        limit: parseInt(limit),
+        hasNextPage: endIndex < allJournalEntries.length,
+        hasPrevPage: startIndex > 0
+      },
+      searchInfo: {
+        searchedSources,
+        totalSourcesSearched: totalSearched,
+        successfulSources: searchedSources.filter(s => s.status === 'success').length,
+        multiTenantEnabled: process.env.ENABLE_MULTI_TENANT === 'true',
+        queryFilters,
+        searchTimestamp: new Date().toISOString(),
+        discoveryMethod: 'dynamic_getAllTenants'
+      },
+      summary: {
+        totalEntriesFound: allJournalEntries.length,
+        entriesReturned: processedEntries.length,
+        sourcesWithData: searchedSources.filter(s => s.journalEntriesFound > 0).length,
+        dateRange: days === 'all' ? 'All time' : `Last ${days} days`,
+        tenantsDiscovered: searchedSources.filter(s => s.sourceType === 'tenant').length
+      }
+    };
+    
+    // 8. LOGGING & RESPONSE
+    console.log(`📊 ADMIN DYNAMIC JOURNAL SEARCH COMPLETE:`);
+    console.log(`   Total entries found: ${allJournalEntries.length}`);
+    console.log(`   Entries returned: ${processedEntries.length}`);
+    console.log(`   Sources searched: ${totalSearched}`);
+    console.log(`   Successful sources: ${searchedSources.filter(s => s.status === 'success').length}`);
+    console.log(`   Tenants discovered: ${searchedSources.filter(s => s.sourceType === 'tenant').length}`);
+    console.log(`   Page: ${page}/${Math.ceil(allJournalEntries.length / parseInt(limit))}`);
+    
+    if (allJournalEntries.length === 0) {
+      console.log(`⚠️ ADMIN: No journal entries found for user ${userId} in any data source`);
+      responseData.message = `No journal entries found for user ${userId} across ${totalSearched} data sources`;
+    } else {
+      responseData.message = `Retrieved ${processedEntries.length} journal entries from ${searchedSources.filter(s => s.journalEntriesFound > 0).length} data sources`;
+    }
+    
+    res.status(200).json(responseData);
+    
+  } catch (error) {
+    console.error('❌ ADMIN: Critical error in dynamic journal data retrieval:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error occurred while retrieving journal data',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
+      timestamp: new Date().toISOString(),
+      endpoint: `/api/admin/journal/user/${req.params.userId}`
+    });
+  }
+});
+
+console.log('✅ Admin journal route added: GET /api/admin/journal/user/:userId');
+
 // Mount billing routes
 if (billingRoutes) {
   app.use('/api/billing', billingRoutes);
