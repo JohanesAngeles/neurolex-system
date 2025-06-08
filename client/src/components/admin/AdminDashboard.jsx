@@ -260,9 +260,6 @@ const handleRejectDoctor = async (id) => {
       {/* Dashboard header */}
       <div className="dashboard-header">
         <h1 className="dashboard-title">Admin Dashboard</h1>
-        <button onClick={handleAdminLogout} className="logout-button">
-          Logout
-        </button>
       </div>
       
       {/* Stats cards */}
@@ -349,27 +346,16 @@ const handleRejectDoctor = async (id) => {
                 <div className="table-cell">{formatDate(doctor.createdAt)}</div>
                 <div className="table-cell">
                   <div className="action-buttons">
-                    <button 
-                      className="btn-action view"
-                      onClick={() => handleViewDoctor(doctor._id)}
-                      title="View Details"
-                    >
-                      View
-                    </button>
-                    <button 
-                      className="btn-action approve"
-                      onClick={() => handleApproveDoctor(doctor._id)}
-                      title="Approve Application"
-                    >
-                      Approve
-                    </button>
-                    <button 
-                      className="btn-action reject"
-                      onClick={() => handleRejectDoctor(doctor._id)}
-                      title="Reject Application"
-                    >
-                      Reject
-                    </button>
+                   {pendingDoctors.length > 0 && (
+          <div className="view-all">
+            <button 
+              onClick={() => navigate('/admin/professionals')}
+              className="view-all-link"
+            >
+              View All Applications
+            </button>
+          </div>
+        )}
                   </div>
                 </div>
               </div>
@@ -410,16 +396,6 @@ const handleRejectDoctor = async (id) => {
           </div>
         )}
         
-        {pendingDoctors.length > 0 && (
-          <div className="view-all">
-            <button 
-              onClick={() => navigate('/admin/professionals')}
-              className="view-all-link"
-            >
-              View All Applications
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Doctor Details Modal */}

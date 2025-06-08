@@ -11,7 +11,7 @@ import logoImage from '../../../assets/images/Neurolex_Logo_New.png';
 import dashboardIcon from '../../../assets/icons/dashboard_icon.svg';
 import usersIcon from '../../../assets/icons/UserManagement_Icon.svg';
 import doctorIcon from '../../../assets/icons/DoctorManagement_Icon.svg';
-import journalIcon from '../../../assets/icons/JournalManagement_Icon.svg';
+import journalIcon from '../../../assets/icons/journal_icon.svg';
 import tenantIcon from '../../../assets/icons/clinic_icon.svg';
 import settingsIcon from '../../../assets/icons/Settings_icon.svg';
 import moodIcon from '../../../assets/icons/mood_icon.svg';

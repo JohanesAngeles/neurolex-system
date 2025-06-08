@@ -1,11 +1,15 @@
-// server/src/routes/appointmentRoutes.js - SIMPLIFIED VERSION
+// server/src/routes/appointmentRoutes.js - UPDATED VERSION WITH MEETING LINKS
+
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/auth');
 const appointmentController = require('../controllers/appointmentController');
 const mongoose = require('mongoose');
 
-console.log('Loading simplified appointment routes...');
+// ✅ ADD: Import the Jitsi Meet service
+const JitsiMeetService = require('../services/jitsiMeetService');
+
+console.log('Loading appointment routes with Jitsi Meet integration...');
 
 // Basic test route
 router.get('/test', (req, res) => {
@@ -170,12 +174,14 @@ router.get('/pending', protect, async (req, res) => {
   }
 });
 
-// Accept appointment (basic version)
+// ✅ FIXED: Accept appointment and generate Jitsi meeting link
 router.put('/accept/:id', protect, async (req, res) => {
   try {
     const Appointment = req.tenantConnection ? req.tenantConnection.model('Appointment') : require('../models/Appointment');
     
-    const appointment = await Appointment.findById(req.params.id);
+    const appointment = await Appointment.findById(req.params.id)
+      .populate('patient', 'firstName lastName email profilePicture')
+      .populate('doctor', 'firstName lastName title credentials specialty profilePicture');
     
     if (!appointment) {
       return res.status(404).json({
@@ -185,23 +191,65 @@ router.put('/accept/:id', protect, async (req, res) => {
     }
     
     // Check if user is the doctor for this appointment
-    if (appointment.doctor.toString() !== req.user.id) {
+    if (appointment.doctor._id.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
         message: 'Unauthorized'
       });
     }
     
+    // Update appointment status
     appointment.status = 'Scheduled';
+    
+    // ✅ CRITICAL FIX: Generate Jitsi meeting link
+    try {
+      console.log('🎥 Generating Jitsi meeting link for appointment:', appointment._id);
+      
+      const jitsiService = new JitsiMeetService();
+      const meetingResult = jitsiService.createNoWaitMeetingRoom({
+        _id: appointment._id,
+        appointmentDate: appointment.appointmentDate,
+        duration: appointment.duration,
+        appointmentType: appointment.appointmentType,
+        doctor: appointment.doctor,
+        patient: appointment.patient
+      });
+      
+      // Update appointment with meeting details
+      appointment.meetingLink = meetingResult.meetingLink;
+      appointment.meetingGenerated = true;
+      appointment.meetingGeneratedAt = new Date();
+      appointment.meetingType = 'jitsi';
+      appointment.roomName = meetingResult.roomName;
+      
+      console.log('✅ Successfully generated meeting link:', meetingResult.meetingLink);
+      
+    } catch (meetingError) {
+      console.error('⚠️ Failed to generate meeting link, using fallback method:', meetingError);
+      
+      // ✅ FALLBACK: Use the built-in generateMeetingLink method from schema
+      const fallbackLink = appointment.generateMeetingLink('jitsi');
+      console.log('✅ Fallback meeting link generated:', fallbackLink);
+    }
+    
+    // Add doctor response information
+    appointment.doctorResponse = {
+      responseDate: new Date(),
+      responseMessage: req.body.responseMessage || 'Appointment accepted. Video meeting room is ready.'
+    };
+    
     await appointment.save();
+    
+    console.log('✅ Appointment accepted with meeting link:', appointment.meetingLink);
     
     res.status(200).json({
       success: true,
-      message: 'Appointment accepted',
+      message: 'Appointment accepted and meeting link generated',
       data: appointment
     });
+    
   } catch (error) {
-    console.error('Error accepting appointment:', error);
+    console.error('❌ Error accepting appointment:', error);
     res.status(500).json({
       success: false,
       message: 'Error accepting appointment',
@@ -233,6 +281,13 @@ router.put('/decline/:id', protect, async (req, res) => {
     }
     
     appointment.status = 'Declined';
+    
+    // Add doctor response information
+    appointment.doctorResponse = {
+      responseDate: new Date(),
+      responseMessage: req.body.responseMessage || 'Appointment declined'
+    };
+    
     await appointment.save();
     
     res.status(200).json({
@@ -277,6 +332,43 @@ router.get('/details/:id', protect, async (req, res) => {
       });
     }
     
+    // ✅ Auto-generate meeting link if appointment is scheduled but no link exists
+    if (appointment.status === 'Scheduled' && !appointment.meetingLink) {
+      try {
+        console.log('🔄 Auto-generating missing meeting link for appointment:', appointment._id);
+        
+        const jitsiService = new JitsiMeetService();
+        const meetingResult = jitsiService.createNoWaitMeetingRoom({
+          _id: appointment._id,
+          appointmentDate: appointment.appointmentDate,
+          duration: appointment.duration,
+          appointmentType: appointment.appointmentType,
+          doctor: appointment.doctor,
+          patient: appointment.patient
+        });
+        
+        appointment.meetingLink = meetingResult.meetingLink;
+        appointment.meetingGenerated = true;
+        appointment.meetingGeneratedAt = new Date();
+        appointment.meetingType = 'jitsi';
+        appointment.roomName = meetingResult.roomName;
+        
+        await appointment.save();
+        console.log('✅ Auto-generated meeting link:', meetingResult.meetingLink);
+        
+      } catch (meetingError) {
+        console.error('⚠️ Failed to auto-generate meeting link:', meetingError);
+        // Try fallback method
+        try {
+          const fallbackLink = appointment.generateMeetingLink('jitsi');
+          await appointment.save();
+          console.log('✅ Fallback meeting link generated:', fallbackLink);
+        } catch (fallbackError) {
+          console.error('❌ Fallback method also failed:', fallbackError);
+        }
+      }
+    }
+    
     res.status(200).json({
       success: true,
       data: appointment
@@ -291,6 +383,91 @@ router.get('/details/:id', protect, async (req, res) => {
   }
 });
 
-console.log('Simplified appointment routes loaded successfully');
+// ✅ NEW: Get meeting link for specific appointment
+router.get('/meeting/:id', protect, async (req, res) => {
+  try {
+    const Appointment = req.tenantConnection ? req.tenantConnection.model('Appointment') : require('../models/Appointment');
+    
+    const appointment = await Appointment.findById(req.params.id)
+      .populate('doctor', 'firstName lastName title')
+      .populate('patient', 'firstName lastName');
+    
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Appointment not found'
+      });
+    }
+    
+    // Check if user is either doctor or patient
+    if (
+      appointment.doctor._id.toString() !== req.user.id &&
+      appointment.patient._id.toString() !== req.user.id
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Unauthorized'
+      });
+    }
+    
+    // Check if appointment is scheduled
+    if (appointment.status !== 'Scheduled') {
+      return res.status(400).json({
+        success: false,
+        message: 'Appointment is not scheduled yet'
+      });
+    }
+    
+    // Generate meeting link if it doesn't exist
+    if (!appointment.meetingLink) {
+      try {
+        const jitsiService = new JitsiMeetService();
+        const meetingResult = jitsiService.createNoWaitMeetingRoom({
+          _id: appointment._id,
+          appointmentDate: appointment.appointmentDate,
+          duration: appointment.duration,
+          appointmentType: appointment.appointmentType,
+          doctor: appointment.doctor,
+          patient: appointment.patient
+        });
+        
+        appointment.meetingLink = meetingResult.meetingLink;
+        appointment.meetingGenerated = true;
+        appointment.meetingGeneratedAt = new Date();
+        appointment.meetingType = 'jitsi';
+        appointment.roomName = meetingResult.roomName;
+        
+        await appointment.save();
+      } catch (error) {
+        console.error('Error generating meeting link:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to generate meeting link'
+        });
+      }
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        meetingLink: appointment.meetingLink,
+        roomName: appointment.roomName,
+        meetingType: appointment.meetingType,
+        appointmentDate: appointment.appointmentDate,
+        platform: 'Jitsi Meet'
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error getting meeting link:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting meeting link',
+      error: error.message
+    });
+  }
+});
+
+console.log('Appointment routes with Jitsi Meet integration loaded successfully');
 
 module.exports = router;
