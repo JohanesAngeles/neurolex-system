@@ -5,6 +5,7 @@ import doctorService from '../../../services/doctorService';
 import axios from 'axios';
 import '../../../styles/components/doctor/JournalEntryDetail.css';
 
+
 const JournalEntryDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();

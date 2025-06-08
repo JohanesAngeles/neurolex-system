@@ -1,6 +1,5 @@
 /* JournalEntryDetail.css */
 
-
 /* Header */
 .journal-header {
   display: flex;
@@ -66,12 +65,23 @@
   font-weight: 500;
 }
 
-/* Grid Layout */
+/* Grid Layout - now single column */
 .journal-grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 24px;
+  display: block;
   margin-bottom: 24px;
+}
+
+/* Toggle Button Container */
+.toggle-button-container {
+  display: flex;
+  justify-content: center;
+  margin: 24px 0;
+}
+
+/* Journal Sidebar - now appears below main content */
+.journal-sidebar {
+  width: 100%;
+  margin-top: 0;
 }
 
 /* Paper Components */
@@ -185,7 +195,7 @@
 /* Analysis Panel */
 .analysis-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   margin-bottom: 20px;
 }
@@ -674,7 +684,7 @@ input:checked + .slider:before {
 /* Responsive Design */
 @media (max-width: 1024px) {
   .journal-grid {
-    grid-template-columns: 1fr;
+    display: block;
   }
   
   .entry-info {
