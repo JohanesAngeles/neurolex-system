@@ -739,34 +739,55 @@ if (moodRoutes) {
       
       console.log(`✅ ADMIN: Access granted to ${decoded.email || decoded.id}`);
       
-      // Build query filters
-      const queryFilters = { userId: userId };
+      // ✅ FINAL FIX: Build query filters with correct field names from schema
+      const queryFilters = {
+        userId: new mongoose.Types.ObjectId(userId)  // Convert to ObjectId
+      };
       
-      // Add tenant filter if available in token
+      // ✅ CRITICAL: Handle tenant filtering properly
       if (decoded.tenantId) {
-        queryFilters.tenantId = decoded.tenantId;
+        queryFilters.tenantId = new mongoose.Types.ObjectId(decoded.tenantId);
         console.log(`🏢 ADMIN: Filtering by tenant: ${decoded.tenantId}`);
+      } else {
+        // ✅ If no tenant in token, search across all tenants (admin access)
+        console.log(`🌐 ADMIN: Searching across all tenants (super admin)`);
       }
       
-      // Add date filter for recent data
+      // ✅ Add date filter using correct timestamp field
       if (days && days !== 'all') {
         const daysAgo = new Date();
         daysAgo.setDate(daysAgo.getDate() - parseInt(days));
         queryFilters.timestamp = { $gte: daysAgo };
-        console.log(`📅 ADMIN: Filtering by days: ${days}`);
+        console.log(`📅 ADMIN: Filtering by days: ${days} (since ${daysAgo.toISOString()})`);
       }
       
-      console.log('🔍 ADMIN: Query filters:', queryFilters);
+      console.log('🔍 ADMIN: Final query filters:', JSON.stringify(queryFilters, null, 2));
       
-      // Get mood entries directly from Mood model
+      // ✅ Get mood entries using correct schema fields
       const moodEntries = await Mood.find(queryFilters)
-        .sort({ timestamp: -1 })
+        .sort({ timestamp: -1 })  // Use timestamp field from schema
         .limit(parseInt(limit))
         .skip((parseInt(page) - 1) * parseInt(limit))
-        .select('moodRating moodKey moodLabel moodSvgUrl reflection timestamp sentiment metadata')
+        .select('moodRating moodKey moodLabel moodSvgUrl reflection timestamp tenantId userId metadata')
         .lean();
       
       console.log(`📊 ADMIN: Found ${moodEntries.length} mood entries`);
+      
+      // ✅ DEBUG: Log first entry structure and database stats
+      if (moodEntries.length > 0) {
+        console.log('🔍 ADMIN: First mood entry structure:', moodEntries[0]);
+      } else {
+        // Check if mood data exists for this user without tenant filter
+        const anyUserMood = await Mood.find({ userId: new mongoose.Types.ObjectId(userId) }).limit(3).lean();
+        console.log(`🔍 ADMIN: Mood entries for this user (any tenant): ${anyUserMood.length}`);
+        if (anyUserMood.length > 0) {
+          console.log('🔍 ADMIN: Sample user mood entry:', anyUserMood[0]);
+        }
+        
+        // Check total mood entries in database
+        const totalMoodEntries = await Mood.countDocuments({});
+        console.log(`🔍 ADMIN: Total mood entries in database: ${totalMoodEntries}`);
+      }
       
       // Get total count for pagination
       const totalEntries = await Mood.countDocuments(queryFilters);
@@ -781,7 +802,12 @@ if (moodRoutes) {
           totalEntries,
           limit: parseInt(limit)
         },
-        message: `Retrieved ${moodEntries.length} mood entries`
+        message: `Retrieved ${moodEntries.length} mood entries`,
+        debug: {
+          queryFilters,
+          totalEntriesInDb: await Mood.countDocuments({}),
+          userEntriesAnyTenant: await Mood.countDocuments({ userId: new mongoose.Types.ObjectId(userId) })
+        }
       });
       
     } catch (error) {
@@ -798,8 +824,6 @@ if (moodRoutes) {
 } else {
   console.log('⚠️ Cannot add admin mood route - moodRoutes not available');
 }
-
-console.log('✅ Admin-specific mood routes configured');
 
 // Mount billing routes
 if (billingRoutes) {
