@@ -154,7 +154,10 @@
 .admin-content {
   flex: 1;
   padding-left: 10px;
-  overflow-y: auto;
+  height: calc(100vh - 20px); /* Add explicit height */
+  overflow-y: auto; /* Enable scrolling on this container */
+  display: flex;
+  flex-direction: column;
 }
 
 .admin-content-container {
@@ -162,8 +165,10 @@
   border: 1px solid #A7D7C5;
   border-radius: 10px;
   padding: 24px;
-  height: 100%;
+  flex: 1; /* Change from height: 100% to flex: 1 */
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+  overflow-y: auto; /* Add scrolling here too */
+  min-height: 0; /* Allow container to shrink */
 }
 
 /* icons design */

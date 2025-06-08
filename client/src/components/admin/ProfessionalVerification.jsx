@@ -362,7 +362,7 @@ const ProfessionalVerification = () => {
   }
   
   return (
-    <div className="admin-content">
+    <div className="professional-verification">
       <div className="user-management-header">
         <h1>Doctor Verification Dashboard</h1>
         <p>Easily verify, manage, and monitor all mental health professionals in the system.</p>

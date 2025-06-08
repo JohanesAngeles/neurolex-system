@@ -259,7 +259,7 @@ const DoctorVerificationDetails = () => {
 
   if (loading) {
     return (
-      <div className="admin-content">
+      <div className="doctor-verification-details">
         <div className="loading-container">
           <div className="loading-spinner"></div>
           <p>Loading doctor details...</p>
@@ -270,7 +270,7 @@ const DoctorVerificationDetails = () => {
 
   if (error && !doctor) {
     return (
-      <div className="admin-content">
+      <div className="doctor-verification-details">
         <div className="error-container">
           <div className="error-header">
             <button 
@@ -295,7 +295,7 @@ const DoctorVerificationDetails = () => {
   const headerText = getHeaderText();
 
   return (
-    <div className="admin-content">
+    <div className="doctor-verification-details">
       {/* Header with back button */}
       <div className="verification-header">
         <button 
