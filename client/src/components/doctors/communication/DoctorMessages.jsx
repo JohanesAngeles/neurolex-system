@@ -337,11 +337,14 @@ const loadPatientsWithProfile = async (profile) => {
   // Format message time
   const formatMessageTime = (timestamp) => {
     const date = new Date(timestamp);
-    return date.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit',
-      hour12: true 
-    });
+    const now = new Date();
+    const diffMinutes = Math.floor((now - date) / (1000 * 60));
+    
+    if (diffMinutes < 1) return 'Just now';
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)}h ago`;
+    
+    return date.toLocaleDateString();
   };
 
   // Get patient initials for avatar
@@ -369,14 +372,29 @@ const loadPatientsWithProfile = async (profile) => {
   }
 
   return (
-    <FeatureWrapper feature="Messages" showMessage={true}>
-      <div className="doctor-messages-container">
-        {/* Header */}
+  <FeatureWrapper feature="Messages" showMessage={true}>
+    <div className="doctor-messages-container">
+      {error && (
+        <div className="error-banner">
+          <span className="error-icon">⚠️</span>
+          <span className="error-text">{error}</span>
+          <button 
+            className="error-dismiss"
+            onClick={() => setError(null)}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {/* Sidebar Container - includes header and conversations */}
+      <div className="sidebar-container">
+        {/* Header - now only for sidebar */}
         <div className="messages-header">
           <div className="header-left">
             <h1 className="messages-title">Messages</h1>
             <p className="messages-subtitle">
-              Where conversations and care continue.
+              Communicate securely with your patients through {platformName}
             </p>
           </div>
           <div className="header-stats">
@@ -387,207 +405,199 @@ const loadPatientsWithProfile = async (profile) => {
           </div>
         </div>
 
-        {error && (
-          <div className="error-banner">
-            <span className="error-icon">⚠️</span>
-            <span className="error-text">{error}</span>
-            <button 
-              className="error-dismiss"
-              onClick={() => setError(null)}
-            >
-              ×
-            </button>
-          </div>
-        )}
-
-        <div className="messages-content">
-          {/* Conversations List - LEFT SIDE */}
-          <div className="conversations-sidebar">
-            <div className="sidebar-header">
-              <h3 className="sidebar-title">Conversations</h3>
-              <div className="search-container">
-                <input
-                  type="text"
-                  placeholder="Search"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="patient-search"
-                />
-              </div>
-            </div>
-            
-            <div className="conversations-list">
-              {filteredPatients.length === 0 ? (
-                <div className="no-patients">
-                  <p className="no-patients-text">
-                    {searchTerm ? 'No patients found matching your search.' : 'No patients with appointments found.'}
-                  </p>
-                  {!searchTerm && (
-                    <p className="no-patients-subtitle">
-                      Patients will appear here after they book appointments with you.
-                    </p>
-                  )}
-                </div>
-              ) : (
-                filteredPatients.map((patient) => (
-                  <div
-                    key={patient._id}
-                    className={`conversation-item ${selectedPatient?._id === patient._id ? 'selected' : ''}`}
-                    onClick={() => selectPatient(patient)}
-                  >
-                    <div className="conversation-avatar">
-                      {patient.profilePicture ? (
-                        <img src={patient.profilePicture} alt={`${patient.firstName} ${patient.lastName}`} />
-                      ) : (
-                        <div className="avatar-initials">{getPatientInitials(patient)}</div>
-                      )}
-                      <div className="online-indicator"></div>
-                    </div>
-                    <div className="conversation-info">
-                      <div className="conversation-header">
-                        <div className="patient-name">
-                          Dr. {patient.firstName} {patient.lastName}
-                        </div>
-                        <div className="last-message-time">
-                          19h
-                        </div>
-                      </div>
-                      <div className="conversation-preview">
-                        <span className="appointment-count">
-                          I'm really glad you're open to it. L...
-                        </span>
-                      </div>
-                    </div>
-                    <div className="conversation-badge">
-                      <div className="unread-count">●</div>
-                    </div>
-                  </div>
-                ))
-              )}
+        {/* Conversations Sidebar */}
+        <div className="conversations-sidebar">
+          <div className="sidebar-header">
+            <h3 className="sidebar-title">Conversations</h3>
+            <div className="search-container">
+              <input
+                type="text"
+                placeholder="Search patients..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="patient-search"
+              />
             </div>
           </div>
-
-          {/* Selected Chat Area - RIGHT SIDE */}
-          <div className="chat-area">
-            {selectedPatient ? (
-              <>
-                {/* Chat Header */}
-                <div className="chat-header">
-                  <div className="chat-patient-info">
-                    <div className="chat-patient-avatar">
-                      {selectedPatient.profilePicture ? (
-                        <img src={selectedPatient.profilePicture} alt={`${selectedPatient.firstName} ${selectedPatient.lastName}`} />
-                      ) : (
-                        <div className="avatar-initials">{getPatientInitials(selectedPatient)}</div>
-                      )}
-                    </div>
-                    <div className="chat-patient-details">
-                      <h3 className="chat-patient-name">
-                        Dr. {selectedPatient.firstName} {selectedPatient.lastName}
-                      </h3>
-                      <p className="chat-patient-status">
-                        Online
-                      </p>
-                    </div>
-                  </div>
-                  <div className="chat-header-icon">
-                    💌
-                  </div>
-                </div>
-
-                {/* Messages */}
-                <div className="messages-container">
-                  {messages.length === 0 ? (
-                    <div className="no-messages">
-                      <div className="no-messages-icon">💬</div>
-                      <h3 className="no-messages-title">Start the conversation</h3>
-                      <p className="no-messages-text">
-                        Send a message to {selectedPatient.firstName} to begin your secure conversation.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="messages-list">
-                      {messages.map((message, index) => {
-                        const isDoctor = message.user?.id === doctorInfo._id;
-                        const isConsecutive = index > 0 && 
-                          messages[index - 1].user?.id === message.user?.id &&
-                          (new Date(message.created_at) - new Date(messages[index - 1].created_at)) < 60000; // 1 minute
-                        
-                        return (
-                          <div
-                            key={message.id}
-                            className={`message ${isDoctor ? 'doctor-message' : 'patient-message'} ${isConsecutive ? 'consecutive' : ''}`}
-                          >
-                            {!isConsecutive && (
-                              <div className="message-avatar">
-                                {isDoctor ? (
-                                  <div className="avatar-initials doctor-avatar">
-                                    {getDoctorInitials()}
-                                  </div>
-                                ) : (
-                                  selectedPatient.profilePicture ? (
-                                    <img src={selectedPatient.profilePicture} alt={selectedPatient.firstName} />
-                                  ) : (
-                                    <div className="avatar-initials">{getPatientInitials(selectedPatient)}</div>
-                                  )
-                                )}
-                              </div>
-                            )}
-                            <div className="message-content">
-                              {!isConsecutive && (
-                                <div className="message-time">
-                                  {formatMessageTime(message.created_at)}
-                                </div>
-                              )}
-                              <div className="message-text">
-                                {message.text}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                      <div ref={messagesEndRef} />
-                    </div>
-                  )}
-                </div>
-
-                {/* Message Input */}
-                <div className="message-input-container">
-                  <div className="message-input-wrapper">
-                    <textarea
-                      ref={messageInputRef}
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyPress={handleKeyPress}
-                      placeholder="Message..."
-                      className="message-input"
-                      rows="1"
-                      disabled={sending}
-                    />
-                    <button
-                      onClick={sendMessage}
-                      disabled={!newMessage.trim() || sending}
-                      className="send-button"
-                    >
-                      {sending ? '⏳' : '➤'}
-                    </button>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="no-chat-selected">
-                <div className="no-chat-icon">💬</div>
-                <h3 className="no-chat-title">Select a patient to start messaging</h3>
-                <p className="no-chat-text">
-                  Choose a patient from the list to begin a secure conversation through {platformName}.
+          
+          <div className="conversations-list">
+            {filteredPatients.length === 0 ? (
+              <div className="no-patients">
+                <p className="no-patients-text">
+                  {searchTerm ? 'No patients found matching your search.' : 'No patients with appointments found.'}
                 </p>
+                {!searchTerm && (
+                  <p className="no-patients-subtitle">
+                    Patients will appear here after they book appointments with you.
+                  </p>
+                )}
               </div>
+            ) : (
+              filteredPatients.map((patient) => (
+                <div
+                  key={patient._id}
+                  className={`conversation-item ${selectedPatient?._id === patient._id ? 'selected' : ''}`}
+                  onClick={() => selectPatient(patient)}
+                >
+                  <div className="conversation-avatar">
+                    {patient.profilePicture ? (
+                      <img src={patient.profilePicture} alt={`${patient.firstName} ${patient.lastName}`} />
+                    ) : (
+                      <div className="avatar-initials">{getPatientInitials(patient)}</div>
+                    )}
+                    <div className="online-indicator"></div>
+                  </div>
+                  <div className="conversation-info">
+                    <div className="conversation-header">
+                      <div className="patient-name">
+                        {patient.firstName} {patient.lastName}
+                      </div>
+                      <div className="last-message-time">
+                        {patient.lastAppointment ? formatMessageTime(patient.lastAppointment) : 'New'}
+                      </div>
+                    </div>
+                    <div className="conversation-preview">
+                      <span className="appointment-count">
+                        {patient.appointmentCount} appointment{patient.appointmentCount !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="conversation-badge">
+                    <div className="unread-count">●</div>
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </div>
       </div>
-    </FeatureWrapper>
-  );
+
+      {/* Chat Area - starts from top */}
+      <div className="chat-area">
+        {selectedPatient ? (
+          <>
+            {/* Chat Header */}
+            <div className="chat-header">
+              <div className="chat-patient-info">
+                <div className="chat-patient-avatar">
+                  {selectedPatient.profilePicture ? (
+                    <img src={selectedPatient.profilePicture} alt={`${selectedPatient.firstName} ${selectedPatient.lastName}`} />
+                  ) : (
+                    <div className="avatar-initials">{getPatientInitials(selectedPatient)}</div>
+                  )}
+                </div>
+                <div className="chat-patient-details">
+                  <h3 className="chat-patient-name">
+                    {selectedPatient.firstName} {selectedPatient.lastName}
+                  </h3>
+                  <p className="chat-patient-status">
+                    {selectedPatient.appointmentCount} appointment{selectedPatient.appointmentCount !== 1 ? 's' : ''}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Messages */}
+            <div className="messages-container">
+              {messages.length === 0 ? (
+                <div className="no-messages">
+                  <div className="no-messages-icon">💬</div>
+                  <h3 className="no-messages-title">Start the conversation</h3>
+                  <p className="no-messages-text">
+                    Send a message to {selectedPatient.firstName} to begin your secure conversation.
+                  </p>
+                </div>
+              ) : (
+                <div className="messages-list">
+                  {messages.map((message, index) => {
+                    const isDoctor = message.user?.id === doctorInfo._id;
+                    const isConsecutive = index > 0 && 
+                      messages[index - 1].user?.id === message.user?.id &&
+                      (new Date(message.created_at) - new Date(messages[index - 1].created_at)) < 60000;
+                    
+                    return (
+                      <div
+                        key={message.id}
+                        className={`message ${isDoctor ? 'doctor-message' : 'patient-message'} ${isConsecutive ? 'consecutive' : ''}`}
+                      >
+                        {!isConsecutive && (
+                          <div className="message-avatar">
+                            {isDoctor ? (
+                              <div className="avatar-initials doctor-avatar">
+                                {getDoctorInitials()}
+                              </div>
+                            ) : (
+                              selectedPatient.profilePicture ? (
+                                <img src={selectedPatient.profilePicture} alt={selectedPatient.firstName} />
+                              ) : (
+                                <div className="avatar-initials">{getPatientInitials(selectedPatient)}</div>
+                              )
+                            )}
+                          </div>
+                        )}
+                        <div className="message-content">
+                          {!isConsecutive && (
+                            <div className="message-header">
+                              <span className="message-sender">
+                                {isDoctor ? `Dr. ${doctorInfo.firstName} ${doctorInfo.lastName}` : `${selectedPatient.firstName} ${selectedPatient.lastName}`}
+                              </span>
+                              <span className="message-time">
+                                {formatMessageTime(message.created_at)}
+                              </span>
+                            </div>
+                          )}
+                          <div className="message-text">
+                            {message.text}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div ref={messagesEndRef} />
+                </div>
+              )}
+            </div>
+
+            {/* Message Input */}
+            <div className="message-input-container">
+              <div className="message-input-wrapper">
+                <textarea
+                  ref={messageInputRef}
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder={`Message ${selectedPatient.firstName}...`}
+                  className="message-input"
+                  rows="1"
+                  disabled={sending}
+                />
+                <button
+                  onClick={sendMessage}
+                  disabled={!newMessage.trim() || sending}
+                  className="send-button"
+                  style={{ backgroundColor: theme?.primaryColor || '#4CAF50' }}
+                >
+                  {sending ? '⏳' : '📤'}
+                </button>
+              </div>
+              <div className="message-input-hint">
+                Press Enter to send, Shift+Enter for new line
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="no-chat-selected">
+            <div className="no-chat-icon">💬</div>
+            <h3 className="no-chat-title">Select a patient to start messaging</h3>
+            <p className="no-chat-text">
+              Choose a patient from the list to begin a secure conversation through {platformName}.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  </FeatureWrapper>
+);
 };
 
 export default DoctorMessages;

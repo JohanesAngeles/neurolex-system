@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { AdminProvider } from '../../../context/AdminContext';
+import authService from '../../../services/authService';
 import '../../../styles/components/admin/AdminLayout.css';
 
 // Import logo
@@ -13,11 +14,13 @@ import doctorIcon from '../../../assets/icons/DoctorManagement_Icon.svg';
 import journalIcon from '../../../assets/icons/JournalManagement_Icon.svg';
 import tenantIcon from '../../../assets/icons/clinic_icon.svg';
 import settingsIcon from '../../../assets/icons/Settings_icon.svg';
-// TODO: Add mood check-ins icon - using journal icon for now
 import moodIcon from '../../../assets/icons/mood_icon.svg';
+// Using settings icon for logout - replace with your actual logout icon
+import logoutIcon from '../../../assets/icons/admin_icon.svg';
 
 const AdminLayout = () => {
   const location = useLocation();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   // Custom active check function for nested routes
   const isActiveRoute = (path, menuId) => {
@@ -45,12 +48,40 @@ const AdminLayout = () => {
     return location.pathname.startsWith(path);
   };
 
-  // 🆕 UPDATED: Menu items with mood check-ins route
+  // Handle logout confirmation
+  const handleLogoutClick = () => {
+    console.log('Logout button clicked!'); // Debug log
+    setShowLogoutModal(true);
+  };
+
+  // Handle logout confirmation
+  const handleLogoutConfirm = () => {
+    try {
+      // Use the auth service logout function
+      authService.logout();
+    } catch (error) {
+      console.error('Error during logout:', error);
+      // Force logout even if there's an error
+      localStorage.removeItem('token');
+      localStorage.removeItem('adminToken');
+      localStorage.removeItem('user');
+      localStorage.removeItem('tenant');
+      window.location.href = '/login';
+    }
+    setShowLogoutModal(false);
+  };
+
+  // Handle logout cancellation
+  const handleLogoutCancel = () => {
+    setShowLogoutModal(false);
+  };
+
+  // Menu items
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', path: '/admin', icon: dashboardIcon },
-    { id: 'users', label: 'User Management', path: '/admin/users', icon: usersIcon }, // This handles both users and patients
+    { id: 'users', label: 'User Management', path: '/admin/users', icon: usersIcon },
     { id: 'professionals', label: 'Doctor Management', path: '/admin/professionals', icon: doctorIcon },
-    { id: 'mood', label: 'Mood Analytics', path: '/admin/mood-checkins', icon: moodIcon }, // 🆕 NEW: Mood Check-ins
+    { id: 'mood', label: 'Mood Analytics', path: '/admin/mood-checkins', icon: moodIcon },
     { id: 'tenants', label: 'Tenant Management', path: '/admin/tenants', icon: tenantIcon },
     { id: 'journal', label: 'Journal Management', path: '/admin/journal-entries', icon: journalIcon }, 
     { id: 'settings', label: 'System Settings', path: '/admin/settings', icon: settingsIcon }
@@ -59,51 +90,90 @@ const AdminLayout = () => {
   return (
     <AdminProvider>
       <div className="admin-layout">
-        {/* Left Sidebar - matching the image */}
+        {/* Left Sidebar */}
         <div className="admin-sidebar">
-          <div className="sidebar-header">
-            <img src={logoImage} alt="Neurolex Logo" className="admin-logo" />
-          </div>
-          
-          <div className="sidebar-menu">
-            <ul className="nav-menu">
-              {menuItems.map(item => (
-                <li key={item.id} className="nav-item">
-                  <NavLink 
-                    to={item.path}
-                    className={() => {
-                      // Use custom logic for determining active state
-                      const shouldBeActive = isActiveRoute(item.path, item.id);
-                      return shouldBeActive ? "nav-link active" : "nav-link";
-                    }}
-                    end={item.path === '/admin'}
-                    title={item.label} // Add tooltip for better UX
-                  >
-                    <img src={item.icon} alt={item.label} className="nav-icon" />
-                    <span className="nav-label">{item.label}</span>
-                  </NavLink>
-                </li>
-              ))}
-            </ul>
-          </div>
-          
-          <div className="sidebar-footer">
-            <div className="admin-info">
-              <div className="admin-details">
-                <p className="admin-name">Admin User</p>
-                <p className="admin-role">System Admin</p>
+          {/* Wrap top content in a container */}
+          <div className="sidebar-top-content">
+            {/* Top Logo Section */}
+            <div className="sidebar-top">
+              <div className="logo-container">
+                <img src={logoImage} alt="Neurolex Logo" className="admin-logo" />
               </div>
             </div>
+            
+            {/* Navigation Menu */}
+            <div className="sidebar-nav">
+              <ul className="nav-menu">
+                {menuItems.map(item => (
+                  <li key={item.id} className="nav-item">
+                    <NavLink 
+                      to={item.path}
+                      className={() => {
+                        const shouldBeActive = isActiveRoute(item.path, item.id);
+                        return shouldBeActive ? "nav-link active" : "nav-link";
+                      }}
+                      end={item.path === '/admin'}
+                      title={item.label}
+                    >
+                      <img src={item.icon} alt={item.label} className="nav-icon" />
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+          
+          {/* Bottom Section - Logout Button - NOW POSITIONED ABSOLUTELY */}
+          <div className="sidebar-bottom">
+            <button 
+              className="logout-container"
+              onClick={handleLogoutClick}
+              title="Logout"
+            >
+              <img 
+                src={logoutIcon} 
+                alt="Logout" 
+                className="logout-icon"
+              />
+            </button>
           </div>
         </div>
         
-        {/* Main Content Area with admin-content-container */}
+        {/* Main Content Area */}
         <div className="admin-content">
           <div className="admin-content-container">
             <Outlet />
           </div>
         </div>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutModal && (
+        <div className="logout-modal-overlay">
+          <div className="logout-modal">
+            <div className="logout-modal-header">
+              <h3>Confirm Logout</h3>
+            </div>
+            <div className="logout-modal-body">
+              <p>Are you sure you want to logout? You will need to sign in again to access the admin panel.</p>
+            </div>
+            <div className="logout-modal-footer">
+              <button 
+                className="logout-cancel-btn"
+                onClick={handleLogoutCancel}
+              >
+                Cancel
+              </button>
+              <button 
+                className="logout-confirm-btn"
+                onClick={handleLogoutConfirm}
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminProvider>
   );
 };
