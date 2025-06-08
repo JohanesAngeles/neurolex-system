@@ -326,122 +326,124 @@ const DoctorProfile = () => {
 
   // Handle email change
   const handleEmailChange = async (e) => {
-    e.preventDefault();
-    
-    try {
-      setChangingEmail(true);
+  e.preventDefault();
+  
+  try {
+    setChangingEmail(true);
 
-      // Validate email format
-      if (!validateEmail(emailData.newEmail)) {
-        toast.error('Please enter a valid email address');
-        return;
-      }
-
-      // Check if new email is different
-      if (emailData.newEmail === emailData.currentEmail) {
-        toast.error('New email must be different from current email');
-        return;
-      }
-
-      // Validate current password is provided
-      if (!emailData.password) {
-        toast.error('Please enter your current password to confirm the change');
-        return;
-      }
-
-      console.log('🔄 Changing email...');
-      
-      const response = await doctorService.changeEmail(
-        emailData.currentEmail,
-        emailData.newEmail,
-        emailData.password
-      );
-
-      if (response.success) {
-        // Update local state
-        setDoctorProfile(prev => ({
-          ...prev,
-          email: emailData.newEmail
-        }));
-        
-        setEmailData(prev => ({
-          ...prev,
-          currentEmail: emailData.newEmail,
-          newEmail: '',
-          password: ''
-        }));
-
-        toast.success('Email address updated successfully!');
-      }
-
-    } catch (error) {
-      console.error('❌ Error changing email:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to change email';
-      toast.error(errorMessage);
-    } finally {
-      setChangingEmail(false);
+    // Validate email format
+    if (!validateEmail(emailData.newEmail)) {
+      toast.error('Please enter a valid email address');
+      return;
     }
-  };
+
+    // Check if new email is different
+    if (emailData.newEmail === emailData.currentEmail) {
+      toast.error('New email must be different from current email');
+      return;
+    }
+
+    // Validate current password is provided
+    if (!emailData.password) {
+      toast.error('Please enter your current password to confirm the change');
+      return;
+    }
+
+    console.log('🔄 Changing email...');
+    
+    // ✅ FIXED: Pass a single object instead of three separate parameters
+    const response = await doctorService.changeEmail({
+      currentEmail: emailData.currentEmail,
+      newEmail: emailData.newEmail,
+      password: emailData.password
+    });
+
+    if (response.success) {
+      // Update local state
+      setDoctorProfile(prev => ({
+        ...prev,
+        email: emailData.newEmail
+      }));
+      
+      setEmailData(prev => ({
+        ...prev,
+        currentEmail: emailData.newEmail,
+        newEmail: '',
+        password: ''
+      }));
+
+      toast.success('Email address updated successfully!');
+    }
+
+  } catch (error) {
+    console.error('❌ Error changing email:', error);
+    const errorMessage = error.response?.data?.message || error.message || 'Failed to change email';
+    toast.error(errorMessage);
+  } finally {
+    setChangingEmail(false);
+  }
+};
 
   // Handle password change
   const handlePasswordChange = async (e) => {
-    e.preventDefault();
-    
-    try {
-      setChangingPassword(true);
+  e.preventDefault();
+  
+  try {
+    setChangingPassword(true);
 
-      // Validate current password is provided
-      if (!passwordData.currentPassword) {
-        toast.error('Please enter your current password');
-        return;
-      }
-
-      // Validate new password
-      const passwordValidation = validatePassword(passwordData.newPassword);
-      if (!passwordValidation.isValid) {
-        toast.error(passwordValidation.errors[0]);
-        return;
-      }
-
-      // Check password confirmation
-      if (passwordData.newPassword !== passwordData.confirmPassword) {
-        toast.error('New passwords do not match');
-        return;
-      }
-
-      // Check if new password is different from current
-      if (passwordData.currentPassword === passwordData.newPassword) {
-        toast.error('New password must be different from current password');
-        return;
-      }
-
-      console.log('🔄 Changing password...');
-      
-      const response = await doctorService.changePassword(
-        passwordData.currentPassword,
-        passwordData.newPassword,
-        passwordData.confirmPassword
-      );
-
-      if (response.success) {
-        // Clear form
-        setPasswordData({
-          currentPassword: '',
-          newPassword: '',
-          confirmPassword: ''
-        });
-
-        toast.success('Password updated successfully!');
-      }
-
-    } catch (error) {
-      console.error('❌ Error changing password:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to change password';
-      toast.error(errorMessage);
-    } finally {
-      setChangingPassword(false);
+    // Validate current password is provided
+    if (!passwordData.currentPassword) {
+      toast.error('Please enter your current password');
+      return;
     }
-  };
+
+    // Validate new password
+    const passwordValidation = validatePassword(passwordData.newPassword);
+    if (!passwordValidation.isValid) {
+      toast.error(passwordValidation.errors[0]);
+      return;
+    }
+
+    // Check password confirmation
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast.error('New passwords do not match');
+      return;
+    }
+
+    // Check if new password is different from current
+    if (passwordData.currentPassword === passwordData.newPassword) {
+      toast.error('New password must be different from current password');
+      return;
+    }
+
+    console.log('🔄 Changing password...');
+    
+    // ✅ FIXED: Pass a single object instead of three separate parameters
+    const response = await doctorService.changePassword({
+      currentPassword: passwordData.currentPassword,
+      newPassword: passwordData.newPassword,
+      confirmPassword: passwordData.confirmPassword
+    });
+
+    if (response.success) {
+      // Clear form
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+
+      toast.success('Password updated successfully!');
+    }
+
+  } catch (error) {
+    console.error('❌ Error changing password:', error);
+    const errorMessage = error.response?.data?.message || error.message || 'Failed to change password';
+    toast.error(errorMessage);
+  } finally {
+    setChangingPassword(false);
+  }
+};
 
   // 🆕 FIXED: Change Email or Password Component (no useState hooks)
   const renderChangeEmailPassword = () => {
