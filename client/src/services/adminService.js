@@ -1053,10 +1053,10 @@ getIndividualPatientMoodAnalytics: async (patientId, days = 7, tenantId = null) 
       throw new Error('Admin authentication required');
     }
     
-    // ✅ FIX: Use the working admin mood endpoint
-    console.log('🌐 ADMIN: Using endpoint /api/admin/mood/user/' + patientId);
+    // ✅ FIXED: Removed /api/ prefix to prevent double /api/ in URL
+    console.log('🌐 ADMIN: Using endpoint /admin/mood/user/' + patientId);
     
-    const response = await api.get(`/api/admin/mood/user/${patientId}`, {
+    const response = await api.get(`/admin/mood/user/${patientId}`, {
       params: { 
         days: days,
         limit: 100  // Increase limit to see more data
