@@ -717,13 +717,17 @@ addDoctor: async (doctorData) => {
     
     // Ensure the doctor is marked as admin-added and auto-approved
     const submissionData = {
-      ...doctorData,
-      role: 'doctor',
-      verificationStatus: 'approved',
-      verificationDate: new Date().toISOString(),
-      isAdminAdded: true,
-      verificationNotes: doctorData.verificationNotes || 'Added by admin - automatically approved'
-    };
+  ...doctorData,
+  role: 'doctor',
+  verificationStatus: 'approved',
+  verificationDate: new Date().toISOString(),
+  isAdminAdded: true,
+  verificationNotes: [{
+    note: doctorData.verificationNotes || 'Added by admin - automatically approved',
+    addedBy: 'admin',
+    addedAt: new Date().toISOString()
+  }]
+};
     
     console.log('Submitting admin doctor data:', submissionData);
     
