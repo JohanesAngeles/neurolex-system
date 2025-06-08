@@ -211,7 +211,7 @@
 .conversation-avatar .avatar-initials {
   width: 66px;
   height: 65px;
-  border-radius: 8px;
+  border-radius: 50%;
   border: 1px solid #A7D7C5;
 }
 
@@ -355,7 +355,7 @@
 .chat-patient-avatar .avatar-initials {
   width: 66px;
   height: 65px;
-  border-radius: 8px;
+  border-radius: 50%;
   border: 1px solid #A7D7C5;
 }
 

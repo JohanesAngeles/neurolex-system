@@ -843,81 +843,44 @@
 /* Today's Appointments Styles */
 .todays-appointments {
   background-color: #fff;
-  border: 1px solid #A7D7C5;
   border-radius: 10px;
-  padding: 30px;
+  padding: 20px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  position: relative;
 }
 
-/* Header section */
 .today-appointment-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #A7D7C5;
-}
-
-.today-appointment-header .section-title {
-  font-family: 'Poppins', sans-serif;
-  font-style: normal;
-  font-weight: 400;
-  font-size: 25px;
-  line-height: 50px;
-  display: flex;
-  align-items: center;
-  color: #000000;
-  margin: 0;
-}
-
-.appointments-count {
-  font-size: 14px;
-  color: #666;
-  margin: 0;
-}
-
-/* Main appointment card container */
-.today-appointment-card {
-  border: 1px solid #A7D7C5;
-  border-radius: 10px;
-  padding: 20px;
   margin-bottom: 15px;
-  background-color: #fff;
-  position: relative;
 }
 
-/* Patient section */
+.today-appointment-card {
+  border-radius: 8px;
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+  margin-bottom: 15px;
+  overflow: hidden;
+}
+
 .today-appointment-patient {
   display: flex;
   align-items: center;
-  margin-bottom: 25px;
-  padding: 0;
-  border-bottom: none;
+  padding: 15px;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .patient-avatar {
-  width: 55px;
-  height: 55px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  border: 0.773366px solid #A7D7C5;
-  background-color: #A7D7C5;
+  background-color: #FFAB00;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-weight: 600;
-  font-size: 20px;
-  margin-right: 13px;
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.patient-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  margin-right: 15px;
 }
 
 .patient-info {
@@ -925,302 +888,125 @@
 }
 
 .patient-name-label {
-  font-family: 'Poppins', sans-serif;
-  font-style: normal;
-  font-weight: 400;
-  font-size: 25px;
-  line-height: 50px;
-  display: flex;
-  align-items: center;
-  color: #000000;
-  margin: 0 0 8px 0;
-  height: 20px;
-  overflow: hidden;
+  font-size: 16px;
+  font-weight: 500;
+  margin: 0;
 }
 
 .patient-type-label {
-  font-family: 'IBM Plex Mono', monospace;
-  font-style: italic;
-  font-weight: 400;
-  font-size: 15px;
-  line-height: 50px;
-  display: flex;
-  align-items: center;
-  color: #000000;
+  font-size: 12px;
+  color: #888;
   margin: 0;
-  height: 11px;
-  overflow: hidden;
 }
 
-/* Date and time section */
 .appointment-meta {
   display: flex;
-  gap: 12px;
-  margin-bottom: 25px;
-  padding: 0;
-  background-color: transparent;
+  justify-content: space-between;
+  padding: 12px 15px;
+  background-color: #f9f9f9;
 }
 
 .appointment-date-time {
   display: flex;
-  gap: 12px;
-  width: 100%;
+  gap: 15px;
 }
 
 .meta-group {
-  background: rgba(167, 215, 197, 0.1);
-  border: 1px solid #A7D7C5;
-  border-radius: 10px;
-  padding: 0;
-  flex: 1;
-  height: 87px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  position: relative;
-}
-
-/* Icon containers */
-.meta-group::before {
-  content: '';
-  position: absolute;
-  width: 41px;
-  height: 41px;
-  background: #FFFFFF;
-  border: 0.57651px solid #A7D7C5;
-  border-radius: 50%;
-  top: 50%;
-  left: 15px;
-  transform: translateY(-50%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Calendar icon */
-.meta-group.date-group::after {
-  content: '';
-  position: absolute;
-  width: 20.18px;
-  height: 20.18px;
-  left: 25px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: #548170;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M8 2v4m8-4v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z' stroke='%23548170' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  mask-size: contain;
-  mask-repeat: no-repeat;
-  mask-position: center;
-}
-
-/* Clock icon */
-.meta-group.time-group::after {
-  content: '';
-  position: absolute;
-  width: 20.18px;
-  height: 20.18px;
-  left: 25px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: #548170;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Ccircle cx='12' cy='12' r='10' stroke='%23548170' stroke-width='1.68205'/%3E%3Cpath d='M12 6v6l4 2' stroke='%23548170' stroke-width='1.68205' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  mask-size: contain;
-  mask-repeat: no-repeat;
-  mask-position: center;
-}
-
-.meta-group span {
-  font-family: 'Poppins', sans-serif;
-  font-style: normal;
-  font-weight: 400;
-  font-size: 15px;
-  line-height: 50px;
-  display: flex;
-  align-items: center;
-  color: #000000;
-  margin-left: 60px;
+  font-size: 13px;
+  color: #666;
 }
 
 .meta-icon {
-  display: none; /* Hide emoji icons since we're using CSS icons */
-}
-
-/* Action button */
-.appointment-actions {
-  display: flex;
-  gap: 0;
+  margin-right: 6px;
+  color: #4CAF50;
 }
 
 .view-details-button {
-  width: 100%;
-  height: 50px;
-  background: #548170;
-  border: 1px solid #548170;
-  border-radius: 10px;
-  font-family: 'IBM Plex Mono', monospace;
-  font-style: normal;
-  font-weight: 700;
-  font-size: 20px;
-  line-height: 50px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  color: #FFFFFF;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 15px;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  width: 100%;
+  transition: background-color 0.2s ease;
 }
 
 .view-details-button:hover {
-  background-color: #3d6b57;
-  border-color: #3d6b57;
+  background-color: #3d9140;
 }
 
-/* Meeting button updates */
-.join-meeting-button {
-  background-color: #548170;
-  color: white;
-  border: 1px solid #548170;
-  padding: 12px 20px;
-  border-radius: 10px;
-  cursor: pointer;
-  font-size: 16px;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  margin-bottom: 10px;
-  width: 100%;
-  font-family: 'IBM Plex Mono', monospace;
-  height: 50px;
+/* Responsive Adjustments */
+@media (max-width: 1024px) {
+  .stats-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .main-content {
+    grid-template-columns: 1fr;
+  }
+
+  .calendar-section {
+    margin-bottom: 20px;
+  }
+  
+  .week-day {
+    min-height: 150px;
+  }
 }
 
-.join-meeting-button:hover {
-  background-color: #3d6b57;
-}
-
-.join-meeting-button.active {
-  background-color: #FF4444;
-  animation: pulse 2s infinite;
-}
-
-.join-meeting-button.disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-
-/* Session status updates */
-.session-status {
-  font-size: 12px;
-  font-weight: 500;
-  margin-top: 5px;
-  color: #548170;
-  font-family: 'IBM Plex Mono', monospace;
-}
-
-/* No appointments state */
-.no-appointments {
-  text-align: center;
-  padding: 40px 20px;
-  color: #666;
-}
-
-.no-appointments-subtitle {
-  font-size: 14px;
-  margin-top: 8px;
-  color: #999;
-}
-
-/* Meeting instructions */
-.meeting-instructions {
-  margin-top: 20px;
-  padding: 15px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  font-size: 12px;
-  border-left: 4px solid #A7D7C5;
-}
-
-.meeting-instructions h4 {
-  margin: 0 0 10px 0;
-  color: #548170;
-  font-size: 14px;
-}
-
-.meeting-instructions ul {
-  margin: 0;
-  padding-left: 20px;
-}
-
-.meeting-instructions li {
-  margin-bottom: 5px;
-  color: #666;
-}
-
-/* Responsive adjustments */
 @media (max-width: 768px) {
-  .appointment-meta {
+  .dashboard-header {
     flex-direction: column;
-    gap: 10px;
+    align-items: flex-start;
+    gap: 15px;
   }
   
-  .meta-group {
-    height: 60px;
+  .header-actions {
+    width: 100%;
+    justify-content: flex-end;
   }
   
-  .meta-group::before {
-    width: 30px;
-    height: 30px;
-    left: 10px;
+  .week-row {
+    flex-wrap: wrap;
   }
   
-  .meta-group.date-group::after,
-  .meta-group.time-group::after {
-    width: 16px;
-    height: 16px;
-    left: 17px;
-  }
-  
-  .meta-group span {
-    margin-left: 50px;
-    font-size: 14px;
-  }
-  
-  .patient-avatar {
-    width: 45px;
-    height: 45px;
-    font-size: 18px;
-  }
-  
-  .patient-name-label {
-    font-size: 20px;
-  }
-  
-  .patient-type-label {
-    font-size: 13px;
-  }
-  
-  .view-details-button {
-    font-size: 16px;
+  .week-day {
+    flex: 0 0 50%;
+    border-bottom: 1px solid #e0e0e0;
   }
 }
 
 @media (max-width: 480px) {
-  .today-appointment-card {
-    padding: 15px;
+  .stats-container {
+    grid-template-columns: 1fr;
   }
-  
-  .appointment-actions {
-    flex-direction: column;
-  }
-  
-  .today-appointment-header .section-title {
-    font-size: 20px;
-  }
-}
 
-@keyframes pulse {
-  0% { opacity: 1; }
-  50% { opacity: 0.7; }
-  100% { opacity: 1; }
+  .week-day {
+    flex: 0 0 100%;
+  }
+
+  .appointment-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .appointment-avatar {
+    margin-bottom: 10px;
+  }
+
+  .appointment-time {
+    margin: 10px 0;
+  }
+
+  .view-details-btn {
+    width: 100%;
+    margin-top: 10px;
+  }
 }
 
 .join-meeting-button {
