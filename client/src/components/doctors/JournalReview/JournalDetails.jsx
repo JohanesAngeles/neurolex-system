@@ -1,36 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import {
-  Box,
-  Typography,
-  Paper,
-  Button,
-  Grid,
-  Divider,
-  TextField,
-  Chip,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Alert,
-  CircularProgress,
-  IconButton,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Switch,
-  FormControlLabel
-} from '@mui/material';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import MoodIcon from '@mui/icons-material/Mood';
-import SentimentVeryDissatisfiedIcon from '@mui/icons-material/SentimentVeryDissatisfied';
-import SentimentNeutralIcon from '@mui/icons-material/SentimentNeutral';
-import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import { format, parseISO, isValid } from 'date-fns';
 import doctorService from '../../../services/doctorService';
 import axios from 'axios';
+import '../../../styles/components/doctor/JournalEntryDetail.css';
 
 const JournalEntryDetail = () => {
   const { id } = useParams();
@@ -50,6 +23,7 @@ const JournalEntryDetail = () => {
   const [useAI, setUseAI] = useState(true);
   const [aiAnalysis, setAiAnalysis] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [showAIAnalysis, setShowAIAnalysis] = useState(false);
   
   // Safe date formatting function
   const formatDateSafe = (dateString) => {
@@ -181,11 +155,11 @@ const JournalEntryDetail = () => {
       
       console.log(`Starting AI analysis for entry ID: ${id}`);
       
-            const response = await axios.post(
+      const response = await axios.post(
         `/api/doctor/journal-entries/${id}/analyze`,
         { 
           useAI: true, 
-          applyChanges: true,  // ← SAVE IMMEDIATELY
+          applyChanges: true,
           includeHighlights: true
         },
         {
@@ -202,25 +176,19 @@ const JournalEntryDetail = () => {
       let analysisData = null;
       
       if (response.data && response.data.success === true) {
-        // ✅ FIXED: Check for the correct data structure
         if (response.data.data && response.data.data.analysis) {
-          // New backend format: data.analysis
           analysisData = response.data.data.analysis;
           console.log('Found analysis in data.analysis:', analysisData);
         } else if (response.data.data && response.data.data.sentimentAnalysis) {
-          // Legacy format: data.sentimentAnalysis
           analysisData = response.data.data.sentimentAnalysis;
           console.log('Found analysis in data.sentimentAnalysis:', analysisData);
         } else if (response.data.aiAnalysis) {
-          // Alternative format: aiAnalysis
           analysisData = response.data.aiAnalysis;
           console.log('Found analysis in aiAnalysis:', analysisData);
         } else if (response.data.data) {
-          // Fallback: use data directly
           analysisData = response.data.data;
           console.log('Using data directly:', analysisData);
         } else {
-          // Last resort: use entire response data
           analysisData = response.data;
           console.log('Using response.data:', analysisData);
         }
@@ -229,7 +197,6 @@ const JournalEntryDetail = () => {
       console.log('Final analysisData:', analysisData);
       
       if (analysisData) {
-        // ✅ FIXED: Set AI analysis with proper data structure
         setAiAnalysis({
           sentiment: analysisData.sentiment || { type: 'neutral', score: 0.5 },
           emotions: analysisData.emotions || [],
@@ -239,37 +206,31 @@ const JournalEntryDetail = () => {
           keywords: analysisData.keywords || []
         });
         
-        // ✅ FIXED: Update the form fields with the analysis results
         setAnalysis(prev => {
           const updatedAnalysis = { ...prev };
           
-          // Set sentiment
           if (analysisData.sentiment && analysisData.sentiment.type) {
             updatedAnalysis.sentiment = analysisData.sentiment.type;
           }
           
-          // Set emotions
           if (analysisData.emotions && Array.isArray(analysisData.emotions)) {
             updatedAnalysis.emotions = analysisData.emotions.map(e => 
               typeof e === 'object' ? (e.name || e.label || e) : e
             );
           }
           
-          // Set notes from insights
           if (analysisData.insights && Array.isArray(analysisData.insights)) {
             updatedAnalysis.notes = analysisData.insights.join('\n');
           }
           
-          // Set flags from recommendedActions
           if (analysisData.recommendedActions && Array.isArray(analysisData.recommendedActions)) {
-            updatedAnalysis.flags = ['progress']; // Default flag when AI analysis is complete
+            updatedAnalysis.flags = ['progress'];
           }
           
           console.log('Updated analysis state:', updatedAnalysis);
           return updatedAnalysis;
         });
         
-        // ✅ SUCCESS MESSAGE
         setError(null);
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 3000);
@@ -357,156 +318,117 @@ const JournalEntryDetail = () => {
     handleAnalysisChange('flags', flags);
   };
   
-  // ✅ FIXED: Render journal content (rawText instead of structured responses)
+  // Render journal content
   const renderJournalContent = () => {
-    // Priority 1: Check for rawText (new simplified format)
     if (entry?.rawText) {
       return (
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-            Journal Entry Content
-          </Typography>
-          <Paper 
-            variant="outlined" 
-            sx={{ 
-              p: 2, 
-              backgroundColor: 'grey.50',
-              borderRadius: 2
-            }}
-          >
-            <Typography 
-              variant="body1" 
-              sx={{ 
-                whiteSpace: 'pre-line',
-                lineHeight: 1.6
-              }}
-            >
-              {entry.rawText}
-            </Typography>
-          </Paper>
-        </Box>
+        <div className="journal-content-section">
+          <h4 className="section-subtitle">Journal Entry Content</h4>
+          <div className="journal-content-box">
+            <p className="journal-text">{entry.rawText}</p>
+          </div>
+        </div>
       );
     }
     
-    // Priority 2: Check for old structured responses (for backward compatibility)
     if (entry?.template?.fields && Array.isArray(entry.template.fields) && entry.template.fields.length > 0) {
       return entry.template.fields.map((field, index) => (
-        <Box key={field.id || `field-${index}`} sx={{ mb: 3 }}>
-          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-            {field.label}
-          </Typography>
+        <div key={field.id || `field-${index}`} className="journal-content-section">
+          <h4 className="section-subtitle">{field.label}</h4>
           {renderFieldResponse(field)}
-        </Box>
+        </div>
       ));
     }
     
-    // Priority 3: Check for responses object
     if (entry?.responses && Object.keys(entry.responses).length > 0) {
       return Object.entries(entry.responses).map(([key, value], index) => (
-        <Box key={key} sx={{ mb: 3 }}>
-          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+        <div key={key} className="journal-content-section">
+          <h4 className="section-subtitle">
             {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-          </Typography>
-          <Typography>
-            {typeof value === 'object' ? JSON.stringify(value) : value}
-          </Typography>
-        </Box>
+          </h4>
+          <p>{typeof value === 'object' ? JSON.stringify(value) : value}</p>
+        </div>
       ));
     }
     
-    // Priority 4: Check for journalFields
     if (entry?.journalFields && Object.keys(entry.journalFields).length > 0) {
       return Object.entries(entry.journalFields).map(([key, value], index) => (
-        <Box key={key} sx={{ mb: 3 }}>
-          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+        <div key={key} className="journal-content-section">
+          <h4 className="section-subtitle">
             {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-          </Typography>
-          <Typography>
+          </h4>
+          <p>
             {Array.isArray(value) 
               ? value.join(', ') 
               : (typeof value === 'object' ? JSON.stringify(value) : value)}
-          </Typography>
-        </Box>
+          </p>
+        </div>
       ));
     }
     
-    // No content found
     return (
-      <Box sx={{ textAlign: 'center', py: 4 }}>
-        <Typography color="text.secondary">
-          No journal content found
-        </Typography>
-      </Box>
+      <div className="no-content">
+        <p>No journal content found</p>
+      </div>
     );
   };
   
-  // Render a form field's response (for backward compatibility)
+  // Render a form field's response
   const renderFieldResponse = (field) => {
-    if (!entry || !field || !entry.responses) return 'No response';
+    if (!entry || !field || !entry.responses) return <p>No response</p>;
     
     const response = entry.responses[field.id];
-    if (response === undefined || response === null) return 'No response';
+    if (response === undefined || response === null) return <p>No response</p>;
     
     switch (field.type) {
       case 'mood-scale':
-        if (!field.options) return response;
+        if (!field.options) return <p>{response}</p>;
         const option = field.options.find(opt => opt.value === response || opt.value === response.toString());
         return (
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Typography variant="h5" sx={{ mr: 1 }}>
-              {option?.icon || ''}
-            </Typography>
-            <Typography>
-              {option?.label || response || 'No response'}
-            </Typography>
-          </Box>
+          <div className="mood-response">
+            <span className="mood-icon">{option?.icon || ''}</span>
+            <span className="mood-label">{option?.label || response || 'No response'}</span>
+          </div>
         );
         
       case 'select':
       case 'radio':
-        if (!field.options) return response;
+        if (!field.options) return <p>{response}</p>;
         const selectedOption = field.options.find(opt => opt.value === response || opt.value === response.toString());
-        return <Typography>{selectedOption?.label || response || 'No response'}</Typography>;
+        return <p>{selectedOption?.label || response || 'No response'}</p>;
         
       case 'checkbox':
         if (Array.isArray(response)) {
-          if (response.length === 0) return 'No options selected';
+          if (response.length === 0) return <p>No options selected</p>;
           
           return (
-            <Box>
+            <div className="checkbox-responses">
               {response.map((value, index) => {
                 const opt = field.options ? field.options.find(o => o.value === value || o.value === value.toString()) : null;
                 return (
-                  <Chip 
-                    key={index}
-                    label={opt?.label || value}
-                    sx={{ mr: 0.5, mb: 0.5 }}
-                    size="small"
-                  />
+                  <span key={index} className="response-chip">
+                    {opt?.label || value}
+                  </span>
                 );
               })}
-            </Box>
+            </div>
           );
         } else {
-          return 'Invalid response format';
+          return <p>Invalid response format</p>;
         }
         
       case 'textarea':
-        return (
-          <Typography sx={{ whiteSpace: 'pre-line' }}>
-            {response || 'No response'}
-          </Typography>
-        );
+        return <p className="textarea-response">{response || 'No response'}</p>;
         
       case 'date':
         try {
-          return format(new Date(response), 'MMMM dd, yyyy');
+          return <p>{format(new Date(response), 'MMMM dd, yyyy')}</p>;
         } catch {
-          return response;
+          return <p>{response}</p>;
         }
         
       default:
-        return <Typography>{typeof response === 'object' ? JSON.stringify(response) : response || 'No response'}</Typography>;
+        return <p>{typeof response === 'object' ? JSON.stringify(response) : response || 'No response'}</p>;
     }
   };
   
@@ -514,11 +436,11 @@ const JournalEntryDetail = () => {
   const renderSentimentIcon = (sentimentType) => {
     switch (sentimentType) {
       case 'positive':
-        return <MoodIcon fontSize="large" sx={{ color: 'success.main' }} />;
+        return <span className="sentiment-icon positive">😊</span>;
       case 'negative':
-        return <SentimentVeryDissatisfiedIcon fontSize="large" sx={{ color: 'error.main' }} />;
+        return <span className="sentiment-icon negative">😔</span>;
       case 'neutral':
-        return <SentimentNeutralIcon fontSize="large" sx={{ color: 'warning.main' }} />;
+        return <span className="sentiment-icon neutral">😐</span>;
       default:
         return null;
     }
@@ -526,319 +448,308 @@ const JournalEntryDetail = () => {
   
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', p: 5 }}>
-        <CircularProgress />
-      </Box>
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+      </div>
     );
   }
   
   if (error && !entry) {
     return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="error">{error}</Alert>
-      </Box>
+      <div className="error-alert">
+        <span className="alert-title">Error:</span>
+        {error}
+      </div>
     );
   }
   
   return (
-    <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-        <IconButton onClick={() => navigate('/doctor/journal-entries')} sx={{ mr: 1 }}>
-          <ArrowBackIcon />
-        </IconButton>
-        <Typography variant="h5">
-          Journal Entry Review
-        </Typography>
-      </Box>
-      
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
-        </Alert>
-      )}
-      
-      {saveSuccess && (
-        <Alert severity="success" sx={{ mb: 3 }}>
-          Analysis saved successfully!
-        </Alert>
-      )}
-      
-      <Grid container spacing={3}>
-        {/* Entry Details */}
-        <Grid item xs={12} md={7}>
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-              <Typography variant="h6">Entry Details</Typography>
-              <Typography variant="body2" color="text.secondary">
-                {entry && formatDateSafe(entry.date || entry.createdAt)}
-              </Typography>
-            </Box>
-            
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                Patient
-              </Typography>
-              <Typography variant="body1">
-                {entry?.patientName || (entry?.user ? `${entry.user.firstName} ${entry.user.lastName}` : 'Unknown')}
-              </Typography>
-            </Box>
-            
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                Template
-              </Typography>
-              <Typography variant="body1">
-                {entry?.templateName || (entry?.template?.name ? entry.template.name : 'Custom Entry')}
-              </Typography>
-            </Box>
-            
-            <Divider sx={{ my: 3 }} />
-            
-            <Typography variant="h6" gutterBottom>
-              Responses
-            </Typography>
-            
-            {/* ✅ FIXED: Use the new renderJournalContent function */}
-            {renderJournalContent()}
-          </Paper>
-        </Grid>
-        
-        {/* Analysis Panel */}
-        <Grid item xs={12} md={5}>
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Analysis
-            </Typography>
-            
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={useAI}
-                  onChange={(e) => setUseAI(e.target.checked)}
-                  color="primary"
-                />
-              }
-              label="Use AI Assistant"
-              sx={{ mb: 2 }}
-            />
-            
-            {useAI && !aiAnalysis && (
-              <Box sx={{ mb: 2 }}>
-                <Button
-                  variant="outlined"
-                  startIcon={aiLoading ? <CircularProgress size={20} /> : <AutoFixHighIcon />}
-                  onClick={runAIAnalysis}
-                  disabled={aiLoading}
-                  fullWidth
-                >
-                  {aiLoading ? 'Running AI Analysis...' : 'Run AI Analysis'}
-                </Button>
-              </Box>
-            )}
-            
-            {aiAnalysis && (
-              <Accordion sx={{ mb: 2 }}>
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography>AI Analysis Results</Typography>
-                </AccordionSummary>
-                <AccordionDetails>
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                      Sentiment
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      {renderSentimentIcon(aiAnalysis.sentiment?.type)}
-                      <Typography sx={{ ml: 1 }}>
-                        {aiAnalysis.sentiment?.type 
-                          ? aiAnalysis.sentiment.type.charAt(0).toUpperCase() + aiAnalysis.sentiment.type.slice(1)
-                          : 'Not detected'}
-                      </Typography>
-                    </Box>
-                  </Box>
-                  
-                  {aiAnalysis.emotions && aiAnalysis.emotions.length > 0 && (
-                    <Box sx={{ mb: 2 }}>
-                      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                        Detected Emotions
-                      </Typography>
-                      <Box>
-                        {aiAnalysis.emotions.map((emotion, index) => (
-                          <Chip
-                            key={index}
-                            label={typeof emotion === 'object' ? emotion.name : emotion}
-                            size="small"
-                            sx={{ mr: 0.5, mb: 0.5 }}
-                          />
-                        ))}
-                      </Box>
-                    </Box>
-                  )}
-                  
-                  {aiAnalysis.highlights && aiAnalysis.highlights.length > 0 && (
-                    <Box sx={{ mt: 2 }}>
-                      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                        Key Phrases
-                      </Typography>
-                      {aiAnalysis.highlights.map((highlight, index) => (
-                        <Box 
-                          key={index} 
-                          sx={{ 
-                            p: 1.5, 
-                            mb: 1.5, 
-                            borderRadius: 1,
-                            borderLeft: `4px solid ${highlight.type === 'positive' 
-                              ? '#4caf50' 
-                              : highlight.type === 'negative' 
-                                ? '#f44336' 
-                                : '#ff9800'}`,
-                            backgroundColor: highlight.type === 'positive' 
-                              ? 'rgba(76,175,80,0.1)' 
-                              : highlight.type === 'negative' 
-                                ? 'rgba(244,67,54,0.1)' 
-                                : 'rgba(255,152,0,0.1)',
-                          }}
-                        >
-                          <Typography variant="body2">
-                            "{highlight.text}"
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                            Keyword: <strong>{highlight.keyword}</strong>
-                          </Typography>
-                        </Box>
-                      ))}
-                    </Box>
-                  )}
-                  
-                  {aiAnalysis.keywords && aiAnalysis.keywords.length > 0 && (
-                    <Box>
-                      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                        Keywords
-                      </Typography>
-                      <Box>
-                        {aiAnalysis.keywords.map((keyword, index) => (
-                          <Chip
-                            key={index}
-                            label={keyword}
-                            variant="outlined"
-                            size="small"
-                            sx={{ mr: 0.5, mb: 0.5 }}
-                          />
-                        ))}
-                      </Box>
-                    </Box>
-                  )}
-                </AccordionDetails>
-              </Accordion>
-            )}
-            
-            <FormControl fullWidth sx={{ mb: 3 }}>
-              <InputLabel>Sentiment</InputLabel>
-              <Select
-                value={analysis.sentiment}
-                onChange={(e) => handleAnalysisChange('sentiment', e.target.value)}
-                label="Sentiment"
+    <div className="journal-entry-detail">
+          
+          {/* Header */}
+          <div className="journal-header">
+            <div className="header-left">
+              <button 
+                className="back-button" 
+                onClick={() => navigate('/doctor/journal-entries')}
               >
-                <MenuItem value="">Not Selected</MenuItem>
-                <MenuItem value="positive">Positive</MenuItem>
-                <MenuItem value="neutral">Neutral</MenuItem>
-                <MenuItem value="negative">Negative</MenuItem>
-              </Select>
-            </FormControl>
+                <span className="back-icon">←</span>
+              </button>
+              <div>
+                <h1 className="journal-title">Journal Entry Review</h1>
+              </div>
+            </div>
+            <div className="date-badge">
+              <span className="calendar-icon">📅</span>
+              <span className="date-text">
+                {entry && formatDateSafe(entry.date || entry.createdAt)}
+              </span>
+            </div>
+          </div>
+          
+          {/* Alerts */}
+          {error && (
+            <div className="error-alert">
+              <span className="alert-title">Error:</span>
+              {error}
+            </div>
+          )}
+          
+          {saveSuccess && (
+            <div className="success-alert">
+              <span className="alert-title">Success:</span>
+              Analysis saved successfully!
+            </div>
+          )}
+          
+          {/* Main Content */}
+          <div className="journal-grid">
             
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                Emotions
-              </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', mb: 1 }}>
-                {analysis.emotions.map((emotion, index) => (
-                  <Chip
-                    key={index}
-                    label={emotion}
-                    onDelete={() => toggleEmotion(emotion)}
-                    sx={{ mr: 0.5, mb: 0.5 }}
-                  />
-                ))}
-              </Box>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                Common emotions:
-              </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap' }}>
-                {commonEmotions.map((emotion) => (
-                  <Chip
-                    key={emotion}
-                    label={emotion}
-                    variant={analysis.emotions.includes(emotion) ? 'filled' : 'outlined'}
-                    onClick={() => toggleEmotion(emotion)}
-                    sx={{ mr: 0.5, mb: 0.5 }}
-                    size="small"
-                  />
-                ))}
-              </Box>
-            </Box>
+            {/* Entry Details */}
+            <div className="journal-main-content">
+              <div className="form-paper">
+                
+                <div className="entry-header">
+                  <h2 className="section-title">Entry Details</h2>
+                </div>
+                
+                <div className="entry-info">
+                  <div className="info-item">
+                    <h4 className="section-subtitle">Patient</h4>
+                    <p>{entry?.patientName || (entry?.user ? `${entry.user.firstName} ${entry.user.lastName}` : 'Unknown')}</p>
+                  </div>
+                  
+                  <div className="info-item">
+                    <h4 className="section-subtitle">Template</h4>
+                    <p>{entry?.templateName || (entry?.template?.name ? entry.template.name : 'Custom Entry')}</p>
+                  </div>
+                </div>
+                
+                <div className="content-divider"></div>
+                
+                <h2 className="section-title">Responses</h2>
+                
+                {renderJournalContent()}
+              </div>
+            </div>
             
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                Doctor Notes
-              </Typography>
-              <TextField
-                multiline
-                rows={4}
-                fullWidth
-                placeholder="Add your professional notes about this journal entry..."
-                value={analysis.notes}
-                onChange={(e) => handleAnalysisChange('notes', e.target.value)}
-              />
-            </Box>
-            
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                Flags
-              </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap' }}>
-                <Chip
-                  label="Follow Up Needed"
-                  variant={analysis.flags.includes('follow-up') ? 'filled' : 'outlined'}
-                  onClick={() => toggleFlag('follow-up')}
-                  sx={{ mr: 0.5, mb: 0.5 }}
-                  color="primary"
-                />
-                <Chip
-                  label="Concerning Content"
-                  variant={analysis.flags.includes('concerning') ? 'filled' : 'outlined'}
-                  onClick={() => toggleFlag('concerning')}
-                  sx={{ mr: 0.5, mb: 0.5 }}
-                  color="error"
-                />
-                <Chip
-                  label="Progress"
-                  variant={analysis.flags.includes('progress') ? 'filled' : 'outlined'}
-                  onClick={() => toggleFlag('progress')}
-                  sx={{ mr: 0.5, mb: 0.5 }}
-                  color="success"
-                />
-                <Chip
-                  label="Discuss"
-                  variant={analysis.flags.includes('discuss') ? 'filled' : 'outlined'}
-                  onClick={() => toggleFlag('discuss')}
-                  sx={{ mr: 0.5, mb: 0.5 }}
-                  color="warning"
-                />
-              </Box>
-            </Box>
-            
-            <Button
-              variant="contained"
-              color="primary"
-              fullWidth
-              onClick={saveAnalysis}
-              disabled={saving}
-            >
-              {saving ? 'Saving...' : 'Save Analysis'}
-            </Button>
-          </Paper>
-        </Grid>
-      </Grid>
-    </Box>
+            {/* Analysis Panel */}
+            <div className="journal-sidebar">
+              <div className="form-paper">
+                <div className="analysis-header">
+                  <h2 className="section-title">Analysis</h2>
+                  
+                  {/* AI Toggle Button */}
+                  <button 
+                    className={`ai-toggle-button ${showAIAnalysis ? 'active' : ''}`}
+                    onClick={() => setShowAIAnalysis(!showAIAnalysis)}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                    Run AI Analysis
+                  </button>
+                </div>
+                
+                <div className="toggle-container">
+                  <label className="switch">
+                    <input 
+                      type="checkbox" 
+                      checked={useAI}
+                      onChange={(e) => setUseAI(e.target.checked)}
+                    />
+                    <span className="slider round"></span>
+                  </label>
+                  <span className="toggle-label">Use AI Assistant</span>
+                </div>
+                
+                {/* AI Analysis Section */}
+                {showAIAnalysis && (
+                  <div className="ai-analysis-section">
+                    {useAI && !aiAnalysis && (
+                      <div className="ai-run-container">
+                        <button
+                          className={`primary-button ${aiLoading ? 'loading' : ''}`}
+                          onClick={runAIAnalysis}
+                          disabled={aiLoading}
+                        >
+                          {aiLoading ? (
+                            <>
+                              <div className="button-spinner"></div>
+                              Running AI Analysis...
+                            </>
+                          ) : (
+                            <>
+                              <span>🤖</span>
+                              Run AI Analysis
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    )}
+                    
+                    {aiAnalysis && (
+                      <div className="ai-results">
+                        <div className="ai-results-header">
+                          <h3>AI Analysis Results</h3>
+                        </div>
+                        
+                        <div className="ai-sentiment">
+                          <h4 className="section-subtitle">Sentiment</h4>
+                          <div className="sentiment-display">
+                            {renderSentimentIcon(aiAnalysis.sentiment?.type)}
+                            <span className="sentiment-text">
+                              {aiAnalysis.sentiment?.type 
+                                ? aiAnalysis.sentiment.type.charAt(0).toUpperCase() + aiAnalysis.sentiment.type.slice(1)
+                                : 'Not detected'}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {aiAnalysis.emotions && aiAnalysis.emotions.length > 0 && (
+                          <div className="ai-emotions">
+                            <h4 className="section-subtitle">Detected Emotions</h4>
+                            <div className="emotion-chips">
+                              {aiAnalysis.emotions.map((emotion, index) => (
+                                <span key={index} className="emotion-chip">
+                                  {typeof emotion === 'object' ? emotion.name : emotion}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {aiAnalysis.highlights && aiAnalysis.highlights.length > 0 && (
+                          <div className="ai-highlights">
+                            <h4 className="section-subtitle">Key Phrases</h4>
+                            {aiAnalysis.highlights.map((highlight, index) => (
+                              <div 
+                                key={index} 
+                                className={`highlight-item ${highlight.type}`}
+                              >
+                                <p className="highlight-text">"{highlight.text}"</p>
+                                <span className="highlight-keyword">
+                                  Keyword: <strong>{highlight.keyword}</strong>
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {aiAnalysis.keywords && aiAnalysis.keywords.length > 0 && (
+                          <div className="ai-keywords">
+                            <h4 className="section-subtitle">Keywords</h4>
+                            <div className="keyword-chips">
+                              {aiAnalysis.keywords.map((keyword, index) => (
+                                <span key={index} className="keyword-chip">
+                                  {keyword}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* Manual Analysis Form */}
+                <div className="manual-analysis">
+                  <div className="form-section">
+                    <label className="form-label">Sentiment</label>
+                    <select 
+                      className="form-select"
+                      value={analysis.sentiment}
+                      onChange={(e) => handleAnalysisChange('sentiment', e.target.value)}
+                    >
+                      <option value="">Not Selected</option>
+                      <option value="positive">Positive</option>
+                      <option value="neutral">Neutral</option>
+                      <option value="negative">Negative</option>
+                    </select>
+                  </div>
+                  
+                  <div className="form-section">
+                    <label className="form-label">Emotions</label>
+                    <div className="selected-emotions">
+                      {analysis.emotions.map((emotion, index) => (
+                        <span 
+                          key={index} 
+                          className="selected-emotion-chip"
+                          onClick={() => toggleEmotion(emotion)}
+                        >
+                          {emotion}
+                          <span className="remove-emotion">×</span>
+                        </span>
+                      ))}
+                    </div>
+                    <p className="form-hint">Common emotions:</p>
+                    <div className="emotion-options">
+                      {commonEmotions.map((emotion) => (
+                        <span
+                          key={emotion}
+                          className={`emotion-option ${analysis.emotions.includes(emotion) ? 'selected' : ''}`}
+                          onClick={() => toggleEmotion(emotion)}
+                        >
+                          {emotion}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="form-section">
+                    <label className="form-label">Doctor Notes</label>
+                    <textarea
+                      className="form-textarea"
+                      rows={4}
+                      placeholder="Add your professional notes about this journal entry..."
+                      value={analysis.notes}
+                      onChange={(e) => handleAnalysisChange('notes', e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="form-section">
+                    <label className="form-label">Flags</label>
+                    <div className="flag-options">
+                      <span
+                        className={`flag-option follow-up ${analysis.flags.includes('follow-up') ? 'selected' : ''}`}
+                        onClick={() => toggleFlag('follow-up')}
+                      >
+                        Follow Up Needed
+                      </span>
+                      <span
+                        className={`flag-option concerning ${analysis.flags.includes('concerning') ? 'selected' : ''}`}
+                        onClick={() => toggleFlag('concerning')}
+                      >
+                        Concerning Content
+                      </span>
+                      <span
+                        className={`flag-option progress ${analysis.flags.includes('progress') ? 'selected' : ''}`}
+                        onClick={() => toggleFlag('progress')}
+                      >
+                        Progress
+                      </span>
+                      <span
+                        className={`flag-option discuss ${analysis.flags.includes('discuss') ? 'selected' : ''}`}
+                        onClick={() => toggleFlag('discuss')}
+                      >
+                        Discuss
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <button
+                    className={`primary-button large-button ${saving ? 'loading' : ''}`}
+                    onClick={saveAnalysis}
+                    disabled={saving}
+                  >
+                    {saving ? 'Saving...' : 'Save Analysis'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
   );
 };
 

@@ -389,7 +389,7 @@ const loadPatientsWithProfile = async (profile) => {
 
       {/* Sidebar Container - simplified layout */}
       <div className="sidebar-container">
-        {/* Simplified Header without search */}
+        {/* Simplified Header with envelope icon */}
         <div className="messages-header">
           <div className="header-left">
             <h1 className="messages-title">Messages</h1>
@@ -397,11 +397,8 @@ const loadPatientsWithProfile = async (profile) => {
               Communicate securely with your patients through {platformName}
             </p>
           </div>
-          <div className="header-stats">
-            <div className="stat-item">
-              <span className="stat-number">{patients.length}</span>
-              <span className="stat-label">Patients</span>
-            </div>
+          <div className="header-icon">
+            <span className="header-icon-emoji">💌</span>
           </div>
         </div>
 
