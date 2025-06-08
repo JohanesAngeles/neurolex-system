@@ -2828,10 +2828,6 @@ exports.changeDoctorEmail = async (req, res) => {
 };
 
 /**
- * Change doctor's password - FINAL CORRECT VERSION
- * @authenticated - Doctor only
- */
-/**
  * Change doctor's password - GUARANTEED HASHING VERSION
  * @authenticated - Doctor only
  */

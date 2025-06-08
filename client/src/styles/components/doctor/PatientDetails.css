@@ -2,11 +2,12 @@
 
 /* Container */
 .patient-details-container {
-  max-width: 1500px;
+   max-width: 1500px;
   width: 100%;
-  margin: 0 auto;
+  margin: 0 auto; 
   margin-top: 50px;
   padding: 20px;
+  text-align: left !important;
 }
 
 /* Header Section */
@@ -16,12 +17,20 @@
   align-items: flex-start;
   margin-bottom: 32px;
   padding-bottom: 24px;
+  width: 100%;
+  position: relative;
+  text-align: left; 
 }
 
-.header-left {
+.header-left-{
   display: flex;
   align-items: center;
   gap: 16px;
+  flex: 1;
+  justify-content: flex-start; 
+  text-align: left;
+  margin-left: 0; 
+  margin-right: auto;
 }
 
 .patient-details-container .back-button {
@@ -35,6 +44,7 @@
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
+  flex-shrink: 0; /* Prevent shrinking */
 }
 
 .back-button:hover {
@@ -49,6 +59,10 @@
 .patient-info {
   display: flex;
   flex-direction: column;
+  align-items: flex-start; /* Ensure left alignment */
+  flex: 1;
+  text-align: left; /* Override any inherited centering */
+  margin-left: 0; /* Ensure no left margin */
 }
 
 .patient-name {
@@ -57,6 +71,8 @@
   font-family: 'Poppins', sans-serif; 
   color: #000000;
   margin: 0 0 2px 0;
+  text-align: left !important; /* Force left alignment with !important */
+  align-self: flex-start; /* Ensure it aligns to the start of flex container */
 }
 
 .patient-email {
@@ -65,6 +81,8 @@
   font-family: 'IBM Plex Mono', monospace;
   font-style: italic;
   margin: 0;
+  text-align: left !important; /* Force left alignment with !important */
+  align-self: flex-start; /* Ensure it aligns to the start of flex container */
 }
 
 .header-right {
@@ -72,6 +90,150 @@
   flex-direction: column;
   align-items: flex-end;
   gap: 8px;
+  flex-shrink: 0; /* Prevent shrinking */
+  min-width: 250px; /* Ensure enough space */
+}
+
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.status-badge.active {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.registration-date {
+  font-size: 14px;
+  color: #666;
+  font-style: italic;
+  text-align: right; /* Ensure right alignment */
+  white-space: nowrap; /* Prevent text wrapping */
+}
+
+/* Responsive Design Updates */
+@media (max-width: 768px) {
+  .patient-details-container {
+    padding: 16px;
+  }
+  
+  .patient-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .header-left {
+    width: 100%;
+  }
+  
+  .header-right {
+    align-items: flex-start;
+    width: 100%;
+  }
+  
+  .registration-date {
+    text-align: left;
+  }
+  
+  .patient-name {
+    font-size: 32px;
+  }
+  
+  .patient-email {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .patient-name {
+    font-size: 24px;
+  }
+  
+  .patient-email {
+    font-size: 16px;
+  }
+  
+  .header-right {
+    margin-top: 12px;
+  }
+}
+
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.status-badge.active {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.registration-date {
+  font-size: 14px;
+  color: #666;
+  font-style: italic;
+  text-align: right; /* Ensure right alignment */
+  white-space: nowrap; /* Prevent text wrapping */
+}
+
+/* Responsive Design Updates */
+@media (max-width: 768px) {
+  .patient-details-container {
+    padding: 16px;
+  }
+  
+  .patient-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .header-left {
+    width: 100%;
+  }
+  
+  .header-right {
+    align-items: flex-start;
+    width: 100%;
+  }
+  
+  .registration-date {
+    text-align: left;
+  }
+  
+  .patient-name {
+    font-size: 32px;
+  }
+  
+  .patient-email {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .patient-name {
+    font-size: 24px;
+  }
+  
+  .patient-email {
+    font-size: 16px;
+  }
+  
+  .header-right {
+    margin-top: 12px;
+  }
 }
 
 .status-badge {

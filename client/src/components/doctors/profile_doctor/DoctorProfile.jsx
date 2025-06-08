@@ -669,6 +669,335 @@ const DoctorProfile = () => {
     );
   };
 
+// 🆕 REPLACE THE ENTIRE renderDoctorApplication FUNCTION WITH THIS:
+const renderDoctorApplication = () => {
+  return (
+    <div className="profile-content">
+      <div className="content-header">
+        <h2>My Doctor Application</h2>
+        <div className="tools-section">
+          <button className="tools-button">
+            <img src={settingsIcon} alt="Tools" />
+          </button>
+        </div>
+      </div>
+
+      <div className="application-overview">
+        {/* Application Status */}
+        <div className="form-section">
+          <h3>Application Status</h3>
+          <div className="status-card">
+            <div className="status-info">
+              <span className={`status-badge ${
+                doctorProfile.verificationStatus === 'approved' ? 'approved' :
+                doctorProfile.verificationStatus === 'pending' ? 'pending' :
+                doctorProfile.verificationStatus === 'rejected' ? 'rejected' : 'unknown'
+              }`}>
+                {doctorProfile.verificationStatus === 'approved' ? '✅ Approved' :
+                 doctorProfile.verificationStatus === 'pending' ? '⏳ Pending Review' :
+                 doctorProfile.verificationStatus === 'rejected' ? '❌ Rejected' : '❓ Unknown'}
+              </span>
+              <p className="status-description">
+                {doctorProfile.verificationStatus === 'approved' ? 
+                  'Your application has been approved and you can now provide services on our platform.' :
+                 doctorProfile.verificationStatus === 'pending' ? 
+                  'Your application is currently under review by our admin team.' :
+                 doctorProfile.verificationStatus === 'rejected' ? 
+                  'Your application was not approved. Please contact support.' :
+                  'Application status is currently unknown.'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Personal Information */}
+        <div className="form-section">
+          <h3>Personal Information</h3>
+          <div className="info-grid">
+            <div className="info-item">
+              <label>Full Name</label>
+              <span>{doctorProfile.title ? `${doctorProfile.title} ` : ''}{doctorProfile.firstName} {doctorProfile.lastName}</span>
+            </div>
+            <div className="info-item">
+              <label>Email Address</label>
+              <span>{doctorProfile.email}</span>
+            </div>
+            <div className="info-item">
+              <label>Professional Title</label>
+              <span>{doctorProfile.title || 'Not specified'}</span>
+            </div>
+            <div className="info-item">
+              <label>Personal Contact</label>
+              <span>{doctorProfile.personalContactNumber || 'Not provided'}</span>
+            </div>
+            <div className="info-item">
+              <label>Clinic Contact</label>
+              <span>{doctorProfile.clinicContactNumber || 'Not provided'}</span>
+            </div>
+            <div className="info-item">
+              <label>Account Created</label>
+              <span>{doctorProfile.createdAt ? new Date(doctorProfile.createdAt).toLocaleDateString() : 'Unknown'}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Professional Details */}
+        <div className="form-section">
+          <h3>Professional Details</h3>
+          <div className="info-grid">
+            <div className="info-item">
+              <label>Specialization/Specialty</label>
+              <span>{doctorProfile.specialty || 'Not specified'}</span>
+            </div>
+            <div className="info-item">
+              <label>License Number</label>
+              <span>{doctorProfile.licenseNumber || 'Not provided'}</span>
+            </div>
+            <div className="info-item">
+              <label>License Issuing Authority</label>
+              <span>{doctorProfile.licenseIssuingAuthority || 'Not specified'}</span>
+            </div>
+            <div className="info-item">
+              <label>Years of Practice</label>
+              <span>{doctorProfile.yearsOfPractice || 'Not specified'}</span>
+            </div>
+            <div className="info-item">
+              <label>Experience</label>
+              <span>{doctorProfile.experience || 'Not provided'}</span>
+            </div>
+            <div className="info-item">
+              <label>Areas of Expertise</label>
+              <span>{doctorProfile.areasOfExpertise || 'Not specified'}</span>
+            </div>
+            <div className="info-item">
+              <label>Consultation Fee</label>
+              <span>{doctorProfile.consultationFee ? `₱${doctorProfile.consultationFee}` : 'Not set'}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Clinic Information */}
+        <div className="form-section">
+          <h3>Clinic Information</h3>
+          <div className="info-grid">
+            <div className="info-item full-width">
+              <label>Clinic Name</label>
+              <span>{doctorProfile.clinicName || 'Not provided'}</span>
+            </div>
+            <div className="info-item full-width">
+              <label>Clinic Address</label>
+              <span>{doctorProfile.clinicAddress || 'Not provided'}</span>
+            </div>
+            <div className="info-item">
+              <label>In-Person Consultations</label>
+              <span>{doctorProfile.inPerson ? '✅ Available' : '❌ Not available'}</span>
+            </div>
+            <div className="info-item">
+              <label>Telehealth Services</label>
+              <span>{doctorProfile.telehealth ? '✅ Available' : '❌ Not available'}</span>
+            </div>
+            <div className="info-item">
+              <label>Emergency Services</label>
+              <span>{doctorProfile.emergencyAware ? '✅ Available' : '❌ Not available'}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Education & Credentials */}
+        {(doctorProfile.education && doctorProfile.education.length > 0) && (
+          <div className="form-section">
+            <h3>Education</h3>
+            <div className="credentials-list">
+              {doctorProfile.education.map((edu, index) => (
+                <div key={index} className="credential-item">
+                  <div className="credential-main">
+                    <strong>{edu.degree}</strong>
+                    <span className="credential-institution">{edu.institution}</span>
+                  </div>
+                  <div className="credential-year">{edu.year}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Licenses */}
+        {(doctorProfile.licenses && doctorProfile.licenses.length > 0) && (
+          <div className="form-section">
+            <h3>Professional Licenses</h3>
+            <div className="credentials-list">
+              {doctorProfile.licenses.map((license, index) => (
+                <div key={index} className="credential-item">
+                  <div className="credential-main">
+                    <strong>{license.degree}</strong>
+                    <span className="credential-number">License: {license.licenseNumber}</span>
+                  </div>
+                  <div className="credential-expiry">Expires: {license.expirationDate}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Certifications */}
+        {(doctorProfile.certifications && doctorProfile.certifications.length > 0) && (
+          <div className="form-section">
+            <h3>Certifications</h3>
+            <div className="credentials-list">
+              {doctorProfile.certifications.map((cert, index) => (
+                <div key={index} className="credential-item">
+                  <div className="credential-main">
+                    <strong>{cert.degree}</strong>
+                    <span className="credential-authority">{cert.issuingAuthority}</span>
+                  </div>
+                  <div className="credential-year">{cert.year}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Documents */}
+        <div className="form-section">
+          <h3>Uploaded Documents</h3>
+          <div className="documents-list">
+            <div className="document-item">
+              <span className="document-type">License Document</span>
+              <span className={`document-status ${doctorProfile.licenseDocumentUrl ? 'uploaded' : 'missing'}`}>
+                {doctorProfile.licenseDocumentUrl ? '✅ Uploaded' : '❌ Not uploaded'}
+              </span>
+            </div>
+            <div className="document-item">
+              <span className="document-type">Education Certificate</span>
+              <span className={`document-status ${doctorProfile.educationCertificateUrl ? 'uploaded' : 'missing'}`}>
+                {doctorProfile.educationCertificateUrl ? '✅ Uploaded' : '❌ Not uploaded'}
+              </span>
+            </div>
+            <div className="document-item">
+              <span className="document-type">Profile Photo</span>
+              <span className={`document-status ${doctorProfile.profilePicture ? 'uploaded' : 'missing'}`}>
+                {doctorProfile.profilePicture ? '✅ Uploaded' : '❌ Not uploaded'}
+              </span>
+            </div>
+            {doctorProfile.additionalDocumentUrls && doctorProfile.additionalDocumentUrls.length > 0 && (
+              <div className="document-item">
+                <span className="document-type">Additional Documents</span>
+                <span className="document-status uploaded">✅ {doctorProfile.additionalDocumentUrls.length} files uploaded</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Availability */}
+        {doctorProfile.availability && (
+          <div className="form-section">
+            <h3>Weekly Availability</h3>
+            <div className="availability-grid">
+              {Object.entries(doctorProfile.availability).map(([day, schedule]) => (
+                <div key={day} className="availability-day">
+                  <div className="day-name">{day.charAt(0).toUpperCase() + day.slice(1)}</div>
+                  <div className={`day-status ${schedule.available ? 'available' : 'unavailable'}`}>
+                    {schedule.available ? '✅ Available' : '❌ Not available'}
+                  </div>
+                  {schedule.available && schedule.slots && schedule.slots.length > 0 && (
+                    <div className="time-slots">
+                      {schedule.slots.map((slot, index) => (
+                        <span key={index} className="time-slot">
+                          {slot.startTime} - {slot.endTime}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Verification Information */}
+        <div className="form-section">
+          <h3>Verification Details</h3>
+          <div className="info-grid">
+            <div className="info-item">
+              <label>Verification Status</label>
+              <span className={`verification-status ${doctorProfile.verificationStatus || 'unknown'}`}>
+                {doctorProfile.verificationStatus || 'Unknown'}
+              </span>
+            </div>
+            <div className="info-item">
+              <label>Account Active</label>
+              <span>{doctorProfile.isActive ? '✅ Active' : '❌ Inactive'}</span>
+            </div>
+            <div className="info-item">
+              <label>Email Verified</label>
+              <span>{doctorProfile.isEmailVerified ? '✅ Verified' : '❌ Not verified'}</span>
+            </div>
+            <div className="info-item">
+              <label>Terms Accepted</label>
+              <span>{doctorProfile.termsAccepted ? '✅ Accepted' : '❌ Not accepted'}</span>
+            </div>
+            {doctorProfile.verificationDate && (
+              <div className="info-item">
+                <label>Verification Date</label>
+                <span>{new Date(doctorProfile.verificationDate).toLocaleDateString()}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Verification Notes */}
+        {doctorProfile.verificationNotes && doctorProfile.verificationNotes.length > 0 && (
+          <div className="form-section">
+            <h3>Admin Notes</h3>
+            <div className="verification-notes-list">
+              {doctorProfile.verificationNotes.map((note, index) => (
+                <div key={index} className="verification-note">
+                  <div className="note-content">{note.content}</div>
+                  <div className="note-meta">
+                    {note.timestamp && (
+                      <span className="note-date">{new Date(note.timestamp).toLocaleDateString()}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="form-section">
+          <div className="application-actions">
+            {doctorProfile.verificationStatus === 'pending' && (
+              <div className="info-message">
+                <h4>⏳ Application Under Review</h4>
+                <p>Your application is currently being reviewed by our admin team. You will receive an email notification once the review is complete.</p>
+              </div>
+            )}
+            
+            {doctorProfile.verificationStatus === 'rejected' && (
+              <div className="action-buttons">
+                <button className="secondary-button" onClick={() => alert('Contact support feature coming soon')}>
+                  Contact Support
+                </button>
+                <button className="primary-button" onClick={() => alert('Resubmit application feature coming soon')}>
+                  Resubmit Application
+                </button>
+              </div>
+            )}
+            
+            {doctorProfile.verificationStatus === 'approved' && (
+              <div className="success-message">
+                <h4>🎉 Congratulations!</h4>
+                <p>Your application has been approved. You can now provide professional services on our platform and access all doctor features.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
   const renderSidebarMenu = () => {
     const menuItems = [
       { id: 'edit-profile', label: 'Edit Profile', icon: editIcon },
@@ -890,7 +1219,7 @@ const DoctorProfile = () => {
       case 'change-password':
         return renderChangeEmailPassword(); // 🆕 NEW: Use the change password component
       case 'doctor-application':
-        return renderPlaceholderSection('My Doctor Application');
+          return renderDoctorApplication();
       case 'public-profile':
         return renderPlaceholderSection('Public Profile');
       case 'help-guide':

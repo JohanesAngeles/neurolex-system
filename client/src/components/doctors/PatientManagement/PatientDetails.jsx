@@ -273,7 +273,7 @@ const PatientDetails = () => {
     <div className="patient-details-container">
       {/* Header */}
       <div className="patient-header">
-        <div className="header-left">
+        <div className="header-left-">
           <button className="back-button" onClick={handleBack}>
             <span className="back-icon">←</span>
           </button>
