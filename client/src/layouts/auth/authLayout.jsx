@@ -1,10 +1,10 @@
 import React from 'react';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import '../../styles/components/auth/auth_layout.css';
 import logo from '../../assets/images/Neurolex_Logo_Gradient.png';
 import logo2 from '../../assets/images/NeurolexLogo_White.png';
 
-const AuthLayout = ({ children }) => {
+const AuthLayout = ({ children, showProfessionalSection = false }) => {
   const location = useLocation();
   const path = location.pathname;
   
@@ -70,9 +70,8 @@ const AuthLayout = ({ children }) => {
         </div>
         
         {/* Right column - Decorative content */}
-  
         <div className="auth-decorative-column">
-        <img src={logo2} alt="App Logo" className="auth-logo2" />
+          <img src={logo2} alt="App Logo" className="auth-logo2" />
           <h1 className="header-neurolex">NEUROLEX</h1>
           <p className="abt-neurolex">
             Neurolex is an AI-powered system that uses Natural Language Processing (NLP) 
@@ -81,6 +80,21 @@ const AuthLayout = ({ children }) => {
             thoughts and feelings over time. With continuous monitoring, Neurolex supports 
             your journey toward self-awareness, emotional growth, and overall well-being.
           </p>
+          
+          {/* Professional Registration Section - only show on login page */}
+          {showProfessionalSection && (
+            <div className="professional-registration-right">
+              <div className="divider-right">
+                <span>For Healthcare Professionals</span>
+              </div>
+              <div className="professional-info-right">
+                <p>Are you a mental health professional looking to join our network?</p>
+                <Link to="/doctor-register" className="professional-link-right">
+                  Register as a Professional
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

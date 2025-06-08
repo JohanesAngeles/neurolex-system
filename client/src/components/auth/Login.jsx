@@ -199,7 +199,7 @@ const Login = () => {
   const showTenantSelector = multiTenantEnabled && tenants.length > 0;
 
   return (
-    <AuthLayout>
+    <AuthLayout showProfessionalSection={true}>
       <form onSubmit={handleSubmit} className="auth-form">
         {showTenantSelector && (
           <div className="form-group">
@@ -281,18 +281,6 @@ const Login = () => {
         
         <div className="auth-link">
           <p>Don't have an account? <Link to="/register">Sign Up</Link></p>
-        </div>
-        
-        <div className="professional-registration">
-          <div className="divider">
-            <span>For Healthcare Professionals</span>
-          </div>
-          <div className="professional-info">
-            <p>Are you a mental health professional looking to join our network?</p>
-            <Link to="/doctor-register" className="professional-link">
-              Register as a Professional
-            </Link>
-          </div>
         </div>
       </form>
     </AuthLayout>

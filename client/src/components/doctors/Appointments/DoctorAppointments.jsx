@@ -1,4 +1,4 @@
-// client/src/components/doctors/Appointments/DoctorAppointments.jsx
+// client/src/components/doctors/Appointments/DoctorAppointments.jsx - COMPLETE FIXED VERSION
 import React, { useState, useEffect } from 'react';
 import doctorService from '../../../services/doctorService';
 import billingService from '../../../services/billingService';
@@ -89,6 +89,7 @@ const DoctorAppointments = () => {
     setLoading(false);
   }
 };
+
   const fetchPatients = async () => {
     try {
       const response = await doctorService.getPatients();
@@ -446,15 +447,15 @@ const DoctorAppointments = () => {
     setResponseAction('');
   };
 
-  // ✅ REPLACE openRescheduleModal function (around line 428)
-const openRescheduleModal = (appointment) => {
-  setSelectedAppointment(appointment);
-  
-  const appointmentDate = new Date(appointment.appointmentDate);
-  setNewDate(format(appointmentDate, 'yyyy-MM-dd'));
-  setNewTime(format(appointmentDate, 'HH:mm'));
-  setShowRescheduleModal(true);
-};
+  // ✅ FIXED: No timezone conversion - use database time as-is
+  const openRescheduleModal = (appointment) => {
+    setSelectedAppointment(appointment);
+    
+    const appointmentDate = new Date(appointment.appointmentDate);
+    setNewDate(format(appointmentDate, 'yyyy-MM-dd'));
+    setNewTime(format(appointmentDate, 'HH:mm'));
+    setShowRescheduleModal(true);
+  };
 
   const closeRescheduleModal = () => {
     setShowRescheduleModal(false);
@@ -463,21 +464,23 @@ const openRescheduleModal = (appointment) => {
     setNewTime('');
   };
 
+  // ✅ FIXED: Display database time as-is (no conversion)
   const formatAppointmentTime = (dateString) => {
-  const date = new Date(dateString);
-  
-  let dayDisplay;
-  if (isToday(date)) {
-    dayDisplay = 'Today';
-  } else if (isTomorrow(date)) {
-    dayDisplay = 'Tomorrow';
-  } else {
-    dayDisplay = format(date, 'MMM d, yyyy');
-  }
-  
-  const timeDisplay = format(date, 'h:mm a');
-  return `${dayDisplay} at ${timeDisplay}`;
-};
+    const date = new Date(dateString);
+    
+    let dayDisplay;
+    if (isToday(date)) {
+      dayDisplay = 'Today';
+    } else if (isTomorrow(date)) {
+      dayDisplay = 'Tomorrow';
+    } else {
+      dayDisplay = format(date, 'MMM d, yyyy');
+    }
+    
+    const timeDisplay = format(date, 'h:mm a');
+    return `${dayDisplay} at ${timeDisplay}`;
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'Pending': return 'status-pending';
@@ -498,6 +501,7 @@ const openRescheduleModal = (appointment) => {
     }
   };
 
+  // ✅ FIXED: Complete appointments table with proper date/time display
   const renderAppointmentsTable = (appointments, title, isPendingSection = false) => (
     <div className="doctor-appointments-section">
       <div className="doctor-appointments-section-header">
@@ -535,11 +539,13 @@ const openRescheduleModal = (appointment) => {
               
               <div className="doctor-appointments-table-cell">
                 <div className="doctor-appointments-date-time-info">
-                  
-<span className="doctor-appointments-time-range">
-  {format(new Date(appointment.appointmentDate), 'h:mm a')} - 
-  {format(addMinutes(new Date(appointment.appointmentDate), appointment.duration || 30), 'h:mm a')}
-</span>
+                  <span className="doctor-appointments-date-text">
+                    {formatAppointmentTime(appointment.appointmentDate)}
+                  </span>
+                  <span className="doctor-appointments-time-range">
+                    {format(new Date(appointment.appointmentDate), 'h:mm a')} - 
+                    {format(addMinutes(new Date(appointment.appointmentDate), appointment.duration || 30), 'h:mm a')}
+                  </span>
                 </div>
               </div>
               
