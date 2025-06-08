@@ -739,72 +739,76 @@ if (moodRoutes) {
     
     console.log(`✅ ADMIN: Access granted to ${decoded.email || decoded.id}`);
     
-    // ✅ SEARCH ACROSS ALL TENANTS for mood data
+    // ✅ SEARCH ACROSS ALL TENANTS using existing imports
     let allMoodEntries = [];
     let searchedTenants = [];
     
-    if (process.env.ENABLE_MULTI_TENANT === 'true') {
+    if (process.env.ENABLE_MULTI_TENANT === 'true' && dbManager) {
       try {
-        // Get master connection to access tenants
-        const masterConn = getMasterConnection();
-        if (masterConn) {
-          const Tenant = masterConn.model('Tenant');
-          const tenants = await Tenant.find({ active: true });
-          
-          console.log(`🔍 ADMIN: Searching ${tenants.length} tenants for user ${userId} mood data`);
-          
-          // Search each tenant database
-          for (const tenant of tenants) {
-            try {
-              const tenantConn = await dbManager.connectTenant(tenant._id.toString());
-              if (!tenantConn) {
-                console.warn(`Could not connect to tenant database: ${tenant.name}`);
-                continue;
-              }
-              
-              const Mood = tenantConn.model('Mood');
-              
-              // Build query for this tenant
-              const queryFilters = {
-                userId: new mongoose.Types.ObjectId(userId)
-              };
-              
-              // Add date filter if specified
-              if (days && days !== 'all') {
-                const daysAgo = new Date();
-                daysAgo.setDate(daysAgo.getDate() - parseInt(days));
-                queryFilters.timestamp = { $gte: daysAgo };
-              }
-              
-              // Get mood entries from this tenant
-              const tenantMoodEntries = await Mood.find(queryFilters)
-                .sort({ timestamp: -1 })
-                .limit(parseInt(limit))
-                .select('moodRating moodKey moodLabel moodSvgUrl reflection timestamp userId metadata')
-                .lean();
-              
-              // Add tenant info to each entry
-              const entriesWithTenant = tenantMoodEntries.map(entry => ({
-                ...entry,
-                tenantId: tenant._id.toString(),
-                tenantName: tenant.name
-              }));
-              
-              allMoodEntries = [...allMoodEntries, ...entriesWithTenant];
-              
-              if (tenantMoodEntries.length > 0) {
-                searchedTenants.push({
-                  tenantId: tenant._id.toString(),
-                  tenantName: tenant.name,
-                  moodEntriesFound: tenantMoodEntries.length
-                });
-                console.log(`✅ Found ${tenantMoodEntries.length} mood entries in tenant: ${tenant.name}`);
-              }
-              
-            } catch (tenantError) {
-              console.error(`Error searching tenant ${tenant.name}:`, tenantError.message);
+        console.log('🔍 ADMIN: Multi-tenant search enabled, getting tenants...');
+        
+        // ✅ Use existing connectMaster if available
+        if (connectMaster) {
+          await connectMaster();
+        }
+        
+        // ✅ Get tenants using existing dbManager
+        const tenantConnections = dbManager.getAllConnections ? dbManager.getAllConnections() : {};
+        const tenantIds = Object.keys(tenantConnections);
+        
+        console.log(`🔍 ADMIN: Found ${tenantIds.length} tenant connections`);
+        
+        // Search each tenant database
+        for (const tenantId of tenantIds) {
+          try {
+            const tenantConn = await dbManager.connectTenant(tenantId);
+            if (!tenantConn) {
+              console.warn(`Could not connect to tenant: ${tenantId}`);
               continue;
             }
+            
+            const Mood = tenantConn.model('Mood');
+            
+            // Build query for this tenant
+            const queryFilters = {
+              userId: new mongoose.Types.ObjectId(userId)
+            };
+            
+            // Add date filter if specified
+            if (days && days !== 'all') {
+              const daysAgo = new Date();
+              daysAgo.setDate(daysAgo.getDate() - parseInt(days));
+              queryFilters.timestamp = { $gte: daysAgo };
+            }
+            
+            // Get mood entries from this tenant
+            const tenantMoodEntries = await Mood.find(queryFilters)
+              .sort({ timestamp: -1 })
+              .limit(parseInt(limit))
+              .select('moodRating moodKey moodLabel moodSvgUrl reflection timestamp userId metadata')
+              .lean();
+            
+            // Add tenant info to each entry
+            const entriesWithTenant = tenantMoodEntries.map(entry => ({
+              ...entry,
+              tenantId: tenantId,
+              tenantName: `Tenant ${tenantId}`
+            }));
+            
+            allMoodEntries = [...allMoodEntries, ...entriesWithTenant];
+            
+            if (tenantMoodEntries.length > 0) {
+              searchedTenants.push({
+                tenantId: tenantId,
+                tenantName: `Tenant ${tenantId}`,
+                moodEntriesFound: tenantMoodEntries.length
+              });
+              console.log(`✅ Found ${tenantMoodEntries.length} mood entries in tenant: ${tenantId}`);
+            }
+            
+          } catch (tenantError) {
+            console.error(`Error searching tenant ${tenantId}:`, tenantError.message);
+            continue;
           }
         }
       } catch (error) {
@@ -812,45 +816,45 @@ if (moodRoutes) {
       }
     }
     
-    // ✅ FALLBACK: Search default database if no multi-tenant or no results
-    if (allMoodEntries.length === 0) {
-      try {
-        console.log('🔍 ADMIN: Searching default database for mood data');
-        
-        const queryFilters = {
-          userId: new mongoose.Types.ObjectId(userId)
-        };
-        
-        if (days && days !== 'all') {
-          const daysAgo = new Date();
-          daysAgo.setDate(daysAgo.getDate() - parseInt(days));
-          queryFilters.timestamp = { $gte: daysAgo };
-        }
-        
-        const defaultMoodEntries = await Mood.find(queryFilters)
-          .sort({ timestamp: -1 })
-          .limit(parseInt(limit))
-          .select('moodRating moodKey moodLabel moodSvgUrl reflection timestamp userId metadata')
-          .lean();
-        
-        if (defaultMoodEntries.length > 0) {
-          allMoodEntries = defaultMoodEntries.map(entry => ({
-            ...entry,
-            tenantId: 'default',
-            tenantName: 'Default Database'
-          }));
-          
-          searchedTenants.push({
-            tenantId: 'default',
-            tenantName: 'Default Database',
-            moodEntriesFound: defaultMoodEntries.length
-          });
-          
-          console.log(`✅ Found ${defaultMoodEntries.length} mood entries in default database`);
-        }
-      } catch (defaultError) {
-        console.error('Error searching default database:', defaultError);
+    // ✅ ALWAYS search default database as well
+    try {
+      console.log('🔍 ADMIN: Searching default database for mood data');
+      
+      const queryFilters = {
+        userId: new mongoose.Types.ObjectId(userId)
+      };
+      
+      if (days && days !== 'all') {
+        const daysAgo = new Date();
+        daysAgo.setDate(daysAgo.getDate() - parseInt(days));
+        queryFilters.timestamp = { $gte: daysAgo };
       }
+      
+      const defaultMoodEntries = await Mood.find(queryFilters)
+        .sort({ timestamp: -1 })
+        .limit(parseInt(limit))
+        .select('moodRating moodKey moodLabel moodSvgUrl reflection timestamp userId metadata')
+        .lean();
+      
+      if (defaultMoodEntries.length > 0) {
+        const entriesWithDefault = defaultMoodEntries.map(entry => ({
+          ...entry,
+          tenantId: 'default',
+          tenantName: 'Default Database'
+        }));
+        
+        allMoodEntries = [...allMoodEntries, ...entriesWithDefault];
+        
+        searchedTenants.push({
+          tenantId: 'default',
+          tenantName: 'Default Database',
+          moodEntriesFound: defaultMoodEntries.length
+        });
+        
+        console.log(`✅ Found ${defaultMoodEntries.length} mood entries in default database`);
+      }
+    } catch (defaultError) {
+      console.error('Error searching default database:', defaultError);
     }
     
     // Sort all entries by timestamp (most recent first)
