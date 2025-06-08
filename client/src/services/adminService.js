@@ -1053,26 +1053,38 @@ getIndividualPatientMoodAnalytics: async (patientId, days = 7, tenantId = null) 
       throw new Error('Admin authentication required');
     }
     
-    // ✅ FIXED: Removed /api/ prefix to prevent double /api/ in URL
-    console.log('🌐 ADMIN: Using endpoint /admin/mood/user/' + patientId);
+    // ✅ CRITICAL FIX: Use the SAME working endpoint that doctors use!
+    const baseURL = process.env.REACT_APP_API_URL || 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com/api';
+    const url = `${baseURL}/mood/user/${patientId}?days=${days}&limit=100`;
     
-    const response = await api.get(`/admin/mood/user/${patientId}`, {
-      params: { 
-        days: days,
-        limit: 100  // Increase limit to see more data
-      },
-      headers: {
-        'Authorization': `Bearer ${adminToken}`,
-        'Content-Type': 'application/json'
-      },
-      timeout: 15000
+    console.log('🌐 ADMIN: Using WORKING doctor endpoint:', url);
+    
+    // Set up headers like the doctor service does
+    const headers = {
+      'Authorization': `Bearer ${adminToken}`,
+      'Content-Type': 'application/json'
+    };
+    
+    // Add tenant ID to headers if available (copy doctor approach)
+    if (tenantId) {
+      headers['x-tenant-id'] = tenantId;
+      headers['X-Tenant-ID'] = tenantId;  // Try both cases like doctor service
+      console.log('🏢 ADMIN: Added tenant headers like doctor service');
+    }
+    
+    console.log('📡 ADMIN: Request headers:', headers);
+    
+    // ✅ CRITICAL FIX: Use axios directly like doctor service does
+    const response = await axios.get(url, { 
+      headers,
+      timeout: 15000  // Same timeout as doctor service
     });
     
     console.log('✅ ADMIN mood response:', response.data);
     console.log('📊 ADMIN mood entries count:', response.data?.data?.length || 0);
     console.log('📋 ADMIN mood pagination:', response.data?.pagination);
     
-    // Process the raw mood data into analytics format
+    // Process the raw mood data into analytics format (same as doctor)
     let moodEntries = [];
     
     if (response.data && response.data.success && Array.isArray(response.data.data)) {
@@ -1094,7 +1106,7 @@ getIndividualPatientMoodAnalytics: async (patientId, days = 7, tenantId = null) 
       console.log('🔍 ADMIN: No mood entries found - patient may not have mood data');
     }
     
-    // Transform raw mood data into analytics format
+    // Transform raw mood data into analytics format (same function as doctor)
     const analyticsData = processMoodDataToAnalytics(moodEntries, days);
     
     console.log('📈 ADMIN analytics data generated:', analyticsData);
