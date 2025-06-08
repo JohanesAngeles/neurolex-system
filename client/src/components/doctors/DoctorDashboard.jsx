@@ -1,4 +1,4 @@
-// client/src/components/doctors/dashboard/DoctorDashboard.jsx - COMPLETE FIXED VERSION
+// client/src/components/doctors/dashboard/DoctorDashboard.jsx - FIXED INFINITE LOOP
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFeatureControl } from '../../hooks/useFeatureControl';
@@ -28,11 +28,6 @@ const DoctorDashboard = () => {
     lastName: ''
   });
   const [todayAppointments, setTodayAppointments] = useState([]);
-  
-  // ✅ NEW: Modal state
-  const [selectedAppointment, setSelectedAppointment] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  
   const navigate = useNavigate();
 
   // ✅ ENHANCED: Function to handle joining video meeting with feature check
@@ -93,17 +88,6 @@ const DoctorDashboard = () => {
         );
       }, 1000);
     }
-  };
-
-  // ✅ NEW: Modal functions
-  const openAppointmentModal = (appointment) => {
-    setSelectedAppointment(appointment);
-    setIsModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setSelectedAppointment(null);
   };
 
   // Keep existing functions unchanged
@@ -452,7 +436,6 @@ const DoctorDashboard = () => {
            date.getFullYear() === today.getFullYear();
   };
 
-  // ✅ FIXED: Complete renderCalendar function
   const renderCalendar = () => {
     const { currentDate, viewMode } = calendarState;
     const isMonthView = viewMode === 'month';
@@ -557,78 +540,7 @@ const DoctorDashboard = () => {
     );
   };
 
-  // ✅ NEW: Modal Component - FIXED UI & REMOVED FULL DETAILS
-  const AppointmentModal = ({ appointment, isOpen, onClose }) => {
-    if (!isOpen || !appointment) return null;
-
-    const sessionStatus = getSessionStatus(appointment);
-    const isActive = isSessionActive(appointment);
-
-    return (
-      <div className="modal-overlay-fixed" onClick={onClose}>
-        <div className="modal-content-fixed" onClick={(e) => e.stopPropagation()}>
-          <div className="modal-header-fixed">
-            <h2 className="modal-title-fixed">Appointment Details</h2>
-            <button className="modal-close-fixed" onClick={onClose}>&times;</button>
-          </div>
-          
-          <div className="modal-body-fixed">
-            {/* Patient Section */}
-            <div className="modal-patient-section">
-              <div className="modal-patient-avatar">
-                {appointment.patientImage ? (
-                  <img src={appointment.patientImage} alt={appointment.patientName} />
-                ) : (
-                  appointment.patientName.charAt(0).toUpperCase()
-                )}
-              </div>
-              <div className="modal-patient-info">
-                <h3 className="modal-patient-name">{appointment.patientName}</h3>
-                <p className="modal-patient-type">{appointment.appointmentType}</p>
-              </div>
-            </div>
-
-            {/* Meeting Section - Matches Image 3 exactly */}
-            <div className="modal-meeting-section">
-              <div className="modal-meeting-time">
-                <span className="meeting-date-text">📅 Today</span>
-                <span className="meeting-time-text">🕛 {appointment.time}</span>
-                <span className="meeting-duration-text">⏱️ {appointment.duration} min</span>
-              </div>
-              
-              <div className="modal-meeting-action">
-                {appointment.meetingLink ? (
-                  <button 
-                    className={`modal-join-button ${isActive ? 'active' : ''}`}
-                    onClick={() => {
-                      handleJoinMeeting(appointment);
-                      onClose();
-                    }}
-                  >
-                    <span className="join-icon">📹</span>
-                    <span>{isActive ? 'Join Now' : 'Join Meeting'}</span>
-                  </button>
-                ) : (
-                  <div className="modal-no-meeting">
-                    <span className="no-meeting-icon">📹</span>
-                    <span>No Meeting Link</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="modal-footer-fixed">
-            <button className="modal-close-button" onClick={onClose}>
-              Close
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // ✅ ENHANCED: Today's appointments with feature wrapper - FIXED UI
+  // ✅ ENHANCED: Today's appointments with feature wrapper
   const renderTodayAppointments = () => {
     return (
       <FeatureWrapper feature="Care / Report" showMessage={true}>
@@ -649,45 +561,67 @@ const DoctorDashboard = () => {
             </div>
           ) : (
             todayAppointments.map((appointment, index) => {
-              // Format date to show month and day (e.g., "June 8")
-              const appointmentDate = new Date(appointment.appointmentDate);
-              const formattedDate = appointmentDate.toLocaleDateString('en-US', { 
-                month: 'long', 
-                day: 'numeric' 
-              });
+              const sessionStatus = getSessionStatus(appointment);
+              const isActive = isSessionActive(appointment);
               
               return (
-                <div key={appointment.id || index} className="today-appointment-card-fixed">
-                  {/* Patient Info Section */}
-                  <div className="today-appointment-patient-fixed">
-                    <div className="patient-avatar-fixed">
-                      {appointment.patientImage ? (
-                        <img src={appointment.patientImage} alt={appointment.patientName} />
-                      ) : (
-                        appointment.patientName.charAt(0).toUpperCase()
+                <div key={appointment.id || index} className="today-appointment-card">
+                  <div className="today-appointment-patient">
+                    <div className="patient-avatar">
+                      {appointment.patientName.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="patient-info">
+                      <h4 className="patient-name-label">{appointment.patientName}</h4>
+                      <p className="patient-type-label">{appointment.appointmentType}</p>
+                      <div 
+                        className="session-status" 
+                        data-status={sessionStatus.status.toLowerCase().replace(/\s+/g, '-')}
+                      >
+                        🎥 {sessionStatus.status}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="appointment-meta">
+                    <div className="appointment-date-time">
+                      <div className="meta-group">
+                        <span className="meta-icon">📅</span>
+                        <span>Today</span>
+                      </div>
+                      <div className="meta-group">
+                        <span className="meta-icon">🕛</span>
+                        <span>{appointment.time}</span>
+                      </div>
+                      <div className="meta-group">
+                        <span className="meta-icon">⏱️</span>
+                        <span>{appointment.duration} min</span>
+                      </div>
+                      {appointment.meetingLink && (
+                        <div className="meta-group">
+                          <span className="meta-icon">📹</span>
+                          <span>{appointment.meetingType === 'jitsi' ? 'Jitsi Meet' : 'Video Call'}</span>
+                        </div>
                       )}
                     </div>
-                    <div className="patient-info-fixed">
-                      <h4 className="patient-name-fixed">{appointment.patientName}</h4>
-                      <p className="patient-type-fixed">{appointment.appointmentType}</p>
-                    </div>
                   </div>
                   
-                  {/* Date and Time Section */}
-                  <div className="appointment-datetime-fixed">
-                    <div className="datetime-item">
-                      <span className="datetime-label">{formattedDate}</span>
-                    </div>
-                    <div className="datetime-item">
-                      <span className="datetime-label">{appointment.time}</span>
-                    </div>
-                  </div>
-                  
-                  {/* Action Button */}
-                  <div className="appointment-actions-fixed">
+                  <div className="appointment-actions">
+                    {appointment.meetingLink ? (
+                      <button 
+                        className={`join-meeting-button ${isActive ? 'active' : ''}`}
+                        onClick={() => handleJoinMeeting(appointment)}
+                      >
+                        {isActive ? '🔴 Join Now' : '📹 Join Meeting'}
+                      </button>
+                    ) : (
+                      <button className="join-meeting-button disabled" disabled>
+                        📹 No Meeting Link
+                      </button>
+                    )}
+                    
                     <button 
-                      className="view-details-button-fixed"
-                      onClick={() => openAppointmentModal(appointment)}
+                      className="view-details-button"
+                      onClick={() => navigate(`/doctor/appointments/${appointment.id}`)}
                     >
                       View Details
                     </button>
@@ -701,10 +635,10 @@ const DoctorDashboard = () => {
             <div className="meeting-instructions">
               <h4>📋 {platformName} Video Session Instructions:</h4>
               <ul>
-                <li>Click "View Details" then "Join Meeting" to start the video session</li>
-                <li>Both you and your patient will join the same room</li>
-                <li>No account registration required for Jitsi Meet</li>
-                <li>Ensure good internet connection and test audio/video</li>
+                <li>• Click "Join Meeting" to start the video session</li>
+                <li>• Both you and your patient will join the same room</li>
+                <li>• No account registration required for Jitsi Meet</li>
+                <li>• Ensure good internet connection and test audio/video</li>
               </ul>
             </div>
           )}
@@ -755,7 +689,7 @@ const DoctorDashboard = () => {
       {/* Divider above Patient and Appointment Overview */}
       <div className="section-divider overview-divider"></div>
 
-      {/* ✅ ENHANCED: Overview section with feature-based stats */}
+{/* ✅ ENHANCED: Overview section with feature-based stats */}
       <div className="overview-section">
         <div className="section-header">
           <h2 className="section-title">
@@ -808,10 +742,10 @@ const DoctorDashboard = () => {
       
       {/* ✅ ENHANCED: Main content with feature wrappers */}
       {/* Divider above calendar and appointments */}
-      <div className="section-divider calendar-divider"></div>
+<div className="section-divider calendar-divider"></div>
 
-      {/* ✅ ENHANCED: Main content with feature wrappers */}
-      <div className="main-content">
+{/* ✅ ENHANCED: Main content with feature wrappers */}
+<div className="main-content">
         <div className="calendar-section">
           {renderCalendar()}
         </div>
@@ -820,12 +754,6 @@ const DoctorDashboard = () => {
         </div>
       </div>
 
-      {/* ✅ NEW: Modal for appointment details */}
-      <AppointmentModal 
-        appointment={selectedAppointment}
-        isOpen={isModalOpen}
-        onClose={closeModal}
-      />
     </div>
   );
 };
