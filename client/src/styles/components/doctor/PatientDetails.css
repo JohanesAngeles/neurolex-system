@@ -44,7 +44,7 @@
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  flex-shrink: 0; /* Prevent shrinking */
+  flex-shrink: 0; 
 }
 
 .back-button:hover {
@@ -59,30 +59,30 @@
 .patient-info {
   display: flex;
   flex-direction: column;
-  align-items: flex-start; /* Ensure left alignment */
+  align-items: flex-start; 
   flex: 1;
-  text-align: left; /* Override any inherited centering */
-  margin-left: 0; /* Ensure no left margin */
+  text-align: left;
+  margin-left: 0; 
 }
 
-.patient-name {
+.patient-name- {
   font-size: 45px;
-  font-weight: 600;
+  font-weight: 500;
   font-family: 'Poppins', sans-serif; 
   color: #000000;
   margin: 0 0 2px 0;
-  text-align: left !important; /* Force left alignment with !important */
-  align-self: flex-start; /* Ensure it aligns to the start of flex container */
+  text-align: left !important; 
+  align-self: flex-start; 
 }
 
-.patient-email {
+.patient-email- {
   font-size: 20px;
   color: #548170;
   font-family: 'IBM Plex Mono', monospace;
   font-style: italic;
   margin: 0;
-  text-align: left !important; /* Force left alignment with !important */
-  align-self: flex-start; /* Ensure it aligns to the start of flex container */
+  text-align: left !important; 
+  align-self: flex-start; 
 }
 
 .header-right {
@@ -90,8 +90,8 @@
   flex-direction: column;
   align-items: flex-end;
   gap: 8px;
-  flex-shrink: 0; /* Prevent shrinking */
-  min-width: 250px; /* Ensure enough space */
+  flex-shrink: 0;
+  min-width: 250px; 
 }
 
 .status-badge {
@@ -107,14 +107,15 @@
 .status-badge.active {
   background-color: #e8f5e9;
   color: #2e7d32;
+   text-align: right; 
 }
 
 .registration-date {
   font-size: 14px;
   color: #666;
   font-style: italic;
-  text-align: right; /* Ensure right alignment */
-  white-space: nowrap; /* Prevent text wrapping */
+  text-align: right; 
+  white-space: nowrap; 
 }
 
 /* Responsive Design Updates */
@@ -184,8 +185,8 @@
   font-size: 14px;
   color: #666;
   font-style: italic;
-  text-align: right; /* Ensure right alignment */
-  white-space: nowrap; /* Prevent text wrapping */
+  text-align: right; 
+  white-space: nowrap;
 }
 
 /* Responsive Design Updates */

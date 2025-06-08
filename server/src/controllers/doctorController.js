@@ -2298,9 +2298,15 @@ exports.getCurrentDoctorProfile = async (req, res) => {
     
     // Find the current doctor's profile
     const doctor = await UserModel.findById(doctorId)
-      .select('firstName lastName email title specialty specialization profilePicture bio consultationFee yearsOfPractice clinicAddress languages emergencyAware telehealth inPerson verificationStatus')
-      .lean();
-    
+  .select(`
+    firstName lastName email title specialty specialization profilePicture bio consultationFee 
+    yearsOfPractice clinicAddress languages emergencyAware telehealth inPerson verificationStatus
+    licenseNumber licenseIssuingAuthority licenseExpiryDate experience areasOfExpertise
+    clinicName personalContactNumber clinicContactNumber licenseDocumentUrl educationCertificateUrl
+    education licenses certifications availability additionalDocumentUrls
+    verificationNotes verificationDate isVerified isActive isEmailVerified termsAccepted createdAt
+  `)
+  .lean();
     if (!doctor) {
       console.log('❌ Doctor profile not found for ID:', doctorId);
       return res.status(404).json({

@@ -278,10 +278,10 @@ const PatientDetails = () => {
             <span className="back-icon">←</span>
           </button>
           <div className="patient-info">
-            <h1 className="patient-name">
+            <h1 className="patient-name-">
               {patient.firstName} {patient.lastName}
             </h1>
-            <p className="patient-email">{patient.email}</p>
+            <p className="patient-email-">{patient.email}</p>
           </div>
         </div>
         <div className="header-right">
