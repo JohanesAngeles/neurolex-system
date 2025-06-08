@@ -1067,3 +1067,370 @@
   50% { opacity: 0.7; }
   100% { opacity: 1; }
 }
+
+/* Add these CSS rules to your existing DoctorDashboard.css file */
+
+/* ✅ MODAL STYLES - ADD TO YOUR CSS FILE */
+
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+/* Modal Content Container */
+.modal-content {
+  background: white;
+  border-radius: 15px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  border: 1px solid #A7D7C5;
+}
+
+/* Modal Header */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 25px 30px;
+  border-bottom: 1px solid #A7D7C5;
+  background: rgba(167, 215, 197, 0.05);
+}
+
+.modal-header h2 {
+  font-family: 'Poppins', sans-serif;
+  font-size: 24px;
+  font-weight: 400;
+  color: #000000;
+  margin: 0;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 30px;
+  color: #548170;
+  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+  background-color: rgba(167, 215, 197, 0.2);
+}
+
+/* Modal Body */
+.modal-body {
+  padding: 30px;
+}
+
+.appointment-info {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+/* Patient Section in Modal */
+.patient-section {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+  background: rgba(167, 215, 197, 0.05);
+  border-radius: 10px;
+  border: 1px solid rgba(167, 215, 197, 0.3);
+}
+
+.patient-avatar.large {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 2px solid #A7D7C5;
+  background-color: #A7D7C5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 32px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.patient-avatar.large img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.patient-details h3 {
+  font-family: 'Poppins', sans-serif;
+  font-size: 28px;
+  font-weight: 400;
+  color: #000000;
+  margin: 0 0 8px 0;
+}
+
+.patient-details p {
+  font-family: 'IBM Plex Mono', monospace;
+  font-style: italic;
+  font-size: 16px;
+  color: #548170;
+  margin: 0 0 10px 0;
+}
+
+.session-status-modal {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 14px;
+  font-weight: 500;
+  color: #548170;
+  margin-top: 5px;
+}
+
+/* Appointment Details Grid */
+.appointment-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+}
+
+.detail-item {
+  background: rgba(167, 215, 197, 0.1);
+  border: 1px solid #A7D7C5;
+  border-radius: 8px;
+  padding: 15px;
+  text-align: center;
+}
+
+.detail-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  color: #548170;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.detail-value {
+  font-family: 'Poppins', sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  color: #000000;
+}
+
+/* ✅ MEETING SECTION - MATCHES YOUR IMAGE 3 EXACTLY */
+.meeting-section {
+  background: #FFFFFF;
+  border: 1px solid #A7D7C5;
+  border-radius: 10px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.meeting-info {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Meeting Time Display - Top Section */
+.meeting-time-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  padding: 15px 20px;
+  background: rgba(167, 215, 197, 0.05);
+  border-bottom: 1px solid #A7D7C5;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 14px;
+  color: #548170;
+  font-weight: 500;
+}
+
+.meeting-calendar-icon,
+.meeting-clock-icon,
+.meeting-duration-icon {
+  font-size: 16px;
+}
+
+/* Join Meeting Button - Matches Image 3 Style */
+.modal-join-meeting-button {
+  width: 100%;
+  height: 60px;
+  background: #548170;
+  border: none;
+  color: white;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.modal-join-meeting-button:hover {
+  background-color: #3d6b57;
+}
+
+.modal-join-meeting-button.active {
+  background-color: #FF4444;
+  animation: pulse 2s infinite;
+}
+
+/* No Meeting Link Style - Matches Image 3 */
+.no-meeting-link {
+  width: 100%;
+  height: 60px;
+  background: #E0E0E0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 16px;
+  font-weight: 500;
+  color: #666666;
+}
+
+.no-meeting-icon {
+  font-size: 18px;
+  opacity: 0.6;
+}
+
+/* Modal Footer */
+.modal-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 25px 30px;
+  border-top: 1px solid #A7D7C5;
+  background: rgba(167, 215, 197, 0.05);
+}
+
+.modal-button {
+  flex: 1;
+  height: 50px;
+  border-radius: 8px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid;
+}
+
+.modal-button.secondary {
+  background: white;
+  color: #548170;
+  border-color: #A7D7C5;
+}
+
+.modal-button.secondary:hover {
+  background: rgba(167, 215, 197, 0.1);
+}
+
+.modal-button.primary {
+  background: #548170;
+  color: white;
+  border-color: #548170;
+}
+
+.modal-button.primary:hover {
+  background: #3d6b57;
+}
+
+/* Responsive Modal */
+@media (max-width: 768px) {
+  .modal-content {
+    width: 95%;
+    margin: 10px;
+  }
+  
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding: 20px;
+  }
+  
+  .patient-section {
+    flex-direction: column;
+    text-align: center;
+    gap: 15px;
+  }
+  
+  .appointment-details-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  
+  .modal-footer {
+    flex-direction: column;
+  }
+  
+  .meeting-time-display {
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 12px;
+  }
+  
+  .patient-details h3 {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-header h2 {
+    font-size: 20px;
+  }
+  
+  .patient-avatar.large {
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+  }
+  
+  .patient-details h3 {
+    font-size: 20px;
+  }
+  
+  .modal-join-meeting-button,
+  .no-meeting-link {
+    height: 50px;
+    font-size: 14px;
+  }
+}
+
+/* Loading States */
+.loading-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+}
+
+.loading-spinner {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 16px;
+  color: #548170;
+  animation: pulse 1.5s infinite;
+}
