@@ -1041,9 +1041,11 @@ getTemplateStats: async () => {
 },
 
 
+// Replace the getIndividualPatientMoodAnalytics method in your adminService.js with this debug version:
+
 getIndividualPatientMoodAnalytics: async (patientId, days = 7, tenantId = null) => {
   try {
-    console.log(`🔍 ADMIN: Fetching INDIVIDUAL mood analytics for patient: ${patientId} (${days} days), Tenant: ${tenantId || 'not specified'}`);
+    console.log(`🔍 ADMIN: Fetching mood analytics for patient: ${patientId} (${days} days), Tenant: ${tenantId || 'not specified'}`);
     
     // Get authentication token
     const adminToken = localStorage.getItem('adminToken');
@@ -1051,45 +1053,48 @@ getIndividualPatientMoodAnalytics: async (patientId, days = 7, tenantId = null) 
       throw new Error('Admin authentication required');
     }
     
-    // Build the API URL - use the same endpoint structure as doctor service
-    const baseURL = process.env.REACT_APP_API_URL || 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com/api';
-    const url = `${baseURL}/mood/user/${patientId}?days=${days}`;
+    // ✅ FIX: Use the working admin mood endpoint
+    console.log('🌐 ADMIN: Using endpoint /api/admin/mood/user/' + patientId);
     
-    console.log('🌐 ADMIN Mood API URL:', url);
-    
-    // Set up headers with admin token
-    const headers = {
-      'Authorization': `Bearer ${adminToken}`,
-      'Content-Type': 'application/json'
-    };
-    
-    // Add tenant ID to headers if provided
-    if (tenantId) {
-      headers['x-tenant-id'] = tenantId;
-      headers['X-Tenant-ID'] = tenantId;
-      console.log(`🏢 Added tenant headers: ${tenantId}`);
-    }
-    
-    // Make the API request using axios directly
-    const response = await axios.get(url, { 
-      headers,
+    const response = await api.get(`/api/admin/mood/user/${patientId}`, {
+      params: { 
+        days: days,
+        limit: 100  // Increase limit to see more data
+      },
+      headers: {
+        'Authorization': `Bearer ${adminToken}`,
+        'Content-Type': 'application/json'
+      },
       timeout: 15000
     });
     
     console.log('✅ ADMIN mood response:', response.data);
+    console.log('📊 ADMIN mood entries count:', response.data?.data?.length || 0);
+    console.log('📋 ADMIN mood pagination:', response.data?.pagination);
     
     // Process the raw mood data into analytics format
     let moodEntries = [];
     
     if (response.data && response.data.success && Array.isArray(response.data.data)) {
       moodEntries = response.data.data;
+      console.log('📝 ADMIN: Processing response.data.data array');
     } else if (Array.isArray(response.data)) {
       moodEntries = response.data;
+      console.log('📝 ADMIN: Processing direct response.data array');
+    } else {
+      console.log('⚠️ ADMIN: Unexpected response format:', response.data);
     }
     
     console.log('📊 ADMIN processing mood entries:', moodEntries.length, 'entries found');
     
-    // Transform raw mood data into analytics format (same logic as doctor service)
+    // 🔍 DEBUG: Log first mood entry structure if available
+    if (moodEntries.length > 0) {
+      console.log('🔍 ADMIN: First mood entry structure:', moodEntries[0]);
+    } else {
+      console.log('🔍 ADMIN: No mood entries found - patient may not have mood data');
+    }
+    
+    // Transform raw mood data into analytics format
     const analyticsData = processMoodDataToAnalytics(moodEntries, days);
     
     console.log('📈 ADMIN analytics data generated:', analyticsData);
@@ -1106,6 +1111,7 @@ getIndividualPatientMoodAnalytics: async (patientId, days = 7, tenantId = null) 
       console.error('❌ ADMIN Server error details:');
       console.error('   Status:', error.response.status);
       console.error('   Data:', error.response.data);
+      console.error('   URL:', error.config?.url);
     }
     
     // Return empty result instead of throwing to prevent UI crash
@@ -1116,7 +1122,6 @@ getIndividualPatientMoodAnalytics: async (patientId, days = 7, tenantId = null) 
     };
   }
 },
-
 };
 
 

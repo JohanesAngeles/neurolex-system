@@ -1,4 +1,4 @@
-// server/src/routes/moodRoutes.js
+// server/src/routes/moodRoutes.js - COMPLETE UPDATED VERSION WITH ADMIN FIX
 const express = require('express');
 const router = express.Router();
 
@@ -59,12 +59,108 @@ router.get('/can-checkin', canCheckIn);
 // === ADMIN/DOCTOR ROUTES ===
 
 /**
- * @desc    Get mood history for a specific user (Admin/Doctor access)
+ * @desc    Get mood history for a specific user (Admin/Doctor access) - UPDATED WITH ADMIN FIX
  * @route   GET /api/mood/user/:userId
  * @access  Private (Admin/Doctor only)
- * @query   ?limit=30&page=1
+ * @query   ?limit=30&page=1&days=7
  */
-router.get('/user/:userId', getUserMoodHistory);
+router.get('/user/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { days = 7, limit = 50, page = 1 } = req.query;
+    
+    console.log(`🔍 MOOD: Admin/Doctor accessing mood data for user ${userId}`);
+    console.log(`🔍 MOOD: Request user:`, {
+      id: req.user?.id,
+      role: req.user?.role,
+      email: req.user?.email
+    });
+    
+    // ✅ SAFE FIX: Enhanced admin permission check
+    const isAdmin = req.user && (
+      req.user.role === 'admin' || 
+      req.user.id === 'admin_default' || 
+      req.user._id === 'admin_default'
+    );
+    
+    const isDoctor = req.user && req.user.role === 'doctor';
+    const isOwner = req.user && (req.user.id === userId || req.user._id === userId);
+    
+    // Check permissions - allow admin, doctor, or owner
+    if (!isAdmin && !isDoctor && !isOwner) {
+      console.log('❌ MOOD: Access denied - insufficient permissions');
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to access this user\'s mood data'
+      });
+    }
+    
+    console.log(`✅ MOOD: Access granted - Admin: ${isAdmin}, Doctor: ${isDoctor}, Owner: ${isOwner}`);
+    
+    // ✅ SAFE: Use tenant connection if available, fallback to require
+    let Mood;
+    if (req.tenantConnection) {
+      Mood = req.tenantConnection.model('Mood');
+      console.log('🔗 MOOD: Using tenant connection');
+    } else {
+      // Fallback for admin access without tenant connection
+      Mood = require('../models/Mood');
+      console.log('🔗 MOOD: Using direct model (fallback)');
+    }
+    
+    // Build query filters
+    const queryFilters = { userId: userId };
+    
+    // Add tenant filter if available
+    if (req.user.tenantId) {
+      queryFilters.tenantId = req.user.tenantId;
+      console.log(`🏢 MOOD: Filtering by tenant: ${req.user.tenantId}`);
+    }
+    
+    // Add date filter for recent data
+    if (days && days !== 'all') {
+      const daysAgo = new Date();
+      daysAgo.setDate(daysAgo.getDate() - parseInt(days));
+      queryFilters.timestamp = { $gte: daysAgo };
+      console.log(`📅 MOOD: Filtering by days: ${days} (since ${daysAgo.toISOString()})`);
+    }
+    
+    console.log('🔍 MOOD: Query filters:', queryFilters);
+    
+    // Get mood entries with pagination
+    const moodEntries = await Mood.find(queryFilters)
+      .sort({ timestamp: -1 })
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit))
+      .select('moodRating moodKey moodLabel moodSvgUrl reflection timestamp sentiment metadata');
+    
+    console.log(`📊 MOOD: Found ${moodEntries.length} mood entries`);
+    
+    // Get total count for pagination
+    const totalEntries = await Mood.countDocuments(queryFilters);
+    
+    // Return response in format expected by frontend
+    res.status(200).json({
+      success: true,
+      data: moodEntries,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(totalEntries / parseInt(limit)),
+        totalEntries,
+        limit: parseInt(limit)
+      },
+      message: `Retrieved ${moodEntries.length} mood entries`
+    });
+    
+  } catch (error) {
+    console.error('❌ MOOD: Error getting user mood history:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error occurred while retrieving mood data',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+});
 
 /**
  * @desc    Get comprehensive mood analytics for all patients under doctor's care
@@ -84,8 +180,18 @@ router.get('/user/:userId/analytics', async (req, res) => {
     const { userId } = req.params;
     const { days = 30 } = req.query;
     
+    // ✅ ENHANCED: Better permission check for analytics
+    const isAdmin = req.user && (
+      req.user.role === 'admin' || 
+      req.user.id === 'admin_default' || 
+      req.user._id === 'admin_default'
+    );
+    
+    const isDoctor = req.user && req.user.role === 'doctor';
+    const isOwner = req.user && (req.user.id === userId || req.user._id === userId);
+    
     // Check permissions
-    if (req.user.id !== userId && !['admin', 'doctor'].includes(req.user.role)) {
+    if (!isAdmin && !isDoctor && !isOwner) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to access this user\'s analytics'
@@ -93,16 +199,28 @@ router.get('/user/:userId/analytics', async (req, res) => {
     }
     
     // ✅ FIXED: Use tenant connection instead of require
-    const Mood = req.tenantConnection.model('Mood');
+    let Mood;
+    if (req.tenantConnection) {
+      Mood = req.tenantConnection.model('Mood');
+    } else {
+      Mood = require('../models/Mood');
+    }
+    
+    // Build query filters
+    const queryFilters = { userId: userId };
+    
+    // Add tenant filter if available
+    if (req.user.tenantId) {
+      queryFilters.tenantId = req.user.tenantId;
+    }
+    
+    // Add date filter
+    queryFilters.timestamp = { 
+      $gte: new Date(Date.now() - (parseInt(days) * 24 * 60 * 60 * 1000)) 
+    };
     
     // Get recent moods for calculation
-    const recentMoods = await Mood.find({
-      tenantId: req.user.tenantId,
-      userId: userId,
-      timestamp: { 
-        $gte: new Date(Date.now() - (parseInt(days) * 24 * 60 * 60 * 1000)) 
-      }
-    });
+    const recentMoods = await Mood.find(queryFilters);
     
     // Calculate basic analytics
     const totalEntries = recentMoods.length;
@@ -165,8 +283,18 @@ router.get('/users/:userId/current', async (req, res) => {
   try {
     const { userId } = req.params;
     
+    // ✅ ENHANCED: Better permission check
+    const isAdmin = req.user && (
+      req.user.role === 'admin' || 
+      req.user.id === 'admin_default' || 
+      req.user._id === 'admin_default'
+    );
+    
+    const isDoctor = req.user && req.user.role === 'doctor';
+    const isOwner = req.user && (req.user.id === userId || req.user._id === userId);
+    
     // Check permissions
-    if (req.user.id !== userId && !['admin', 'doctor'].includes(req.user.role)) {
+    if (!isAdmin && !isDoctor && !isOwner) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to access this user\'s mood data'
@@ -174,14 +302,22 @@ router.get('/users/:userId/current', async (req, res) => {
     }
     
     // ✅ FIXED: Use tenant connection instead of require
-    const Mood = req.tenantConnection.model('Mood');
+    let Mood;
+    if (req.tenantConnection) {
+      Mood = req.tenantConnection.model('Mood');
+    } else {
+      Mood = require('../models/Mood');
+    }
     
-    const latestMood = await Mood.findOne({
-      tenantId: req.user.tenantId,
-      userId: userId
-    })
-    .sort({ timestamp: -1 })
-    .select('moodRating moodKey moodLabel moodSvgUrl reflection timestamp sentiment');
+    // Build query
+    const query = { userId: userId };
+    if (req.user.tenantId) {
+      query.tenantId = req.user.tenantId;
+    }
+    
+    const latestMood = await Mood.findOne(query)
+      .sort({ timestamp: -1 })
+      .select('moodRating moodKey moodLabel moodSvgUrl reflection timestamp sentiment');
     
     if (!latestMood) {
       return res.status(200).json({
@@ -224,8 +360,18 @@ router.post('/users/:userId/create', async (req, res) => {
     const { userId } = req.params;
     const { mood, notes, reflection, timestamp } = req.body;
     
+    // ✅ ENHANCED: Better permission check
+    const isAdmin = req.user && (
+      req.user.role === 'admin' || 
+      req.user.id === 'admin_default' || 
+      req.user._id === 'admin_default'
+    );
+    
+    const isDoctor = req.user && req.user.role === 'doctor';
+    const isOwner = req.user && (req.user.id === userId || req.user._id === userId);
+    
     // Check permissions
-    if (req.user.id !== userId && !['admin', 'doctor'].includes(req.user.role)) {
+    if (!isAdmin && !isDoctor && !isOwner) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to create mood entries for this user'
@@ -240,7 +386,13 @@ router.post('/users/:userId/create', async (req, res) => {
     }
     
     // ✅ FIXED: Use tenant connection instead of require
-    const Mood = req.tenantConnection.model('Mood');
+    let Mood;
+    if (req.tenantConnection) {
+      Mood = req.tenantConnection.model('Mood');
+    } else {
+      Mood = require('../models/Mood');
+    }
+    
     const { CloudinaryHelper } = require('../utils/cloudinaryHelper');
     
     // Convert legacy mood format to new format

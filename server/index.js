@@ -693,6 +693,114 @@ if (moodRoutes && tenantMiddleware) {
   console.log('✅ Mood routes mounted at /api/mood (no tenant middleware)');
 }
 
+// Add this section to your server/index.js AFTER the existing mood routes mounting
+// (around line 770, after the mood routes section)
+
+// ============= ADMIN-SPECIFIC MOOD ROUTES =============
+console.log('🔄 Adding admin-specific mood routes...');
+
+// Admin mood data access - bypasses tenant middleware
+if (moodRoutes) {
+  // Create admin-specific mood endpoint
+  app.get('/api/admin/mood/user/:userId', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { days = 7, limit = 50, page = 1 } = req.query;
+      
+      console.log(`🔍 ADMIN: Accessing mood data for user ${userId}`);
+      
+      // Check if user has admin token
+      const token = req.headers.authorization?.replace('Bearer ', '');
+      if (!token) {
+        return res.status(401).json({
+          success: false,
+          message: 'Admin authentication required'
+        });
+      }
+      
+      let decoded;
+      try {
+        decoded = jwt.verify(token, process.env.JWT_SECRET);
+      } catch (error) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid admin token'
+        });
+      }
+      
+      // Verify admin role
+      const isAdmin = decoded.role === 'admin' || decoded.id === 'admin_default';
+      if (!isAdmin) {
+        return res.status(403).json({
+          success: false,
+          message: 'Admin access required'
+        });
+      }
+      
+      console.log(`✅ ADMIN: Access granted to ${decoded.email || decoded.id}`);
+      
+      // Build query filters
+      const queryFilters = { userId: userId };
+      
+      // Add tenant filter if available in token
+      if (decoded.tenantId) {
+        queryFilters.tenantId = decoded.tenantId;
+        console.log(`🏢 ADMIN: Filtering by tenant: ${decoded.tenantId}`);
+      }
+      
+      // Add date filter for recent data
+      if (days && days !== 'all') {
+        const daysAgo = new Date();
+        daysAgo.setDate(daysAgo.getDate() - parseInt(days));
+        queryFilters.timestamp = { $gte: daysAgo };
+        console.log(`📅 ADMIN: Filtering by days: ${days}`);
+      }
+      
+      console.log('🔍 ADMIN: Query filters:', queryFilters);
+      
+      // Get mood entries directly from Mood model
+      const moodEntries = await Mood.find(queryFilters)
+        .sort({ timestamp: -1 })
+        .limit(parseInt(limit))
+        .skip((parseInt(page) - 1) * parseInt(limit))
+        .select('moodRating moodKey moodLabel moodSvgUrl reflection timestamp sentiment metadata')
+        .lean();
+      
+      console.log(`📊 ADMIN: Found ${moodEntries.length} mood entries`);
+      
+      // Get total count for pagination
+      const totalEntries = await Mood.countDocuments(queryFilters);
+      
+      // Return response in format expected by frontend
+      res.status(200).json({
+        success: true,
+        data: moodEntries,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(totalEntries / parseInt(limit)),
+          totalEntries,
+          limit: parseInt(limit)
+        },
+        message: `Retrieved ${moodEntries.length} mood entries`
+      });
+      
+    } catch (error) {
+      console.error('❌ ADMIN: Error getting mood data:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Server error occurred while retrieving mood data',
+        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      });
+    }
+  });
+  
+  console.log('✅ Admin mood route added: GET /api/admin/mood/user/:userId');
+} else {
+  console.log('⚠️ Cannot add admin mood route - moodRoutes not available');
+}
+
+console.log('✅ Admin-specific mood routes configured');
+
 // Mount billing routes
 if (billingRoutes) {
   app.use('/api/billing', billingRoutes);
