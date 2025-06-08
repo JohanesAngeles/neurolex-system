@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import adminService from '../../services/adminService';
-//import '../../styles/components/admin/DoctorVerificationDetails.css';
+import '../../styles/components/admin/DoctorVerificationDetails.css';
 
 const DoctorVerificationDetails = () => {
   const { doctorId } = useParams();
@@ -29,6 +29,14 @@ const DoctorVerificationDetails = () => {
       
       const response = await adminService.getDoctorDetails(doctorId);
       console.log('✅ Doctor details loaded:', response.data);
+      
+      // 🔧 DEBUG: Check for problematic data
+      console.log('🔍 Debugging doctor data structure:');
+      console.log('verificationNotes:', response.data.verificationNotes);
+      console.log('education:', response.data.education);
+      console.log('certifications:', response.data.certifications);
+      console.log('languages:', response.data.languages);
+      
       setDoctor(response.data);
     } catch (err) {
       console.error('❌ Error fetching doctor details:', err);
@@ -73,6 +81,61 @@ const DoctorVerificationDetails = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // 🔧 SAFE: Helper function to safely render any value
+  const safeRender = (value, fallback = 'Not provided') => {
+    if (value === null || value === undefined || value === '') {
+      return fallback;
+    }
+    
+    if (typeof value === 'object') {
+      if (Array.isArray(value)) {
+        return value.length > 0 ? value.join(', ') : fallback;
+      }
+      return JSON.stringify(value);
+    }
+    
+    return String(value);
+  };
+
+  // 🔧 SAFE: Helper function to safely render array data
+  const safeRenderArray = (array, fallback = 'Not specified') => {
+    if (!Array.isArray(array) || array.length === 0) {
+      return fallback;
+    }
+    
+    return array.map((item, index) => {
+      if (typeof item === 'string') {
+        return item;
+      }
+      if (typeof item === 'object' && item.name) {
+        return item.name;
+      }
+      if (typeof item === 'object' && item.content) {
+        return item.content;
+      }
+      return String(item);
+    }).join(', ');
+  };
+
+  // 🔧 SAFE: Helper function to safely render verification notes
+  const safeRenderVerificationNotes = (notes) => {
+    if (!notes) return null;
+    
+    if (Array.isArray(notes)) {
+      return notes.map((note, index) => (
+        <p key={index}>
+          {typeof note === 'object' ? (note.note || note.content || JSON.stringify(note)) : String(note)}
+        </p>
+      ));
+    }
+    
+    if (typeof notes === 'object') {
+      return <p>{notes.note || notes.content || JSON.stringify(notes)}</p>;
+    }
+    
+    return <p>{String(notes)}</p>;
   };
 
   const formatDate = (dateString) => {
@@ -126,9 +189,9 @@ const DoctorVerificationDetails = () => {
                 {dayData.slots && dayData.slots.length > 0 ? (
                   dayData.slots.map((slot, slotIndex) => (
                     <div key={slotIndex} className="time-slot">
-                      <span className="start-time">{slot.startTime || 'Not set'}</span>
+                      <span className="start-time">{safeRender(slot.startTime, 'Not set')}</span>
                       <span className="time-separator">-</span>
-                      <span className="end-time">{slot.endTime || 'Not set'}</span>
+                      <span className="end-time">{safeRender(slot.endTime, 'Not set')}</span>
                     </div>
                   ))
                 ) : (
@@ -159,13 +222,13 @@ const DoctorVerificationDetails = () => {
     );
   };
 
-  // 🆕 Helper function to determine if doctor needs verification
+  // Helper function to determine if doctor needs verification
   const isPendingVerification = () => {
     if (!doctor) return false;
     return !doctor.verificationStatus || doctor.verificationStatus === 'pending';
   };
 
-  // 🆕 Helper function to get status badge style
+  // Helper function to get status badge style
   const getStatusBadgeClass = (status) => {
     switch(status) {
       case 'approved':
@@ -177,7 +240,7 @@ const DoctorVerificationDetails = () => {
     }
   };
 
-  // 🆕 Update header text based on doctor status
+  // Update header text based on doctor status
   const getHeaderText = () => {
     if (!doctor) return { title: 'Doctor Details', subtitle: 'Loading...' };
     
@@ -189,7 +252,7 @@ const DoctorVerificationDetails = () => {
     } else {
       return {
         title: 'Doctor Profile Details',
-        subtitle: `Viewing profile for ${doctor.firstName} ${doctor.lastName}`
+        subtitle: `Viewing profile for ${safeRender(doctor.firstName)} ${safeRender(doctor.lastName)}`
       };
     }
   };
@@ -256,7 +319,7 @@ const DoctorVerificationDetails = () => {
 
       {doctor && (
         <div className="verification-content">
-          {/* 🆕 Show verification status for already-verified doctors */}
+          {/* Show verification status for already-verified doctors */}
           {!isPendingVerification() && (
             <div className="verification-status-card">
               <div className="status-header">
@@ -275,14 +338,14 @@ const DoctorVerificationDetails = () => {
               {doctor.rejectionReason && doctor.verificationStatus === 'rejected' && (
                 <div className="rejection-reason">
                   <p><strong>Rejection Reason:</strong></p>
-                  <p>{doctor.rejectionReason}</p>
+                  <p>{safeRender(doctor.rejectionReason)}</p>
                 </div>
               )}
               
               {doctor.verificationNotes && (
                 <div className="verification-notes">
                   <p><strong>Admin Notes:</strong></p>
-                  <p>{doctor.verificationNotes}</p>
+                  {safeRenderVerificationNotes(doctor.verificationNotes)}
                 </div>
               )}
             </div>
@@ -295,23 +358,23 @@ const DoctorVerificationDetails = () => {
               <div className="info-grid">
                 <div className="info-item">
                   <label>Full Name:</label>
-                  <span>{doctor.title} {doctor.firstName} {doctor.lastName}</span>
+                  <span>{safeRender(doctor.title)} {safeRender(doctor.firstName)} {safeRender(doctor.lastName)}</span>
                 </div>
                 <div className="info-item">
                   <label>Email Address:</label>
-                  <span>{doctor.email}</span>
+                  <span>{safeRender(doctor.email)}</span>
                 </div>
                 <div className="info-item">
                   <label>Personal Contact:</label>
-                  <span>{doctor.personalContactNumber || 'Not provided'}</span>
+                  <span>{safeRender(doctor.personalContactNumber)}</span>
                 </div>
                 <div className="info-item">
                   <label>Clinic Location:</label>
-                  <span>{doctor.clinicLocation || doctor.clinicAddress || 'Not provided'}</span>
+                  <span>{safeRender(doctor.clinicLocation || doctor.clinicAddress)}</span>
                 </div>
                 <div className="info-item">
                   <label>Clinic Contact:</label>
-                  <span>{doctor.clinicContactNumber || 'Not provided'}</span>
+                  <span>{safeRender(doctor.clinicContactNumber)}</span>
                 </div>
               </div>
             </div>
@@ -322,34 +385,34 @@ const DoctorVerificationDetails = () => {
               <div className="info-grid">
                 <div className="info-item">
                   <label>Specialization:</label>
-                  <span>{doctor.specialty || doctor.specialization || 'Not provided'}</span>
+                  <span>{safeRender(doctor.specialty || doctor.specialization)}</span>
                 </div>
                 <div className="info-item">
                   <label>Professional Title:</label>
-                  <span>{doctor.title || 'Not provided'}</span>
+                  <span>{safeRender(doctor.title)}</span>
                 </div>
                 <div className="info-item">
                   <label>Years of Experience:</label>
-                  <span>{doctor.experience || doctor.yearsOfPractice || 'Not provided'}</span>
+                  <span>{safeRender(doctor.experience || doctor.yearsOfPractice)}</span>
                 </div>
                 <div className="info-item">
                   <label>Areas of Expertise:</label>
-                  <span>{doctor.areasOfExpertise || 'Not provided'}</span>
+                  <span>{safeRender(doctor.areasOfExpertise)}</span>
                 </div>
                 <div className="info-item">
                   <label>Languages:</label>
-                  <span>{doctor.languages && doctor.languages.length > 0 ? doctor.languages.join(', ') : 'Not specified'}</span>
+                  <span>{safeRenderArray(doctor.languages)}</span>
                 </div>
                 <div className="info-item">
                   <label>Consultation Fee:</label>
-                  <span>{doctor.consultationFee ? `$${doctor.consultationFee}` : 'Not specified'}</span>
+                  <span>{doctor.consultationFee ? `$${safeRender(doctor.consultationFee)}` : 'Not specified'}</span>
                 </div>
               </div>
               
               {doctor.bio && (
                 <div className="bio-section">
                   <label>Professional Bio:</label>
-                  <p className="bio-text">{doctor.bio}</p>
+                  <p className="bio-text">{safeRender(doctor.bio)}</p>
                 </div>
               )}
             </div>
@@ -390,11 +453,11 @@ const DoctorVerificationDetails = () => {
                 <div className="info-grid">
                   <div className="info-item">
                     <label>License Number:</label>
-                    <span>{doctor.licenseNumber || 'Not provided'}</span>
+                    <span>{safeRender(doctor.licenseNumber)}</span>
                   </div>
                   <div className="info-item">
                     <label>Issuing Authority:</label>
-                    <span>{doctor.licenseIssuingAuthority || 'Not provided'}</span>
+                    <span>{safeRender(doctor.licenseIssuingAuthority)}</span>
                   </div>
                   <div className="info-item">
                     <label>Expiry Date:</label>
@@ -410,9 +473,9 @@ const DoctorVerificationDetails = () => {
                   <div className="credentials-list">
                     {doctor.education.map((edu, index) => (
                       <div key={index} className="credential-item">
-                        <span className="credential-degree">{edu.degree || 'Degree not specified'}</span>
-                        <span className="credential-institution">{edu.institution || 'Institution not specified'}</span>
-                        <span className="credential-year">{edu.year || 'Year not specified'}</span>
+                        <span className="credential-degree">{safeRender(edu.degree, 'Degree not specified')}</span>
+                        <span className="credential-institution">{safeRender(edu.institution, 'Institution not specified')}</span>
+                        <span className="credential-year">{safeRender(edu.year, 'Year not specified')}</span>
                       </div>
                     ))}
                   </div>
@@ -426,9 +489,9 @@ const DoctorVerificationDetails = () => {
                   <div className="credentials-list">
                     {doctor.certifications.map((cert, index) => (
                       <div key={index} className="credential-item">
-                        <span className="credential-degree">{cert.degree || 'Certification not specified'}</span>
-                        <span className="credential-institution">{cert.issuingAuthority || 'Authority not specified'}</span>
-                        <span className="credential-year">{cert.year || 'Year not specified'}</span>
+                        <span className="credential-degree">{safeRender(cert.degree, 'Certification not specified')}</span>
+                        <span className="credential-institution">{safeRender(cert.issuingAuthority, 'Authority not specified')}</span>
+                        <span className="credential-year">{safeRender(cert.year, 'Year not specified')}</span>
                       </div>
                     ))}
                   </div>
@@ -464,7 +527,7 @@ const DoctorVerificationDetails = () => {
             </div>
           </div>
 
-          {/* 🆕 CONDITIONAL: Only show verification form for pending doctors */}
+          {/* CONDITIONAL: Only show verification form for pending doctors */}
           {isPendingVerification() && (
             <div className="verification-form-section">
               <div className="form-card">

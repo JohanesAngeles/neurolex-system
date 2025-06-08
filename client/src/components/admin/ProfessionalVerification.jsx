@@ -71,6 +71,7 @@ const ProfessionalVerification = () => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showVerifyModal, setShowVerifyModal] = useState(false);
   const [showAddDoctorModal, setShowAddDoctorModal] = useState(false); // 🆕 NEW STATE
+  const [showDeleteModal, setShowDeleteModal] = useState(false); // 🆕 DELETE STATE
   const [approving, setApproving] = useState(false);
   
   // Form fields
@@ -78,6 +79,10 @@ const ProfessionalVerification = () => {
   const [verificationNotes, setVerificationNotes] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
   const [formError, setFormError] = useState('');
+  
+  // 🆕 DELETE STATES
+  const [doctorToDelete, setDoctorToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   
   // Filters for registered professionals
   const [searchTerm, setSearchTerm] = useState('');
@@ -241,6 +246,55 @@ const ProfessionalVerification = () => {
       }
     } finally {
       setApproving(false);
+    }
+  };
+
+  // 🆕 DELETE DOCTOR FUNCTIONS
+  const openDeleteModal = (doctor) => {
+    console.log('🗑️ Opening delete modal for doctor:', doctor);
+    setDoctorToDelete(doctor);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteDoctor = async () => {
+    if (!doctorToDelete) return;
+    
+    setDeleting(true);
+    
+    try {
+      console.log('🗑️ Deleting doctor:', doctorToDelete._id);
+      
+      await adminService.deleteDoctor(doctorToDelete._id, doctorToDelete.tenantId);
+      
+      toast.success(`Doctor ${doctorToDelete.firstName} ${doctorToDelete.lastName} deleted successfully`);
+      setShowDeleteModal(false);
+      setDoctorToDelete(null);
+      
+      // Refresh the data
+      loadData();
+      
+    } catch (error) {
+      console.error('❌ Error deleting doctor:', error);
+      
+      if (error.response) {
+        const status = error.response.status;
+        if (status === 404) {
+          toast.error('Doctor not found. They may have already been deleted.');
+        } else {
+          toast.error(`Failed to delete doctor: ${error.response.data?.message || 'Server error'}`);
+        }
+      } else {
+        toast.error('Network error. Please check your connection and try again.');
+      }
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const closeDeleteModal = () => {
+    if (!deleting) {
+      setShowDeleteModal(false);
+      setDoctorToDelete(null);
     }
   };
   
@@ -629,8 +683,10 @@ const ProfessionalVerification = () => {
                         <img 
                           src={TrashIcon} 
                           className="action-icon delete" 
+                          onClick={() => openDeleteModal(doctor)}
                           title="Delete Doctor" 
                           alt="Delete"
+                          style={{ cursor: 'pointer' }}
                         />
                       </div>
                     </td>
@@ -732,6 +788,93 @@ const ProfessionalVerification = () => {
             }
           >
             {approving ? 'Processing...' : verificationStatus === 'approved' ? 'Approve Doctor' : 'Reject Doctor'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 🆕 Delete Confirmation Dialog */}
+      <Dialog
+        open={showDeleteModal}
+        onClose={closeDeleteModal}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ textAlign: 'center', color: '#d32f2f' }}>
+          DELETE DOCTOR ACCOUNT?
+        </DialogTitle>
+        <DialogContent>
+          {doctorToDelete && (
+            <Box sx={{ textAlign: 'center', py: 2 }}>
+              {/* Doctor Icon */}
+              <Box sx={{ mb: 2 }}>
+                <div style={{ 
+                  width: '60px', 
+                  height: '60px', 
+                  margin: '0 auto', 
+                  backgroundColor: '#5B8C7E', 
+                  borderRadius: '50%', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center' 
+                }}>
+                  <span style={{ color: 'white', fontSize: '24px' }}>👨‍⚕️</span>
+                </div>
+              </Box>
+              
+              {/* Doctor Info Box */}
+              <Box sx={{ 
+                backgroundColor: '#f5f5f5', 
+                padding: '16px', 
+                borderRadius: '8px', 
+                mb: 2 
+              }}>
+                <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
+                  {doctorToDelete.firstName} {doctorToDelete.lastName}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {doctorToDelete.email}
+                </Typography>
+              </Box>
+              
+              <Typography variant="body1" color="text.secondary">
+                Deleting this account is permanent. The professional will lose all access to patient data and records.
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: 'center', gap: 2, pb: 3 }}>
+          <Button 
+            onClick={closeDeleteModal} 
+            variant="outlined"
+            color="inherit"
+            disabled={deleting}
+            sx={{ 
+              minWidth: '120px',
+              color: '#666',
+              borderColor: '#ddd',
+              '&:hover': {
+                borderColor: '#999',
+                backgroundColor: '#f5f5f5'
+              }
+            }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleDeleteDoctor}
+            variant="contained"
+            color="error"
+            disabled={deleting}
+            startIcon={deleting ? <CircularProgress size={20} color="inherit" /> : null}
+            sx={{ 
+              minWidth: '120px',
+              backgroundColor: '#ff6b6b',
+              '&:hover': {
+                backgroundColor: '#ff5252'
+              }
+            }}
+          >
+            {deleting ? 'Deleting...' : 'Yes, Delete'}
           </Button>
         </DialogActions>
       </Dialog>
