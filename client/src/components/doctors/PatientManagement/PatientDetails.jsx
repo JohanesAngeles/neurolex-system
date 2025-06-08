@@ -284,7 +284,7 @@ const PatientDetails = () => {
             <p className="patient-email-">{patient.email}</p>
           </div>
         </div>
-        <div className="header-right">
+        <div className="header-right-">
           <div className="status-badge active">
             ● Active
           </div>

@@ -2253,7 +2253,7 @@ exports.getDoctorProfileById = async (req, res) => {
 };
 
 /**
- * Get current doctor's own profile
+ * Get current doctor's own profile - FIXED VERSION
  * @authenticated - For logged-in doctors only
  */
 exports.getCurrentDoctorProfile = async (req, res) => {
@@ -2296,17 +2296,20 @@ exports.getCurrentDoctorProfile = async (req, res) => {
       console.log('🔄 Using global User model (no tenant connection)');
     }
     
-    // Find the current doctor's profile
+    // 🔧 CRITICAL FIX: Select ALL the fields that the frontend needs
     const doctor = await UserModel.findById(doctorId)
-  .select(`
-    firstName lastName email title specialty specialization profilePicture bio consultationFee 
-    yearsOfPractice clinicAddress languages emergencyAware telehealth inPerson verificationStatus
-    licenseNumber licenseIssuingAuthority licenseExpiryDate experience areasOfExpertise
-    clinicName personalContactNumber clinicContactNumber licenseDocumentUrl educationCertificateUrl
-    education licenses certifications availability additionalDocumentUrls
-    verificationNotes verificationDate isVerified isActive isEmailVerified termsAccepted createdAt
-  `)
-  .lean();
+      .select(`
+        firstName lastName email title specialty specialization profilePicture bio consultationFee 
+        yearsOfPractice clinicAddress languages emergencyAware telehealth inPerson verificationStatus
+        licenseNumber licenseIssuingAuthority licenseExpiryDate experience areasOfExpertise
+        clinicName personalContactNumber clinicContactNumber licenseDocumentUrl educationCertificateUrl
+        education licenses certifications availability additionalDocumentUrls
+        verificationNotes verificationDate isVerified isActive isEmailVerified termsAccepted createdAt
+        age gender middleName nickname birthdate location clinicLocation diagnosis occupation emergencyName
+        role updatedAt lastLogin paymentMethods
+      `)
+      .lean();
+      
     if (!doctor) {
       console.log('❌ Doctor profile not found for ID:', doctorId);
       return res.status(404).json({
@@ -2324,10 +2327,40 @@ exports.getCurrentDoctorProfile = async (req, res) => {
       });
     }
     
+    // 🔧 ADDITIONAL FIX: Try to get more data using direct collection access if some fields are missing
+    if (req.tenantConnection && req.tenantConnection.db && (!doctor.licenseNumber || !doctor.clinicName)) {
+      try {
+        console.log('🔍 Trying direct collection access for missing fields...');
+        const usersCollection = req.tenantConnection.db.collection('users');
+        const mongoose = require('mongoose');
+        
+        const doctorObjectId = mongoose.Types.ObjectId.isValid(doctorId)
+          ? new mongoose.Types.ObjectId(doctorId)
+          : doctorId;
+        
+        const fullDoctor = await usersCollection.findOne(
+          { _id: doctorObjectId },
+          { projection: { password: 0, passwordResetToken: 0, emailVerificationToken: 0, refreshToken: 0 } }
+        );
+        
+        if (fullDoctor) {
+          console.log('✅ Found additional data via direct collection access');
+          // Merge the additional data
+          Object.assign(doctor, fullDoctor);
+        }
+      } catch (directError) {
+        console.error('❌ Direct collection access failed:', directError.message);
+      }
+    }
+    
     console.log('✅ Doctor profile retrieved successfully:', {
       id: doctor._id,
       name: `${doctor.firstName} ${doctor.lastName}`,
-      email: doctor.email
+      email: doctor.email,
+      hasLicenseNumber: !!doctor.licenseNumber,
+      hasClinicName: !!doctor.clinicName,
+      hasConsultationFee: !!doctor.consultationFee,
+      verificationStatus: doctor.verificationStatus
     });
     
     // Remove sensitive fields before sending
@@ -2336,12 +2369,24 @@ exports.getCurrentDoctorProfile = async (req, res) => {
       password: undefined,
       passwordResetToken: undefined,
       emailVerificationToken: undefined,
-      refreshToken: undefined
+      refreshToken: undefined,
+      resetPasswordToken: undefined,
+      resetPasswordExpires: undefined
     };
     
     return res.status(200).json({
       success: true,
-      data: sanitizedProfile
+      data: sanitizedProfile,
+      debug: {
+        fieldsRetrieved: Object.keys(sanitizedProfile).length,
+        hasLicenseInfo: !!(sanitizedProfile.licenseNumber && sanitizedProfile.licenseIssuingAuthority),
+        hasClinicInfo: !!(sanitizedProfile.clinicName || sanitizedProfile.clinicAddress),
+        hasProfessionalInfo: !!(sanitizedProfile.specialty || sanitizedProfile.specialization),
+        tenantInfo: {
+          tenantId: req.tenantId || 'None',
+          tenantDbName: req.tenantDbName || 'None'
+        }
+      }
     });
     
   } catch (error) {
