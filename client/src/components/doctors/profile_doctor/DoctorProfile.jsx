@@ -687,7 +687,8 @@ const DoctorProfile = () => {
               className={`sidebar-menu-item ${activeSection === item.id ? 'active' : ''}`}
               onClick={() => setActiveSection(item.id)}
             >
-              <img src={item.icon} alt={item.label} className="menu-icon" />
+              <div className="icon-container">
+              <img src={item.icon} alt={item.label} className="menu-icon" /> </div>
               <span className="menu-label">{item.label}</span>
               <span className="menu-arrow">›</span>
             </button>

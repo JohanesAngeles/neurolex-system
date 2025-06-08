@@ -560,7 +560,7 @@ export default DoctorDashboard;
     );
   };
 
-  // ✅ NEW: Modal Component
+  // ✅ NEW: Modal Component - FIXED UI & REMOVED FULL DETAILS
   const AppointmentModal = ({ appointment, isOpen, onClose }) => {
     if (!isOpen || !appointment) return null;
 
@@ -568,98 +568,62 @@ export default DoctorDashboard;
     const isActive = isSessionActive(appointment);
 
     return (
-      <div className="modal-overlay" onClick={onClose}>
-        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-          <div className="modal-header">
-            <h2>Appointment Details</h2>
-            <button className="modal-close" onClick={onClose}>&times;</button>
+      <div className="modal-overlay-fixed" onClick={onClose}>
+        <div className="modal-content-fixed" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-header-fixed">
+            <h2 className="modal-title-fixed">Appointment Details</h2>
+            <button className="modal-close-fixed" onClick={onClose}>&times;</button>
           </div>
           
-          <div className="modal-body">
-            <div className="appointment-info">
-              <div className="patient-section">
-                <div className="patient-avatar large">
-                  {appointment.patientImage ? (
-                    <img src={appointment.patientImage} alt={appointment.patientName} />
-                  ) : (
-                    appointment.patientName.charAt(0).toUpperCase()
-                  )}
-                </div>
-                <div className="patient-details">
-                  <h3>{appointment.patientName}</h3>
-                  <p>{appointment.appointmentType}</p>
-                  {appointment.meetingLink && (
-                    <div className="session-status-modal">
-                      🎥 {sessionStatus.status}
-                    </div>
-                  )}
-                </div>
+          <div className="modal-body-fixed">
+            {/* Patient Section */}
+            <div className="modal-patient-section">
+              <div className="modal-patient-avatar">
+                {appointment.patientImage ? (
+                  <img src={appointment.patientImage} alt={appointment.patientName} />
+                ) : (
+                  appointment.patientName.charAt(0).toUpperCase()
+                )}
               </div>
-
-              <div className="appointment-details-grid">
-                <div className="detail-item">
-                  <div className="detail-label">📅 Date</div>
-                  <div className="detail-value">Today</div>
-                </div>
-                <div className="detail-item">
-                  <div className="detail-label">🕛 Time</div>
-                  <div className="detail-value">{appointment.time}</div>
-                </div>
-                <div className="detail-item">
-                  <div className="detail-label">⏱️ Duration</div>
-                  <div className="detail-value">{appointment.duration} min</div>
-                </div>
-                <div className="detail-item">
-                  <div className="detail-label">📋 Status</div>
-                  <div className="detail-value">{appointment.status}</div>
-                </div>
+              <div className="modal-patient-info">
+                <h3 className="modal-patient-name">{appointment.patientName}</h3>
+                <p className="modal-patient-type">{appointment.appointmentType}</p>
               </div>
+            </div>
 
-              {/* ✅ THIS IS THE MEETING LINK SECTION FROM YOUR IMAGE 3 */}
-              <div className="meeting-section">
-                <div className="meeting-info">
-                  <div className="meeting-time-display">
-                    <span className="meeting-calendar-icon">📅</span>
-                    <span>Today</span>
-                    <span className="meeting-clock-icon">🕛</span>
-                    <span>{appointment.time}</span>
-                    <span className="meeting-duration-icon">⏱️</span>
-                    <span>{appointment.duration} min</span>
+            {/* Meeting Section - Matches Image 3 exactly */}
+            <div className="modal-meeting-section">
+              <div className="modal-meeting-time">
+                <span className="meeting-date-text">📅 Today</span>
+                <span className="meeting-time-text">🕛 {appointment.time}</span>
+                <span className="meeting-duration-text">⏱️ {appointment.duration} min</span>
+              </div>
+              
+              <div className="modal-meeting-action">
+                {appointment.meetingLink ? (
+                  <button 
+                    className={`modal-join-button ${isActive ? 'active' : ''}`}
+                    onClick={() => {
+                      handleJoinMeeting(appointment);
+                      onClose();
+                    }}
+                  >
+                    <span className="join-icon">📹</span>
+                    <span>{isActive ? 'Join Now' : 'No Meeting Link'}</span>
+                  </button>
+                ) : (
+                  <div className="modal-no-meeting">
+                    <span className="no-meeting-icon">📹</span>
+                    <span>No Meeting Link</span>
                   </div>
-                  
-                  {appointment.meetingLink ? (
-                    <button 
-                      className={`modal-join-meeting-button ${isActive ? 'active' : ''}`}
-                      onClick={() => {
-                        handleJoinMeeting(appointment);
-                        onClose();
-                      }}
-                    >
-                      {isActive ? '🔴 Join Now' : '📹 Join Meeting'}
-                    </button>
-                  ) : (
-                    <div className="no-meeting-link">
-                      <div className="no-meeting-icon">📹</div>
-                      <span>No Meeting Link</span>
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
             </div>
           </div>
 
-          <div className="modal-footer">
-            <button className="modal-button secondary" onClick={onClose}>
+          <div className="modal-footer-fixed">
+            <button className="modal-close-button" onClick={onClose}>
               Close
-            </button>
-            <button 
-              className="modal-button primary" 
-              onClick={() => {
-                navigate(`/doctor/appointments/${appointment.id}`);
-                onClose();
-              }}
-            >
-              Full Details
             </button>
           </div>
         </div>
@@ -667,7 +631,7 @@ export default DoctorDashboard;
     );
   };
 
-  // ✅ ENHANCED: Today's appointments with feature wrapper
+  // ✅ ENHANCED: Today's appointments with feature wrapper - FIXED UI
   const renderTodayAppointments = () => {
     return (
       <FeatureWrapper feature="Care / Report" showMessage={true}>
@@ -688,7 +652,7 @@ export default DoctorDashboard;
             </div>
           ) : (
             todayAppointments.map((appointment, index) => {
-              // Format date to show month and day (e.g., "April 19")
+              // Format date to show month and day (e.g., "June 8")
               const appointmentDate = new Date(appointment.appointmentDate);
               const formattedDate = appointmentDate.toLocaleDateString('en-US', { 
                 month: 'long', 
@@ -696,39 +660,36 @@ export default DoctorDashboard;
               });
               
               return (
-                <div key={appointment.id || index} className="today-appointment-card">
+                <div key={appointment.id || index} className="today-appointment-card-fixed">
                   {/* Patient Info Section */}
-                  <div className="today-appointment-patient">
-                    <div className="patient-avatar">
-                      {/* If you have patient images, use them, otherwise show initials */}
+                  <div className="today-appointment-patient-fixed">
+                    <div className="patient-avatar-fixed">
                       {appointment.patientImage ? (
                         <img src={appointment.patientImage} alt={appointment.patientName} />
                       ) : (
                         appointment.patientName.charAt(0).toUpperCase()
                       )}
                     </div>
-                    <div className="patient-info">
-                      <h4 className="patient-name-label">{appointment.patientName}</h4>
-                      <p className="patient-type-label">{appointment.appointmentType}</p>
+                    <div className="patient-info-fixed">
+                      <h4 className="patient-name-fixed">{appointment.patientName}</h4>
+                      <p className="patient-type-fixed">{appointment.appointmentType}</p>
                     </div>
                   </div>
                   
-                  {/* Date and Time Section - Matching your previous UI exactly */}
-                  <div className="appointment-meta">
-                    <div className="appointment-date-time">
-                      <div className="meta-group date-group">
-                        <span>{formattedDate}</span>
-                      </div>
-                      <div className="meta-group time-group">
-                        <span>{appointment.time}</span>
-                      </div>
+                  {/* Date and Time Section */}
+                  <div className="appointment-datetime-fixed">
+                    <div className="datetime-item">
+                      <span className="datetime-label">{formattedDate}</span>
+                    </div>
+                    <div className="datetime-item">
+                      <span className="datetime-label">{appointment.time}</span>
                     </div>
                   </div>
                   
-                  {/* Action Button - Only View Details */}
-                  <div className="appointment-actions">
+                  {/* Action Button */}
+                  <div className="appointment-actions-fixed">
                     <button 
-                      className="view-details-button"
+                      className="view-details-button-fixed"
                       onClick={() => openAppointmentModal(appointment)}
                     >
                       View Details

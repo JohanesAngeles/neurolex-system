@@ -87,13 +87,25 @@
   color: #000000;
 }
 
+.icon-container {
+  width: 63px;
+  height: 65px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background-color: #F6FBF9;
+  border: 1px solid #A7D7C5;
+}
+
 .sidebar-menu-item:hover {
   background-color: #e8f4f0;
 }
 
 .sidebar-menu-item.active {
   background-color: #F6FBF9;
-  color: white;
+  border: 1px solid #A7D7C5;
+  color: rgb(0, 0, 0);
 }
 
 .menu-icon {
@@ -102,10 +114,6 @@
   opacity: 0.7;
 }
 
-.sidebar-menu-item.active .menu-icon {
-  opacity: 1;
-  filter: brightness(0) invert(1);
-}
 
 .menu-label {
   flex: 1;

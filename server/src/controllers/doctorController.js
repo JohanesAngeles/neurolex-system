@@ -2724,8 +2724,8 @@ exports.updateDoctorProfile = async (req, res) => {
 };
 
 /**
- * Change doctor's email address
- * @authenticated - Doctor only
+ * Change doctor's email address - FINAL CORRECT VERSION
+ * 
  */
 exports.changeDoctorEmail = async (req, res) => {
   try {
@@ -2763,7 +2763,8 @@ exports.changeDoctorEmail = async (req, res) => {
       UserModel = require('../models/User');
     }
     
-    const doctor = await UserModel.findById(doctorId);
+    // ✅ CRITICAL FIX: Include password field in query
+    const doctor = await UserModel.findById(doctorId).select('+password');
     if (!doctor) {
       return res.status(404).json({
         success: false,
@@ -2779,7 +2780,7 @@ exports.changeDoctorEmail = async (req, res) => {
       });
     }
     
-    // Verify password
+    // ✅ Use the schema's comparePassword method
     const isPasswordValid = await doctor.comparePassword(password);
     if (!isPasswordValid) {
       return res.status(401).json({
@@ -2827,7 +2828,7 @@ exports.changeDoctorEmail = async (req, res) => {
 };
 
 /**
- * Change doctor's password
+ * Change doctor's password - FINAL CORRECT VERSION
  * @authenticated - Doctor only
  */
 exports.changeDoctorPassword = async (req, res) => {
@@ -2890,7 +2891,8 @@ exports.changeDoctorPassword = async (req, res) => {
       UserModel = require('../models/User');
     }
     
-    const doctor = await UserModel.findById(doctorId);
+    // ✅ CRITICAL FIX: Include password field in query
+    const doctor = await UserModel.findById(doctorId).select('+password');
     if (!doctor) {
       return res.status(404).json({
         success: false,
@@ -2898,7 +2900,7 @@ exports.changeDoctorPassword = async (req, res) => {
       });
     }
     
-    // Verify current password
+    // ✅ Use the schema's comparePassword method
     const isCurrentPasswordValid = await doctor.comparePassword(currentPassword);
     if (!isCurrentPasswordValid) {
       return res.status(401).json({
@@ -2916,12 +2918,12 @@ exports.changeDoctorPassword = async (req, res) => {
       });
     }
     
-    // Update password (will be hashed by User model's pre-save hook)
+    // ✅ Set new password - pre-save hook will automatically hash it
     doctor.password = newPassword;
     doctor.updatedAt = new Date();
-    await doctor.save();
+    await doctor.save(); // This will trigger the pre-save hook to hash the password
     
-    console.log(`✅ Password updated successfully for doctor ${doctorId}`);
+    console.log(`✅ Password updated and hashed successfully for doctor ${doctorId}`);
     
     return res.status(200).json({
       success: true,
