@@ -2253,19 +2253,13 @@ exports.getDoctorProfileById = async (req, res) => {
 };
 
 /**
- * Get current doctor's own profile - FIXED VERSION
+ * Get current doctor's own profile - FETCH ALL FIELDS VERSION
  * @authenticated - For logged-in doctors only
  */
 exports.getCurrentDoctorProfile = async (req, res) => {
   try {
     console.log('🔍 getCurrentDoctorProfile called for user:', req.user.id || req.user._id);
-    console.log('🏢 Tenant context:', {
-      tenantId: req.tenantId || 'None',
-      tenantDbName: req.tenantDbName || 'None',
-      tenantConnection: !!req.tenantConnection
-    });
     
-    // Get the requesting user's ID (handle both _id and id)
     const doctorId = req.user.id || req.user._id;
     
     if (!doctorId) {
@@ -2296,18 +2290,9 @@ exports.getCurrentDoctorProfile = async (req, res) => {
       console.log('🔄 Using global User model (no tenant connection)');
     }
     
-    // 🔧 CRITICAL FIX: Select ALL the fields that the frontend needs
+    // 🔧 CRITICAL FIX: FETCH ALL FIELDS (except password) instead of selecting specific ones
     const doctor = await UserModel.findById(doctorId)
-      .select(`
-        firstName lastName email title specialty specialization profilePicture bio consultationFee 
-        yearsOfPractice clinicAddress languages emergencyAware telehealth inPerson verificationStatus
-        licenseNumber licenseIssuingAuthority licenseExpiryDate experience areasOfExpertise
-        clinicName personalContactNumber clinicContactNumber licenseDocumentUrl educationCertificateUrl
-        education licenses certifications availability additionalDocumentUrls
-        verificationNotes verificationDate isVerified isActive isEmailVerified termsAccepted createdAt
-        age gender middleName nickname birthdate location clinicLocation diagnosis occupation emergencyName
-        role updatedAt lastLogin paymentMethods
-      `)
+      .select('-password -passwordResetToken -emailVerificationToken -refreshToken')
       .lean();
       
     if (!doctor) {
@@ -2327,32 +2312,6 @@ exports.getCurrentDoctorProfile = async (req, res) => {
       });
     }
     
-    // 🔧 ADDITIONAL FIX: Try to get more data using direct collection access if some fields are missing
-    if (req.tenantConnection && req.tenantConnection.db && (!doctor.licenseNumber || !doctor.clinicName)) {
-      try {
-        console.log('🔍 Trying direct collection access for missing fields...');
-        const usersCollection = req.tenantConnection.db.collection('users');
-        const mongoose = require('mongoose');
-        
-        const doctorObjectId = mongoose.Types.ObjectId.isValid(doctorId)
-          ? new mongoose.Types.ObjectId(doctorId)
-          : doctorId;
-        
-        const fullDoctor = await usersCollection.findOne(
-          { _id: doctorObjectId },
-          { projection: { password: 0, passwordResetToken: 0, emailVerificationToken: 0, refreshToken: 0 } }
-        );
-        
-        if (fullDoctor) {
-          console.log('✅ Found additional data via direct collection access');
-          // Merge the additional data
-          Object.assign(doctor, fullDoctor);
-        }
-      } catch (directError) {
-        console.error('❌ Direct collection access failed:', directError.message);
-      }
-    }
-    
     console.log('✅ Doctor profile retrieved successfully:', {
       id: doctor._id,
       name: `${doctor.firstName} ${doctor.lastName}`,
@@ -2360,32 +2319,33 @@ exports.getCurrentDoctorProfile = async (req, res) => {
       hasLicenseNumber: !!doctor.licenseNumber,
       hasClinicName: !!doctor.clinicName,
       hasConsultationFee: !!doctor.consultationFee,
-      verificationStatus: doctor.verificationStatus
+      verificationStatus: doctor.verificationStatus,
+      fieldsCount: Object.keys(doctor).length
     });
     
-    // Remove sensitive fields before sending
-    const sanitizedProfile = {
-      ...doctor,
-      password: undefined,
-      passwordResetToken: undefined,
-      emailVerificationToken: undefined,
-      refreshToken: undefined,
-      resetPasswordToken: undefined,
-      resetPasswordExpires: undefined
-    };
+    // 🔍 DEBUG: Log what fields we actually got
+    console.log('🔍 Available fields in doctor object:', Object.keys(doctor));
+    console.log('🔍 Professional fields check:', {
+      licenseNumber: doctor.licenseNumber,
+      licenseIssuingAuthority: doctor.licenseIssuingAuthority,
+      specialty: doctor.specialty,
+      clinicName: doctor.clinicName,
+      clinicAddress: doctor.clinicAddress,
+      consultationFee: doctor.consultationFee,
+      yearsOfPractice: doctor.yearsOfPractice,
+      experience: doctor.experience,
+      areasOfExpertise: doctor.areasOfExpertise
+    });
     
     return res.status(200).json({
       success: true,
-      data: sanitizedProfile,
+      data: doctor,
       debug: {
-        fieldsRetrieved: Object.keys(sanitizedProfile).length,
-        hasLicenseInfo: !!(sanitizedProfile.licenseNumber && sanitizedProfile.licenseIssuingAuthority),
-        hasClinicInfo: !!(sanitizedProfile.clinicName || sanitizedProfile.clinicAddress),
-        hasProfessionalInfo: !!(sanitizedProfile.specialty || sanitizedProfile.specialization),
-        tenantInfo: {
-          tenantId: req.tenantId || 'None',
-          tenantDbName: req.tenantDbName || 'None'
-        }
+        fieldsRetrieved: Object.keys(doctor).length,
+        hasLicenseInfo: !!(doctor.licenseNumber && doctor.licenseIssuingAuthority),
+        hasClinicInfo: !!(doctor.clinicName || doctor.clinicAddress),
+        hasProfessionalInfo: !!(doctor.specialty),
+        allFieldsIncluded: true // Since we're fetching all fields
       }
     });
     

@@ -70,57 +70,65 @@ const DoctorProfile = () => {
   }, []);
 
   const loadDoctorProfile = async () => {
-    try {
-      setLoading(true);
-      console.log('🔍 Loading doctor profile...');
-      
-      const response = await doctorService.getProfile();
-      console.log('✅ Profile loaded:', response);
-      
-      let profileData = {};
-      
-      // Handle different response structures
-      if (response.success && response.data) {
-        profileData = response.data;
-      } else if (response.data) {
-        profileData = response.data;
-      } else {
-        profileData = response;
-      }
-      
-      // Set default values if missing
-      const processedProfile = {
-        firstName: profileData.firstName || '',
-        lastName: profileData.lastName || '',
-        title: profileData.title || '',
-        email: profileData.email || '',
-        profilePicture: profileData.profilePicture || null
-      };
-      
-      setDoctorProfile(processedProfile);
-      setFormData({
-        firstName: processedProfile.firstName,
-        lastName: processedProfile.lastName,
-        title: processedProfile.title
-      });
-      
-      // 🆕 NEW: Set current email for change email form
-      setEmailData(prev => ({
-        ...prev,
-        currentEmail: processedProfile.email || ''
-      }));
-      
-      if (processedProfile.profilePicture) {
-        setProfileImagePreview(processedProfile.profilePicture);
-      }
-      
-    } catch (error) {
-      console.error('❌ Error loading doctor profile:', error);
-      toast.error('Failed to load profile information');
-    } finally {
-      setLoading(false);
+  try {
+    setLoading(true);
+    console.log('🔍 Loading doctor profile...');
+    
+    const response = await doctorService.getProfile();
+    console.log('✅ Profile loaded:', response);
+    
+    let profileData = {};
+    
+    // Handle different response structures
+    if (response.success && response.data) {
+      profileData = response.data;
+    } else if (response.data) {
+      profileData = response.data;
+    } else {
+      profileData = response;
     }
-  };
+    
+    // 🔧 CRITICAL FIX: Set ALL the profile data, not just a subset
+    console.log('🔍 Setting complete profile data:', profileData);
+    
+    // Set the COMPLETE doctor profile data
+    setDoctorProfile(profileData);
+    
+    // Set form data for editing (only the fields used in edit form)
+    setFormData({
+      firstName: profileData.firstName || '',
+      lastName: profileData.lastName || '',
+      title: profileData.title || ''
+    });
+    
+    // Set current email for change email form
+    setEmailData(prev => ({
+      ...prev,
+      currentEmail: profileData.email || ''
+    }));
+    
+    // Set profile picture preview
+    if (profileData.profilePicture) {
+      setProfileImagePreview(profileData.profilePicture);
+    }
+    
+    // 🔍 DEBUG: Log what we're actually setting
+    console.log('🔍 Profile data being set:', {
+      hasVerificationStatus: !!profileData.verificationStatus,
+      hasSpecialty: !!profileData.specialty,
+      hasLicenseNumber: !!profileData.licenseNumber,
+      hasClinicName: !!profileData.clinicName,
+      hasConsultationFee: profileData.consultationFee !== undefined,
+      allFieldsCount: Object.keys(profileData).length
+    });
+    
+  } catch (error) {
+    console.error('❌ Error loading doctor profile:', error);
+    toast.error('Failed to load profile information');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;

@@ -469,7 +469,7 @@ const JournalEntryDetail = () => {
           
           {/* Header */}
           <div className="journal-header">
-            <div className="header-left">
+            <div className="header-left1">
               <button 
                 className="back-button" 
                 onClick={() => navigate('/doctor/journal-entries')}
@@ -477,7 +477,7 @@ const JournalEntryDetail = () => {
                 <span className="back-icon">←</span>
               </button>
               <div>
-                <h1 className="journal-title">Journal Entry Review</h1>
+                <h1 className="journal-title-">Journal Entry Review</h1>
               </div>
             </div>
             <div className="date-badge">
