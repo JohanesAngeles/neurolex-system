@@ -728,7 +728,7 @@ addDoctor: async (doctorData) => {
     console.log('Submitting admin doctor data:', submissionData);
     
     // Use the admin endpoint for adding doctors
-    const response = await api.post('/admin/doctors', submissionData);
+    const response = await api.post('/api/admin/doctors', submissionData);
     
     console.log('✅ Admin addDoctor response:', response.data);
     return response.data;
