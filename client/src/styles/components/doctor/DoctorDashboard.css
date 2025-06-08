@@ -933,7 +933,7 @@
   display: flex;
   align-items: center;
   color: #000000;
-  margin: 0;
+  margin: 0 0 8px 0;
   height: 20px;
   overflow: hidden;
 }
@@ -1215,6 +1215,65 @@
   .today-appointment-header .section-title {
     font-size: 20px;
   }
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+.join-meeting-button {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.join-meeting-button.active {
+  background-color: #FF4444;
+  animation: pulse 2s infinite;
+}
+
+.join-meeting-button.disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.session-status {
+  font-size: 11px;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.no-appointments {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+}
+
+.no-appointments-subtitle {
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+.appointments-count {
+  font-size: 14px;
+  color: #666;
+  margin: 0;
+}
+
+.meeting-instructions {
+  margin-top: 16px;
+  padding: 12px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  font-size: 12px;
 }
 
 @keyframes pulse {

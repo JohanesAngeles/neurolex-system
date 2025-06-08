@@ -53,6 +53,10 @@ router.get('/profile', adminAuth, adminController.getAdminProfile);
 // Dashboard
 router.get('/dashboard', adminAuth, adminController.getDashboardData);
 
+// Helper routes for journal filters
+router.get('/patients/list', adminAuth, adminController.getAllPatientsForFilter);
+router.get('/doctors/list', adminAuth, adminController.getAllDoctorsForFilter);
+
 // Patient Management
 router.get('/patients', adminAuth, adminController.getAllPatients);
 router.get('/patients/:patientId', adminAuth, adminController.getPatientById);
@@ -221,9 +225,7 @@ router.get('/journal-entries/export/pdf', adminAuth, adminController.exportJourn
 router.get('/journal-entries/:id', adminAuth, adminController.getJournalEntry);
 router.delete('/journal-entries/:id', adminAuth, adminController.deleteJournalEntry);
 
-// Helper routes for journal filters
-router.get('/patients/list', adminAuth, adminController.getAllPatientsForFilter);
-router.get('/doctors/list', adminAuth, adminController.getAllDoctorsForFilter);
+
 
 console.log('Admin journal management routes added successfully');
 
