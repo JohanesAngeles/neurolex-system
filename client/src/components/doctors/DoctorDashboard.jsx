@@ -542,110 +542,111 @@ const DoctorDashboard = () => {
 
   // ✅ ENHANCED: Today's appointments with feature wrapper
   const renderTodayAppointments = () => {
-    return (
-      <FeatureWrapper feature="Care / Report" showMessage={true}>
-        <div className="todays-appointments">
-          <div className="today-appointment-header">
-            <h3 className="section-title">
-              Today's Appointments
-            </h3>
-            <p className="appointments-count">
-              {todayAppointments.length} appointment{todayAppointments.length !== 1 ? 's' : ''} today
-            </p>
+  return (
+    <FeatureWrapper feature="Care / Report" showMessage={true}>
+      <div className="todays-appointments">
+        <div className="today-appointment-header">
+          <h3 className="section-title">
+            Today's Appointments
+          </h3>
+          <p className="appointments-count">
+            {todayAppointments.length} appointment{todayAppointments.length !== 1 ? 's' : ''} today
+          </p>
+        </div>
+        
+        {todayAppointments.length === 0 ? (
+          <div className="no-appointments">
+            <p>🗓️ No appointments scheduled for today</p>
+            <p className="no-appointments-subtitle">Enjoy your free time!</p>
           </div>
-          
-          {todayAppointments.length === 0 ? (
-            <div className="no-appointments">
-              <p>🗓️ No appointments scheduled for today</p>
-              <p className="no-appointments-subtitle">Enjoy your free time!</p>
-            </div>
-          ) : (
-            todayAppointments.map((appointment, index) => {
-              const sessionStatus = getSessionStatus(appointment);
-              const isActive = isSessionActive(appointment);
-              
-              return (
-                <div key={appointment.id || index} className="today-appointment-card">
-                  <div className="today-appointment-patient">
-                    <div className="patient-avatar">
-                      {appointment.patientName.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="patient-info">
-                      <h4 className="patient-name-label">{appointment.patientName}</h4>
-                      <p className="patient-type-label">{appointment.appointmentType}</p>
+        ) : (
+          todayAppointments.map((appointment, index) => {
+            const sessionStatus = getSessionStatus(appointment);
+            const isActive = isSessionActive(appointment);
+            
+            // Format date to show month and day (e.g., "April 19")
+            const appointmentDate = new Date(appointment.appointmentDate);
+            const formattedDate = appointmentDate.toLocaleDateString('en-US', { 
+              month: 'long', 
+              day: 'numeric' 
+            });
+            
+            return (
+              <div key={appointment.id || index} className="today-appointment-card">
+                {/* Patient Info Section */}
+                <div className="today-appointment-patient">
+                  <div className="patient-avatar">
+                    {/* If you have patient images, use them, otherwise show initials */}
+                    {appointment.patientImage ? (
+                      <img src={appointment.patientImage} alt={appointment.patientName} />
+                    ) : (
+                      appointment.patientName.charAt(0).toUpperCase()
+                    )}
+                  </div>
+                  <div className="patient-info">
+                    <h4 className="patient-name-label">{appointment.patientName}</h4>
+                    <p className="patient-type-label">{appointment.patientType}</p>
+                    {appointment.meetingLink && (
                       <div 
                         className="session-status" 
                         data-status={sessionStatus.status.toLowerCase().replace(/\s+/g, '-')}
                       >
                         🎥 {sessionStatus.status}
                       </div>
-                    </div>
-                  </div>
-                  
-                  <div className="appointment-meta">
-                    <div className="appointment-date-time">
-                      <div className="meta-group">
-                        <span className="meta-icon">📅</span>
-                        <span>Today</span>
-                      </div>
-                      <div className="meta-group">
-                        <span className="meta-icon">🕛</span>
-                        <span>{appointment.time}</span>
-                      </div>
-                      <div className="meta-group">
-                        <span className="meta-icon">⏱️</span>
-                        <span>{appointment.duration} min</span>
-                      </div>
-                      {appointment.meetingLink && (
-                        <div className="meta-group">
-                          <span className="meta-icon">📹</span>
-                          <span>{appointment.meetingType === 'jitsi' ? 'Jitsi Meet' : 'Video Call'}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="appointment-actions">
-                    {appointment.meetingLink ? (
-                      <button 
-                        className={`join-meeting-button ${isActive ? 'active' : ''}`}
-                        onClick={() => handleJoinMeeting(appointment)}
-                      >
-                        {isActive ? '🔴 Join Now' : '📹 Join Meeting'}
-                      </button>
-                    ) : (
-                      <button className="join-meeting-button disabled" disabled>
-                        📹 No Meeting Link
-                      </button>
                     )}
-                    
-                    <button 
-                      className="view-details-button"
-                      onClick={() => navigate(`/doctor/appointments/${appointment.id}`)}
-                    >
-                      View Details
-                    </button>
                   </div>
                 </div>
-              );
-            })
-          )}
-          
-          {todayAppointments.some(appt => appt.meetingLink) && (
-            <div className="meeting-instructions">
-              <h4>📋 {platformName} Video Session Instructions:</h4>
-              <ul>
-                <li>• Click "Join Meeting" to start the video session</li>
-                <li>• Both you and your patient will join the same room</li>
-                <li>• No account registration required for Jitsi Meet</li>
-                <li>• Ensure good internet connection and test audio/video</li>
-              </ul>
-            </div>
-          )}
-        </div>
-      </FeatureWrapper>
-    );
-  };
+                
+                {/* Date and Time Section - Matching Figma exactly */}
+                <div className="appointment-meta">
+                  <div className="appointment-date-time">
+                    <div className="meta-group date-group">
+                      <span>{formattedDate}</span>
+                    </div>
+                    <div className="meta-group time-group">
+                      <span>{appointment.time}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Action Buttons */}
+                <div className="appointment-actions">
+                  {appointment.meetingLink && (
+                    <button 
+                      className={`join-meeting-button ${isActive ? 'active' : ''}`}
+                      onClick={() => handleJoinMeeting(appointment)}
+                    >
+                      {isActive ? '🔴 Join Now' : '📹 Join Meeting'}
+                    </button>
+                  )}
+                  
+                  <button 
+                    className="view-details-button"
+                    onClick={() => navigate(`/doctor/appointments/${appointment.id}`)}
+                  >
+                    View Details
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        )}
+        
+        {todayAppointments.some(appt => appt.meetingLink) && (
+          <div className="meeting-instructions">
+            <h4>📋 {platformName} Video Session Instructions:</h4>
+            <ul>
+              <li>Click "Join Meeting" to start the video session</li>
+              <li>Both you and your patient will join the same room</li>
+              <li>No account registration required for Jitsi Meet</li>
+              <li>Ensure good internet connection and test audio/video</li>
+            </ul>
+          </div>
+        )}
+      </div>
+    </FeatureWrapper>
+  );
+};
 
   if (loading) {
     return (

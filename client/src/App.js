@@ -82,6 +82,9 @@ import TenantManagement from './components/admin/TenantManagement';
 // 🆕 NEW: Import AdminFormTemplates component
 import AdminFormTemplates from './components/admin/FormTemplates';
 
+// 🆕 NEW: Import AdminJournalList component
+import AdminJournalList from './components/admin/AdminJournalList';
+
 // User Management Components
 import UserManagement from '../src/components/admin/UserManagement';
 import UserForm from '../src/pages/admin/user_management/UserForm';
@@ -478,6 +481,10 @@ const App = () => {
                   
                   {/* 🆕 NEW: Tenant Management Route */}
                   <Route path="tenants" element={<TenantManagement />} />
+                  
+                  {/* 🆕 NEW: Journal Entries Management Route */}
+                  <Route path="journal-entries" element={<AdminJournalList />} />
+                  
                   <Route path="content" element={<PlaceholderComponent name="Content Moderation" />} />
                   <Route path="reports" element={<PlaceholderComponent name="Reports" />} />
                   

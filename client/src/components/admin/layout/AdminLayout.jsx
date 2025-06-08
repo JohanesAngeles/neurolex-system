@@ -29,16 +29,22 @@ const AdminLayout = () => {
              location.pathname.startsWith('/admin/patients');
     }
     
+    // Special case for Journal Management - include both templates and journal entries
+    if (menuId === 'journal') {
+      return location.pathname.startsWith('/admin/templates') || 
+             location.pathname.startsWith('/admin/journal-entries');
+    }
+    
     return location.pathname.startsWith(path);
   };
 
-  // Menu items
+  // 🆕 UPDATED: Menu items with journal entries route
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', path: '/admin', icon: dashboardIcon },
     { id: 'users', label: 'User Management', path: '/admin/users', icon: usersIcon }, // This handles both users and patients
     { id: 'professionals', label: 'Doctor Management', path: '/admin/professionals', icon: doctorIcon },
     { id: 'tenants', label: 'Tenant Management', path: '/admin/tenants', icon: tenantIcon },
-    { id: 'templates', label: 'Journal Management', path: '/admin/templates', icon: journalIcon },
+    { id: 'journal', label: 'Journal Management', path: '/admin/journal-entries', icon: journalIcon }, 
     { id: 'settings', label: 'System Settings', path: '/admin/settings', icon: settingsIcon }
   ];
 

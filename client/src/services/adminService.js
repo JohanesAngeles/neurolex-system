@@ -1242,6 +1242,134 @@ getIndividualPatientJournalEntries: async (patientId, days = 30, tenantId = null
   }
 },
 
+// ===== JOURNAL MANAGEMENT METHODS FOR ADMIN =====
+
+// Get all journal entries across all tenants with filtering, sorting, and pagination
+getJournalEntries: async (params = {}) => {
+  try {
+    console.log('adminService.getJournalEntries called with params:', params);
+    
+    // Convert params to query string
+    const queryParams = new URLSearchParams();
+    
+    // Add pagination params
+    if (params.page) queryParams.append('page', params.page);
+    if (params.limit) queryParams.append('limit', params.limit);
+    
+    // Add filter params
+    if (params.patient) queryParams.append('patient', params.patient);
+    if (params.doctor) queryParams.append('doctor', params.doctor);
+    if (params.tenant) queryParams.append('tenant', params.tenant);
+    if (params.dateFrom) queryParams.append('dateFrom', params.dateFrom);
+    if (params.dateTo) queryParams.append('dateTo', params.dateTo);
+    if (params.sentiment) queryParams.append('sentiment', params.sentiment);
+    if (params.mood) queryParams.append('mood', params.mood);
+    if (params.search) queryParams.append('search', params.search);
+    
+    // Add sorting params
+    if (params.sortBy) queryParams.append('sortBy', params.sortBy);
+    if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+    
+    const response = await api.get(`/admin/journal-entries?${queryParams.toString()}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching journal entries:', error);
+    throw error;
+  }
+},
+
+// Get journal entry by ID (admin can view any entry)
+getJournalEntry: async (entryId) => {
+  try {
+    console.log(`adminService.getJournalEntry called for ID: ${entryId}`);
+    const response = await api.get(`/admin/journal-entries/${entryId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching journal entry ${entryId}:`, error);
+    throw error;
+  }
+},
+
+// Delete journal entry (admin function)
+deleteJournalEntry: async (entryId) => {
+  try {
+    console.log(`adminService.deleteJournalEntry called for ID: ${entryId}`);
+    const response = await api.delete(`/admin/journal-entries/${entryId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error deleting journal entry ${entryId}:`, error);
+    throw error;
+  }
+},
+
+// Export journal entries to PDF
+exportJournalEntriesToPDF: async (filters = {}) => {
+  try {
+    console.log('adminService.exportJournalEntriesToPDF called with filters:', filters);
+    const response = await api.get('/admin/journal-entries/export/pdf', {
+      params: filters,
+      responseType: 'blob'
+    });
+    
+    // Create a download link and trigger it
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    
+    // Generate filename with current date
+    const date = new Date().toISOString().slice(0, 10);
+    link.setAttribute('download', `journal-entries-report-${date}.pdf`);
+    
+    document.body.appendChild(link);
+    link.click();
+    
+    // Clean up
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error exporting journal entries to PDF:', error);
+    throw error;
+  }
+},
+
+// Get journal statistics for admin dashboard
+getJournalStats: async () => {
+  try {
+    console.log('adminService.getJournalStats called');
+    const response = await api.get('/admin/journal-entries/stats');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching journal stats:', error);
+    throw error;
+  }
+},
+
+// Get all patients for the journal filter dropdown (across all tenants)
+getAllPatientsForFilter: async () => {
+  try {
+    console.log('adminService.getAllPatientsForFilter called');
+    const response = await api.get('/admin/patients/list');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching patients for filter:', error);
+    throw error;
+  }
+},
+
+// Get all doctors for the journal filter dropdown (across all tenants)
+getAllDoctorsForFilter: async () => {
+  try {
+    console.log('adminService.getAllDoctorsForFilter called');
+    const response = await api.get('/admin/doctors/list');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching doctors for filter:', error);
+    throw error;
+  }
+},
+
 };
 
 
@@ -1332,6 +1460,13 @@ const processMoodDataToAnalytics = (moodEntries, days) => {
     moodDistribution,
     moodHistory: moodEntries.slice(0, 20) // Latest 20 entries
   };
+
+
+
+
+
+
+  
 };
 
 const processJournalDataToAnalytics = (journalEntries, days) => {
@@ -1383,6 +1518,8 @@ const processJournalDataToAnalytics = (journalEntries, days) => {
     }
   };
 };
+
+
 
 
 export default adminService;

@@ -4357,3 +4357,1140 @@ exports.getAllDoctors = async (req, res) => {
     });
   }
 };
+
+// ===== ADMIN JOURNAL MANAGEMENT METHODS =====
+
+// Get all journal entries across all tenants (admin function)
+exports.getJournalEntries = async (req, res) => {
+  try {
+    console.log('Admin getting all journal entries with filters:', req.query);
+    
+    const {
+      page = 1,
+      limit = 10,
+      patient,
+      doctor,
+      tenant,
+      dateFrom,
+      dateTo,
+      sentiment,
+      mood,
+      search,
+      sortBy = 'createdAt',
+      sortOrder = 'desc'
+    } = req.query;
+
+    // If multi-tenant enabled, search across tenants
+    if (process.env.ENABLE_MULTI_TENANT === 'true') {
+      const masterConn = getMasterConnection();
+      if (!masterConn) {
+        throw new Error('Failed to connect to master database');
+      }
+      
+      const Tenant = masterConn.model('Tenant');
+      
+      // Build tenant query
+      let tenantQuery = { active: true };
+      if (tenant && tenant !== 'all') {
+        tenantQuery._id = tenant;
+      }
+      
+      const tenants = await Tenant.find(tenantQuery);
+      let allEntries = [];
+      
+      // Search each tenant
+      for (const tenantDoc of tenants) {
+        try {
+          const tenantConn = await dbManager.connectTenant(tenantDoc._id.toString());
+          if (!tenantConn) {
+            console.warn(`Could not connect to tenant database: ${tenantDoc.name}`);
+            continue;
+          }
+          
+          const JournalEntry = tenantConn.model('JournalEntry');
+          const User = tenantConn.model('User');
+          
+          // Build journal query
+          let journalQuery = {};
+          
+          // Patient filter
+          if (patient && patient !== 'all') {
+            journalQuery.userId = patient;
+          }
+          
+          // Date range filter
+          if (dateFrom || dateTo) {
+            journalQuery.createdAt = {};
+            if (dateFrom) {
+              journalQuery.createdAt.$gte = new Date(dateFrom);
+            }
+            if (dateTo) {
+              journalQuery.createdAt.$lte = new Date(dateTo + 'T23:59:59.999Z');
+            }
+          }
+          
+          // Sentiment filter
+          if (sentiment && sentiment !== 'all') {
+            journalQuery['sentiment.type'] = sentiment;
+          }
+          
+          // Mood filter
+          if (mood && mood !== 'all') {
+            journalQuery['mood.label'] = mood;
+          }
+          
+          // Search filter
+          if (search) {
+            journalQuery.$or = [
+              { title: { $regex: search, $options: 'i' } },
+              { content: { $regex: search, $options: 'i' } },
+              { rawText: { $regex: search, $options: 'i' } }
+            ];
+          }
+          
+          console.log(`Searching tenant ${tenantDoc.name} with query:`, journalQuery);
+          
+          // Get entries from this tenant
+          const entries = await JournalEntry.find(journalQuery)
+            .sort({ [sortBy]: sortOrder === 'desc' ? -1 : 1 })
+            .lean();
+          
+          console.log(`Found ${entries.length} entries in tenant ${tenantDoc.name}`);
+          
+          // Enrich entries with patient and tenant info
+          for (const entry of entries) {
+            try {
+              // Get patient info
+              const patient = await User.findById(entry.userId)
+                .select('firstName lastName email')
+                .lean();
+              
+              if (patient) {
+                entry.patientName = `${patient.firstName} ${patient.lastName}`;
+                entry.patientEmail = patient.email;
+              } else {
+                entry.patientName = 'Unknown Patient';
+                entry.patientEmail = 'unknown@example.com';
+              }
+              
+              // Get doctor info if available
+              if (entry.doctorId) {
+                const doctor = await User.findById(entry.doctorId)
+                  .select('firstName lastName')
+                  .lean();
+                
+                if (doctor) {
+                  entry.doctorName = `${doctor.firstName} ${doctor.lastName}`;
+                }
+              }
+              
+              // Add tenant info
+              entry.tenantId = tenantDoc._id;
+              entry.tenantName = tenantDoc.name;
+              
+              // Ensure date field
+              entry.date = entry.createdAt || entry.date || new Date();
+              
+              // Count words in content
+              const content = entry.content || entry.rawText || entry.text || '';
+              entry.wordCount = content.split(/\s+/).filter(word => word.length > 0).length;
+              
+              // Process emotions
+              if (entry.sentiment && entry.sentiment.emotions) {
+                entry.emotions = Array.isArray(entry.sentiment.emotions) 
+                  ? entry.sentiment.emotions.map(e => typeof e === 'string' ? e : e.name)
+                  : [];
+              } else {
+                entry.emotions = [];
+              }
+              
+            } catch (enrichError) {
+              console.error('Error enriching entry:', enrichError);
+              // Continue with basic entry data
+              entry.patientName = 'Unknown Patient';
+              entry.tenantName = tenantDoc.name;
+              entry.date = entry.createdAt || new Date();
+              entry.wordCount = 0;
+              entry.emotions = [];
+            }
+          }
+          
+          allEntries = [...allEntries, ...entries];
+        } catch (tenantError) {
+          console.error(`Error searching tenant ${tenantDoc.name}:`, tenantError);
+          continue;
+        }
+      }
+      
+      // Sort all entries
+      allEntries.sort((a, b) => {
+        const aVal = a[sortBy] || a.createdAt;
+        const bVal = b[sortBy] || b.createdAt;
+        
+        if (sortOrder === 'desc') {
+          return new Date(bVal) - new Date(aVal);
+        } else {
+          return new Date(aVal) - new Date(bVal);
+        }
+      });
+      
+      // Apply pagination
+      const startIndex = (page - 1) * limit;
+      const endIndex = page * limit;
+      const paginatedEntries = allEntries.slice(startIndex, endIndex);
+      
+      return res.json({
+        success: true,
+        data: paginatedEntries,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: allEntries.length,
+          pages: Math.ceil(allEntries.length / limit)
+        },
+        searchInfo: {
+          searchedTenants: tenants.length,
+          totalEntriesFound: allEntries.length
+        }
+      });
+    } else {
+      // Single tenant mode
+      const JournalEntry = require('../models/JournalEntry');
+      const User = require('../models/User');
+      
+      // Build journal query
+      let journalQuery = {};
+      
+      // Patient filter
+      if (patient && patient !== 'all') {
+        journalQuery.userId = patient;
+      }
+      
+      // Date range filter
+      if (dateFrom || dateTo) {
+        journalQuery.createdAt = {};
+        if (dateFrom) {
+          journalQuery.createdAt.$gte = new Date(dateFrom);
+        }
+        if (dateTo) {
+          journalQuery.createdAt.$lte = new Date(dateTo + 'T23:59:59.999Z');
+        }
+      }
+      
+      // Sentiment filter
+      if (sentiment && sentiment !== 'all') {
+        journalQuery['sentiment.type'] = sentiment;
+      }
+      
+      // Mood filter
+      if (mood && mood !== 'all') {
+        journalQuery['mood.label'] = mood;
+      }
+      
+      // Search filter
+      if (search) {
+        journalQuery.$or = [
+          { title: { $regex: search, $options: 'i' } },
+          { content: { $regex: search, $options: 'i' } },
+          { rawText: { $regex: search, $options: 'i' } }
+        ];
+      }
+      
+      // Get total count
+      const total = await JournalEntry.countDocuments(journalQuery);
+      
+      // Get entries with pagination
+      const entries = await JournalEntry.find(journalQuery)
+        .populate('userId', 'firstName lastName email')
+        .populate('doctorId', 'firstName lastName')
+        .sort({ [sortBy]: sortOrder === 'desc' ? -1 : 1 })
+        .skip((page - 1) * limit)
+        .limit(parseInt(limit))
+        .lean();
+      
+      // Enrich entries
+      entries.forEach(entry => {
+        // Patient name
+        if (entry.userId) {
+          entry.patientName = `${entry.userId.firstName} ${entry.userId.lastName}`;
+          entry.patientEmail = entry.userId.email;
+        } else {
+          entry.patientName = 'Unknown Patient';
+        }
+        
+        // Doctor name
+        if (entry.doctorId) {
+          entry.doctorName = `${entry.doctorId.firstName} ${entry.doctorId.lastName}`;
+        }
+        
+        // Date
+        entry.date = entry.createdAt || entry.date || new Date();
+        
+        // Word count
+        const content = entry.content || entry.rawText || entry.text || '';
+        entry.wordCount = content.split(/\s+/).filter(word => word.length > 0).length;
+        
+        // Emotions
+        if (entry.sentiment && entry.sentiment.emotions) {
+          entry.emotions = Array.isArray(entry.sentiment.emotions) 
+            ? entry.sentiment.emotions.map(e => typeof e === 'string' ? e : e.name)
+            : [];
+        } else {
+          entry.emotions = [];
+        }
+      });
+      
+      return res.json({
+        success: true,
+        data: entries,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          pages: Math.ceil(total / limit)
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error getting journal entries (admin):', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch journal entries',
+      error: error.message
+    });
+  }
+};
+
+// Get journal entry by ID (admin function)
+exports.getJournalEntry = async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(`Admin getting journal entry: ${id}`);
+    
+    // If multi-tenant enabled, search across tenants
+    if (process.env.ENABLE_MULTI_TENANT === 'true') {
+      const masterConn = getMasterConnection();
+      if (!masterConn) {
+        throw new Error('Failed to connect to master database');
+      }
+      
+      const Tenant = masterConn.model('Tenant');
+      const tenants = await Tenant.find({ active: true });
+      
+      for (const tenant of tenants) {
+        try {
+          const tenantConn = await dbManager.connectTenant(tenant._id.toString());
+          if (!tenantConn) continue;
+          
+          const JournalEntry = tenantConn.model('JournalEntry');
+          const User = tenantConn.model('User');
+          
+          const entry = await JournalEntry.findById(id).lean();
+          
+          if (entry) {
+            // Enrich with patient info
+            const patient = await User.findById(entry.userId)
+              .select('firstName lastName email')
+              .lean();
+            
+            if (patient) {
+              entry.patientName = `${patient.firstName} ${patient.lastName}`;
+              entry.patientEmail = patient.email;
+            }
+            
+            // Enrich with doctor info
+            if (entry.doctorId) {
+              const doctor = await User.findById(entry.doctorId)
+                .select('firstName lastName')
+                .lean();
+              
+              if (doctor) {
+                entry.doctorName = `${doctor.firstName} ${doctor.lastName}`;
+              }
+            }
+            
+            entry.tenantId = tenant._id;
+            entry.tenantName = tenant.name;
+            
+            return res.json({
+              success: true,
+              data: entry
+            });
+          }
+        } catch (tenantError) {
+          console.error(`Error searching tenant ${tenant.name}:`, tenantError);
+          continue;
+        }
+      }
+      
+      return res.status(404).json({
+        success: false,
+        message: 'Journal entry not found'
+      });
+    } else {
+      // Single tenant mode
+      const JournalEntry = require('../models/JournalEntry');
+      
+      const entry = await JournalEntry.findById(id)
+        .populate('userId', 'firstName lastName email')
+        .populate('doctorId', 'firstName lastName')
+        .lean();
+      
+      if (!entry) {
+        return res.status(404).json({
+          success: false,
+          message: 'Journal entry not found'
+        });
+      }
+      
+      // Enrich entry
+      if (entry.userId) {
+        entry.patientName = `${entry.userId.firstName} ${entry.userId.lastName}`;
+        entry.patientEmail = entry.userId.email;
+      }
+      
+      if (entry.doctorId) {
+        entry.doctorName = `${entry.doctorId.firstName} ${entry.doctorId.lastName}`;
+      }
+      
+      return res.json({
+        success: true,
+        data: entry
+      });
+    }
+  } catch (error) {
+    console.error('Error getting journal entry (admin):', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch journal entry',
+      error: error.message
+    });
+  }
+};
+
+// Delete journal entry (admin function)
+exports.deleteJournalEntry = async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(`Admin deleting journal entry: ${id}`);
+    
+    // If multi-tenant enabled, search across tenants
+    if (process.env.ENABLE_MULTI_TENANT === 'true') {
+      const masterConn = getMasterConnection();
+      if (!masterConn) {
+        throw new Error('Failed to connect to master database');
+      }
+      
+      const Tenant = masterConn.model('Tenant');
+      const tenants = await Tenant.find({ active: true });
+      
+      for (const tenant of tenants) {
+        try {
+          const tenantConn = await dbManager.connectTenant(tenant._id.toString());
+          if (!tenantConn) continue;
+          
+          const JournalEntry = tenantConn.model('JournalEntry');
+          
+          const deletedEntry = await JournalEntry.findByIdAndDelete(id);
+          
+          if (deletedEntry) {
+            console.log(`Journal entry deleted from tenant: ${tenant.name}`);
+            return res.json({
+              success: true,
+              message: 'Journal entry deleted successfully'
+            });
+          }
+        } catch (tenantError) {
+          console.error(`Error deleting from tenant ${tenant.name}:`, tenantError);
+          continue;
+        }
+      }
+      
+      return res.status(404).json({
+        success: false,
+        message: 'Journal entry not found'
+      });
+    } else {
+      // Single tenant mode
+      const JournalEntry = require('../models/JournalEntry');
+      
+      const deletedEntry = await JournalEntry.findByIdAndDelete(id);
+      
+      if (!deletedEntry) {
+        return res.status(404).json({
+          success: false,
+          message: 'Journal entry not found'
+        });
+      }
+      
+      return res.json({
+        success: true,
+        message: 'Journal entry deleted successfully'
+      });
+    }
+  } catch (error) {
+    console.error('Error deleting journal entry (admin):', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete journal entry',
+      error: error.message
+    });
+  }
+};
+
+// Export journal entries to PDF (admin function)
+exports.exportJournalEntriesToPDF = async (req, res) => {
+  try {
+    console.log('Admin exporting journal entries to PDF with filters:', req.query);
+    
+    const {
+      patient,
+      doctor,
+      tenant,
+      dateFrom,
+      dateTo,
+      sentiment,
+      mood,
+      search
+    } = req.query;
+
+    let allEntries = [];
+
+    // Get entries using the same logic as getJournalEntries but without pagination
+    if (process.env.ENABLE_MULTI_TENANT === 'true') {
+      const masterConn = getMasterConnection();
+      if (!masterConn) {
+        throw new Error('Failed to connect to master database');
+      }
+      
+      const Tenant = masterConn.model('Tenant');
+      
+      let tenantQuery = { active: true };
+      if (tenant && tenant !== 'all') {
+        tenantQuery._id = tenant;
+      }
+      
+      const tenants = await Tenant.find(tenantQuery);
+      
+      for (const tenantDoc of tenants) {
+        try {
+          const tenantConn = await dbManager.connectTenant(tenantDoc._id.toString());
+          if (!tenantConn) continue;
+          
+          const JournalEntry = tenantConn.model('JournalEntry');
+          const User = tenantConn.model('User');
+          
+          // Build query (same as getJournalEntries)
+          let journalQuery = {};
+          
+          if (patient && patient !== 'all') {
+            journalQuery.userId = patient;
+          }
+          
+          if (dateFrom || dateTo) {
+            journalQuery.createdAt = {};
+            if (dateFrom) {
+              journalQuery.createdAt.$gte = new Date(dateFrom);
+            }
+            if (dateTo) {
+              journalQuery.createdAt.$lte = new Date(dateTo + 'T23:59:59.999Z');
+            }
+          }
+          
+          if (sentiment && sentiment !== 'all') {
+            journalQuery['sentiment.type'] = sentiment;
+          }
+          
+          if (mood && mood !== 'all') {
+            journalQuery['mood.label'] = mood;
+          }
+          
+          if (search) {
+            journalQuery.$or = [
+              { title: { $regex: search, $options: 'i' } },
+              { content: { $regex: search, $options: 'i' } },
+              { rawText: { $regex: search, $options: 'i' } }
+            ];
+          }
+          
+          const entries = await JournalEntry.find(journalQuery)
+            .sort({ createdAt: -1 })
+            .lean();
+          
+          // Enrich entries
+          for (const entry of entries) {
+            try {
+              const patient = await User.findById(entry.userId)
+                .select('firstName lastName')
+                .lean();
+              
+              if (patient) {
+                entry.patientName = `${patient.firstName} ${patient.lastName}`;
+              } else {
+                entry.patientName = 'Unknown Patient';
+              }
+              
+              if (entry.doctorId) {
+                const doctor = await User.findById(entry.doctorId)
+                  .select('firstName lastName')
+                  .lean();
+                
+                if (doctor) {
+                  entry.doctorName = `${doctor.firstName} ${doctor.lastName}`;
+                }
+              }
+              
+              entry.tenantName = tenantDoc.name;
+              entry.date = entry.createdAt || entry.date || new Date();
+              
+              const content = entry.content || entry.rawText || entry.text || '';
+              entry.wordCount = content.split(/\s+/).filter(word => word.length > 0).length;
+            } catch (enrichError) {
+              console.error('Error enriching entry for PDF:', enrichError);
+              entry.patientName = 'Unknown Patient';
+              entry.tenantName = tenantDoc.name;
+              entry.date = entry.createdAt || new Date();
+              entry.wordCount = 0;
+            }
+          }
+          
+          allEntries = [...allEntries, ...entries];
+        } catch (tenantError) {
+          console.error(`Error exporting from tenant ${tenantDoc.name}:`, tenantError);
+          continue;
+        }
+      }
+    } else {
+      // Single tenant mode
+      const JournalEntry = require('../models/JournalEntry');
+      
+      let journalQuery = {};
+      
+      if (patient && patient !== 'all') {
+        journalQuery.userId = patient;
+      }
+      
+      if (dateFrom || dateTo) {
+        journalQuery.createdAt = {};
+        if (dateFrom) {
+          journalQuery.createdAt.$gte = new Date(dateFrom);
+        }
+        if (dateTo) {
+          journalQuery.createdAt.$lte = new Date(dateTo + 'T23:59:59.999Z');
+        }
+      }
+      
+      if (sentiment && sentiment !== 'all') {
+        journalQuery['sentiment.type'] = sentiment;
+      }
+      
+      if (mood && mood !== 'all') {
+        journalQuery['mood.label'] = mood;
+      }
+      
+      if (search) {
+        journalQuery.$or = [
+          { title: { $regex: search, $options: 'i' } },
+          { content: { $regex: search, $options: 'i' } },
+          { rawText: { $regex: search, $options: 'i' } }
+        ];
+      }
+      
+      allEntries = await JournalEntry.find(journalQuery)
+        .populate('userId', 'firstName lastName')
+        .populate('doctorId', 'firstName lastName')
+        .sort({ createdAt: -1 })
+        .lean();
+      
+      // Enrich entries
+      allEntries.forEach(entry => {
+        if (entry.userId) {
+          entry.patientName = `${entry.userId.firstName} ${entry.userId.lastName}`;
+        } else {
+          entry.patientName = 'Unknown Patient';
+        }
+        
+        if (entry.doctorId) {
+          entry.doctorName = `${entry.doctorId.firstName} ${entry.doctorId.lastName}`;
+        }
+        
+        entry.date = entry.createdAt || entry.date || new Date();
+        
+        const content = entry.content || entry.rawText || entry.text || '';
+        entry.wordCount = content.split(/\s+/).filter(word => word.length > 0).length;
+      });
+    }
+
+    // Sort entries by date
+    allEntries.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Generate PDF using PDFKit
+    const doc = new PDFDocument();
+    
+    // Set response headers for PDF download
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=journal-entries-report-${new Date().toISOString().slice(0, 10)}.pdf`);
+    
+    // Pipe the PDF to the response
+    doc.pipe(res);
+    
+    // Add PDF content
+    doc.fontSize(18).text('Journal Entries Report', { align: 'center' });
+    doc.moveDown();
+    doc.fontSize(12).text(`Generated on: ${new Date().toLocaleDateString()}`);
+    doc.moveDown();
+    
+    // Add filter information
+    doc.fontSize(14).text('Filters Applied:');
+    doc.fontSize(10);
+    
+    if (patient && patient !== 'all') {
+      doc.text(`Patient ID: ${patient}`);
+    } else {
+      doc.text('Patient: All Patients');
+    }
+    
+    if (tenant && tenant !== 'all') {
+      doc.text(`Tenant ID: ${tenant}`);
+    } else {
+      doc.text('Tenant: All Tenants');
+    }
+    
+    if (dateFrom) {
+      doc.text(`From Date: ${dateFrom}`);
+    }
+    
+    if (dateTo) {
+      doc.text(`To Date: ${dateTo}`);
+    }
+    
+    if (sentiment && sentiment !== 'all') {
+      doc.text(`Sentiment: ${sentiment}`);
+    } else {
+      doc.text('Sentiment: All');
+    }
+    
+    if (mood && mood !== 'all') {
+      doc.text(`Mood: ${mood}`);
+    } else {
+      doc.text('Mood: All');
+    }
+    
+    if (search) {
+      doc.text(`Search: "${search}"`);
+    }
+    
+    doc.moveDown();
+    
+    // Add entries summary
+    doc.fontSize(14).text(`Total Journal Entries: ${allEntries.length}`);
+    doc.moveDown();
+    
+    if (allEntries.length > 0) {
+      // Add entries
+      doc.fontSize(12);
+      
+      for (let i = 0; i < allEntries.length; i++) {
+        const entry = allEntries[i];
+        
+        // Add new page if we're near the bottom
+        if (doc.y > doc.page.height - 150) {
+          doc.addPage();
+        }
+        
+        // Entry header
+        doc.font('Helvetica-Bold');
+        doc.text(`${i + 1}. ${entry.title || 'Untitled Entry'}`, { underline: true });
+        
+        doc.font('Helvetica');
+        doc.text(`Patient: ${entry.patientName}`);
+        doc.text(`Date: ${new Date(entry.date).toLocaleDateString()}`);
+        
+        if (entry.tenantName) {
+          doc.text(`Clinic: ${entry.tenantName}`);
+        }
+        
+        if (entry.doctorName) {
+          doc.text(`Doctor: ${entry.doctorName}`);
+        }
+        
+        if (entry.sentiment && entry.sentiment.type) {
+          doc.text(`Sentiment: ${entry.sentiment.type}`);
+        }
+        
+        if (entry.mood && entry.mood.label) {
+          doc.text(`Mood: ${entry.mood.label}`);
+        }
+        
+        doc.text(`Words: ${entry.wordCount}`);
+        
+        // Entry content (truncated)
+        const content = entry.content || entry.rawText || entry.text || '';
+        const truncatedContent = content.length > 200 ? content.substring(0, 200) + '...' : content;
+        
+        doc.moveDown(0.5);
+        doc.text('Content:', { continued: false });
+        doc.text(truncatedContent, { indent: 20, width: 500 });
+        
+        doc.moveDown();
+        
+        // Add separator line
+        doc.moveTo(50, doc.y)
+           .lineTo(doc.page.width - 50, doc.y)
+           .stroke();
+        
+        doc.moveDown();
+      }
+    } else {
+      doc.text('No journal entries match the selected filters.');
+    }
+    
+    // Finalize the PDF
+    doc.end();
+    
+  } catch (error) {
+    console.error('Error exporting journal entries to PDF (admin):', error);
+    
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to export journal entries to PDF',
+        error: error.message
+      });
+    }
+  }
+};
+
+// Get journal statistics (admin function)
+exports.getJournalStats = async (req, res) => {
+  try {
+    console.log('Admin getting journal statistics');
+    
+    let totalEntries = 0;
+    let sentimentCounts = { positive: 0, neutral: 0, negative: 0 };
+    let moodCounts = {};
+    let recentEntries = [];
+    
+    if (process.env.ENABLE_MULTI_TENANT === 'true') {
+      const masterConn = getMasterConnection();
+      if (!masterConn) {
+        throw new Error('Failed to connect to master database');
+      }
+      
+      const Tenant = masterConn.model('Tenant');
+      const tenants = await Tenant.find({ active: true });
+      
+      for (const tenant of tenants) {
+        try {
+          const tenantConn = await dbManager.connectTenant(tenant._id.toString());
+          if (!tenantConn) continue;
+          
+          const JournalEntry = tenantConn.model('JournalEntry');
+          const User = tenantConn.model('User');
+          
+          // Count entries
+          const entryCount = await JournalEntry.countDocuments();
+          totalEntries += entryCount;
+          
+          // Get sentiment counts
+          const sentimentAgg = await JournalEntry.aggregate([
+            {
+              $group: {
+                _id: '$sentiment.type',
+                count: { $sum: 1 }
+              }
+            }
+          ]);
+          
+          sentimentAgg.forEach(item => {
+            if (item._id && sentimentCounts.hasOwnProperty(item._id)) {
+              sentimentCounts[item._id] += item.count;
+            }
+          });
+          
+          // Get mood counts
+          const moodAgg = await JournalEntry.aggregate([
+            {
+              $group: {
+                _id: '$mood.label',
+                count: { $sum: 1 }
+              }
+            }
+          ]);
+          
+          moodAgg.forEach(item => {
+            if (item._id) {
+              moodCounts[item._id] = (moodCounts[item._id] || 0) + item.count;
+            }
+          });
+          
+          // Get recent entries from this tenant
+          const tenantRecentEntries = await JournalEntry.find()
+            .sort({ createdAt: -1 })
+            .limit(5)
+            .lean();
+          
+          // Enrich with patient info and add to recent entries
+          for (const entry of tenantRecentEntries) {
+            try {
+              const patient = await User.findById(entry.userId)
+                .select('firstName lastName')
+                .lean();
+              
+              if (patient) {
+                entry.patientName = `${patient.firstName} ${patient.lastName}`;
+              } else {
+                entry.patientName = 'Unknown Patient';
+              }
+              
+              entry.tenantName = tenant.name;
+              recentEntries.push(entry);
+            } catch (enrichError) {
+              console.error('Error enriching recent entry:', enrichError);
+            }
+          }
+          
+        } catch (tenantError) {
+          console.error(`Error getting stats from tenant ${tenant.name}:`, tenantError);
+          continue;
+        }
+      }
+      
+      // Sort recent entries and limit to 10
+      recentEntries.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      recentEntries = recentEntries.slice(0, 10);
+      
+    } else {
+      // Single tenant mode
+      const JournalEntry = require('../models/JournalEntry');
+      
+      // Count total entries
+      totalEntries = await JournalEntry.countDocuments();
+      
+      // Get sentiment counts
+      const sentimentAgg = await JournalEntry.aggregate([
+        {
+          $group: {
+            _id: '$sentiment.type',
+            count: { $sum: 1 }
+          }
+        }
+      ]);
+      
+      sentimentAgg.forEach(item => {
+        if (item._id && sentimentCounts.hasOwnProperty(item._id)) {
+          sentimentCounts[item._id] = item.count;
+        }
+      });
+      
+      // Get mood counts
+      const moodAgg = await JournalEntry.aggregate([
+        {
+          $group: {
+            _id: '$mood.label',
+            count: { $sum: 1 }
+          }
+        }
+      ]);
+      
+      moodAgg.forEach(item => {
+        if (item._id) {
+          moodCounts[item._id] = item.count;
+        }
+      });
+      
+      // Get recent entries
+      recentEntries = await JournalEntry.find()
+        .populate('userId', 'firstName lastName')
+        .sort({ createdAt: -1 })
+        .limit(10)
+        .lean();
+      
+      // Enrich recent entries
+      recentEntries.forEach(entry => {
+        if (entry.userId) {
+          entry.patientName = `${entry.userId.firstName} ${entry.userId.lastName}`;
+        } else {
+          entry.patientName = 'Unknown Patient';
+        }
+      });
+    }
+    
+    // Calculate percentages
+    const sentimentPercentages = {};
+    Object.keys(sentimentCounts).forEach(sentiment => {
+      sentimentPercentages[sentiment] = totalEntries > 0 
+        ? Math.round((sentimentCounts[sentiment] / totalEntries) * 100) 
+        : 0;
+    });
+    
+    const stats = {
+      total: totalEntries,
+      sentimentCounts,
+      sentimentPercentages,
+      moodCounts,
+      recentEntries,
+      averageEntriesPerDay: 0, // Could calculate this based on date range
+      topEmotions: [] // Could implement emotion analysis
+    };
+    
+    return res.json({
+      success: true,
+      data: stats
+    });
+    
+  } catch (error) {
+    console.error('Error getting journal stats (admin):', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch journal statistics',
+      error: error.message
+    });
+  }
+};
+
+// Get all patients for filter dropdown (admin function)
+exports.getAllPatientsForFilter = async (req, res) => {
+  try {
+    console.log('Admin getting all patients for filter');
+    
+    let allPatients = [];
+    
+    if (process.env.ENABLE_MULTI_TENANT === 'true') {
+      const masterConn = getMasterConnection();
+      if (!masterConn) {
+        throw new Error('Failed to connect to master database');
+      }
+      
+      const Tenant = masterConn.model('Tenant');
+      const tenants = await Tenant.find({ active: true });
+      
+      for (const tenant of tenants) {
+        try {
+          const tenantConn = await dbManager.connectTenant(tenant._id.toString());
+          if (!tenantConn) continue;
+          
+          const User = tenantConn.model('User');
+          
+          const patients = await User.find({ role: 'patient' })
+            .select('firstName lastName email')
+            .sort({ firstName: 1 })
+            .lean();
+          
+          // Add tenant info to each patient
+          const patientsWithTenant = patients.map(patient => ({
+            ...patient,
+            tenantId: tenant._id,
+            tenantName: tenant.name
+          }));
+          
+          allPatients = [...allPatients, ...patientsWithTenant];
+        } catch (tenantError) {
+          console.error(`Error fetching patients from tenant ${tenant.name}:`, tenantError);
+          continue;
+        }
+      }
+      
+      // Sort all patients by first name
+      allPatients.sort((a, b) => a.firstName.localeCompare(b.firstName));
+      
+    } else {
+      // Single tenant mode
+      const User = require('../models/User');
+      
+      allPatients = await User.find({ role: 'patient' })
+        .select('firstName lastName email')
+        .sort({ firstName: 1 })
+        .lean();
+    }
+    
+    return res.json({
+      success: true,
+      data: allPatients
+    });
+    
+  } catch (error) {
+    console.error('Error getting patients for filter (admin):', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch patients',
+      error: error.message
+    });
+  }
+};
+
+// Get all doctors for filter dropdown (admin function)
+exports.getAllDoctorsForFilter = async (req, res) => {
+  try {
+    console.log('Admin getting all doctors for filter');
+    
+    let allDoctors = [];
+    
+    if (process.env.ENABLE_MULTI_TENANT === 'true') {
+      const masterConn = getMasterConnection();
+      if (!masterConn) {
+        throw new Error('Failed to connect to master database');
+      }
+      
+      const Tenant = masterConn.model('Tenant');
+      const tenants = await Tenant.find({ active: true });
+      
+      for (const tenant of tenants) {
+        try {
+          const tenantConn = await dbManager.connectTenant(tenant._id.toString());
+          if (!tenantConn) continue;
+          
+          const User = tenantConn.model('User');
+          
+          const doctors = await User.find({ 
+            role: 'doctor',
+            verificationStatus: 'approved' 
+          })
+            .select('firstName lastName email specialty')
+            .sort({ firstName: 1 })
+            .lean();
+          
+          // Add tenant info to each doctor
+          const doctorsWithTenant = doctors.map(doctor => ({
+            ...doctor,
+            tenantId: tenant._id,
+            tenantName: tenant.name
+          }));
+          
+          allDoctors = [...allDoctors, ...doctorsWithTenant];
+        } catch (tenantError) {
+          console.error(`Error fetching doctors from tenant ${tenant.name}:`, tenantError);
+          continue;
+        }
+      }
+      
+      // Sort all doctors by first name
+      allDoctors.sort((a, b) => a.firstName.localeCompare(b.firstName));
+      
+    } else {
+      // Single tenant mode
+      const User = require('../models/User');
+      
+      allDoctors = await User.find({ 
+        role: 'doctor',
+        verificationStatus: 'approved' 
+      })
+        .select('firstName lastName email specialty')
+        .sort({ firstName: 1 })
+        .lean();
+    }
+    
+    return res.json({
+      success: true,
+      data: allDoctors
+    });
+    
+  } catch (error) {
+    console.error('Error getting doctors for filter (admin):', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch doctors',
+      error: error.message
+    });
+  }
+};

@@ -211,6 +211,22 @@ router.post('/templates/:id/assign', adminController.assignTemplate);
 
 console.log('Template management routes added successfully');
 
-console.log('✅ Admin routes with proper file upload configuration, tenant management, and doctor management loaded successfully');
+// ===== JOURNAL MANAGEMENT ROUTES =====
+console.log('Adding admin journal management routes...');
+
+// Journal Entries Management
+router.get('/journal-entries', adminAuth, adminController.getJournalEntries);
+router.get('/journal-entries/stats', adminAuth, adminController.getJournalStats);
+router.get('/journal-entries/export/pdf', adminAuth, adminController.exportJournalEntriesToPDF);
+router.get('/journal-entries/:id', adminAuth, adminController.getJournalEntry);
+router.delete('/journal-entries/:id', adminAuth, adminController.deleteJournalEntry);
+
+// Helper routes for journal filters
+router.get('/patients/list', adminAuth, adminController.getAllPatientsForFilter);
+router.get('/doctors/list', adminAuth, adminController.getAllDoctorsForFilter);
+
+console.log('Admin journal management routes added successfully');
+
+console.log('✅ Admin routes with proper file upload configuration, tenant management, doctor management, and journal management loaded successfully');
 
 module.exports = router;
