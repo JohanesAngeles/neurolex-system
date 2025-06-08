@@ -1041,6 +1041,173 @@ getTemplateStats: async () => {
 },
 
 
+getIndividualPatientMoodAnalytics: async (patientId, days = 7, tenantId = null) => {
+  try {
+    console.log(`🔍 ADMIN: Fetching INDIVIDUAL mood analytics for patient: ${patientId} (${days} days), Tenant: ${tenantId || 'not specified'}`);
+    
+    // Get authentication token
+    const adminToken = localStorage.getItem('adminToken');
+    if (!adminToken) {
+      throw new Error('Admin authentication required');
+    }
+    
+    // Build the API URL - use the same endpoint structure as doctor service
+    const baseURL = process.env.REACT_APP_API_URL || 'https://neurolex-platform-9b4c40c0e2da.herokuapp.com/api';
+    const url = `${baseURL}/mood/user/${patientId}?days=${days}`;
+    
+    console.log('🌐 ADMIN Mood API URL:', url);
+    
+    // Set up headers with admin token
+    const headers = {
+      'Authorization': `Bearer ${adminToken}`,
+      'Content-Type': 'application/json'
+    };
+    
+    // Add tenant ID to headers if provided
+    if (tenantId) {
+      headers['x-tenant-id'] = tenantId;
+      headers['X-Tenant-ID'] = tenantId;
+      console.log(`🏢 Added tenant headers: ${tenantId}`);
+    }
+    
+    // Make the API request using axios directly
+    const response = await axios.get(url, { 
+      headers,
+      timeout: 15000
+    });
+    
+    console.log('✅ ADMIN mood response:', response.data);
+    
+    // Process the raw mood data into analytics format
+    let moodEntries = [];
+    
+    if (response.data && response.data.success && Array.isArray(response.data.data)) {
+      moodEntries = response.data.data;
+    } else if (Array.isArray(response.data)) {
+      moodEntries = response.data;
+    }
+    
+    console.log('📊 ADMIN processing mood entries:', moodEntries.length, 'entries found');
+    
+    // Transform raw mood data into analytics format (same logic as doctor service)
+    const analyticsData = processMoodDataToAnalytics(moodEntries, days);
+    
+    console.log('📈 ADMIN analytics data generated:', analyticsData);
+    
+    return {
+      success: true,
+      data: analyticsData
+    };
+    
+  } catch (error) {
+    console.error(`❌ ADMIN Error fetching mood analytics for patient ${patientId}:`, error);
+    
+    if (error.response) {
+      console.error('❌ ADMIN Server error details:');
+      console.error('   Status:', error.response.status);
+      console.error('   Data:', error.response.data);
+    }
+    
+    // Return empty result instead of throwing to prevent UI crash
+    return {
+      success: false,
+      data: null,
+      error: error.message
+    };
+  }
+},
+
+};
+
+
+
+// Helper function to process mood data (same as doctor service)
+const processMoodDataToAnalytics = (moodEntries, days) => {
+  if (!Array.isArray(moodEntries) || moodEntries.length === 0) {
+    return {
+      keyMetrics: {
+        totalLogs: 0,
+        averageLogsPerDay: 0,
+        averageMoodScore: 0,
+        topEmotionalTrends: []
+      },
+      dailyOverview: [],
+      moodDistribution: {},
+      moodHistory: []
+    };
+  }
+
+  // Calculate key metrics
+  const totalLogs = moodEntries.length;
+  const averageLogsPerDay = (totalLogs / days).toFixed(1);
+  const averageRating = moodEntries.reduce((sum, entry) => sum + (entry.moodRating || 0), 0) / totalLogs;
+  const averageMoodScore = averageRating.toFixed(1);
+
+  // Calculate mood distribution
+  const moodCounts = {};
+  moodEntries.forEach(entry => {
+    const moodKey = entry.moodKey || 'unknown';
+    moodCounts[moodKey] = (moodCounts[moodKey] || 0) + 1;
+  });
+
+  const moodDistribution = {};
+  Object.entries(moodCounts).forEach(([mood, count]) => {
+    moodDistribution[mood] = {
+      count,
+      percentage: ((count / totalLogs) * 100).toFixed(1)
+    };
+  });
+
+  // Find most frequent mood
+  const topMood = Object.entries(moodCounts).reduce((a, b) => 
+    moodCounts[a[0]] > moodCounts[b[0]] ? a : b
+  );
+
+  const topEmotionalTrends = topMood ? [{
+    mood: topMood[0].charAt(0).toUpperCase() + topMood[0].slice(1),
+    count: topMood[1]
+  }] : [];
+
+  // Create daily overview
+  const dailyOverview = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    const dateStr = date.toISOString().split('T')[0];
+    
+    const dayEntries = moodEntries.filter(entry => {
+      const entryDate = new Date(entry.timestamp).toISOString().split('T')[0];
+      return entryDate === dateStr;
+    });
+
+    if (dayEntries.length > 0) {
+      const avgRating = dayEntries.reduce((sum, entry) => sum + (entry.moodRating || 0), 0) / dayEntries.length;
+      const mostFrequentMood = dayEntries.reduce((prev, current) => 
+        dayEntries.filter(e => e.moodKey === current.moodKey).length > 
+        dayEntries.filter(e => e.moodKey === prev.moodKey).length ? current : prev
+      ).moodKey;
+
+      dailyOverview.push({
+        date: dateStr,
+        dateFormatted: date.getDate().toString(),
+        totalEntries: dayEntries.length,
+        averageMoodScore: avgRating.toFixed(1),
+        mostFrequentMood: mostFrequentMood
+      });
+    }
+  }
+
+  return {
+    keyMetrics: {
+      totalLogs,
+      averageLogsPerDay: parseFloat(averageLogsPerDay),
+      averageMoodScore: parseFloat(averageMoodScore),
+      topEmotionalTrends
+    },
+    dailyOverview,
+    moodDistribution,
+    moodHistory: moodEntries.slice(0, 20) // Latest 20 entries
+  };
 };
 
 export default adminService;
