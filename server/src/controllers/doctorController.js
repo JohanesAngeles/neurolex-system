@@ -2831,6 +2831,10 @@ exports.changeDoctorEmail = async (req, res) => {
  * Change doctor's password - FINAL CORRECT VERSION
  * @authenticated - Doctor only
  */
+/**
+ * Change doctor's password - GUARANTEED HASHING VERSION
+ * @authenticated - Doctor only
+ */
 exports.changeDoctorPassword = async (req, res) => {
   try {
     console.log('🔄 Doctor changing password');
@@ -2879,51 +2883,169 @@ exports.changeDoctorPassword = async (req, res) => {
       });
     }
     
-    // Get current doctor using tenant-aware approach
-    let UserModel;
-    if (req.tenantConnection) {
+    // Get bcrypt for manual hashing
+    const bcryptjs = require('bcryptjs');
+    
+    let updatedDoctor = null;
+    
+    // Method 1: Try tenant connection with direct collection update
+    if (req.tenantConnection && req.tenantConnection.db) {
       try {
-        UserModel = req.tenantConnection.model('User');
-      } catch (err) {
-        UserModel = require('../models/User');
+        console.log('🔧 Using tenant connection for password update');
+        
+        const usersCollection = req.tenantConnection.db.collection('users');
+        const mongoose = require('mongoose');
+        
+        const doctorObjectId = mongoose.Types.ObjectId.isValid(doctorId)
+          ? new mongoose.Types.ObjectId(doctorId)
+          : doctorId;
+        
+        // Find the doctor first
+        const doctor = await usersCollection.findOne({ 
+          _id: doctorObjectId, 
+          role: 'doctor' 
+        });
+        
+        if (!doctor) {
+          return res.status(404).json({
+            success: false,
+            message: 'Doctor not found'
+          });
+        }
+        
+        // Verify current password
+        const isCurrentPasswordValid = await bcryptjs.compare(currentPassword, doctor.password);
+        if (!isCurrentPasswordValid) {
+          return res.status(401).json({
+            success: false,
+            message: 'Current password is incorrect'
+          });
+        }
+        
+        // Check if new password is different from current
+        const isSamePassword = await bcryptjs.compare(newPassword, doctor.password);
+        if (isSamePassword) {
+          return res.status(400).json({
+            success: false,
+            message: 'New password must be different from current password'
+          });
+        }
+        
+        // ✅ MANUAL HASHING - Generate salt and hash password
+        console.log('🔐 Manually hashing password...');
+        const salt = await bcryptjs.genSalt(12); // Use 12 rounds for extra security
+        const hashedPassword = await bcryptjs.hash(newPassword, salt);
+        
+        console.log('🔍 Password hash check:', {
+          originalLength: newPassword.length,
+          hashedLength: hashedPassword.length,
+          startsWithBcrypt: hashedPassword.startsWith('$2'),
+          hashSample: hashedPassword.substring(0, 20) + '...'
+        });
+        
+        // Update with hashed password directly in database
+        const updateResult = await usersCollection.updateOne(
+          { _id: doctorObjectId },
+          { 
+            $set: { 
+              password: hashedPassword,
+              updatedAt: new Date()
+            } 
+          }
+        );
+        
+        console.log('📊 Direct update result:', updateResult);
+        
+        if (updateResult.modifiedCount > 0) {
+          // Fetch updated doctor (without password for response)
+          updatedDoctor = await usersCollection.findOne(
+            { _id: doctorObjectId },
+            { projection: { password: 0 } }
+          );
+          console.log('✅ Password updated via direct collection with manual hashing');
+        }
+        
+      } catch (tenantError) {
+        console.error('Tenant update failed:', tenantError.message);
       }
-    } else {
-      UserModel = require('../models/User');
     }
     
-    // ✅ CRITICAL FIX: Include password field in query
-    const doctor = await UserModel.findById(doctorId).select('+password');
-    if (!doctor) {
-      return res.status(404).json({
+    // Method 2: Fallback to default database with manual hashing
+    if (!updatedDoctor) {
+      try {
+        console.log('🔧 Using default database for password update');
+        const User = require('../models/User');
+        
+        // Find the doctor with password field
+        const doctor = await User.findById(doctorId).select('+password');
+        if (!doctor) {
+          return res.status(404).json({
+            success: false,
+            message: 'Doctor not found'
+          });
+        }
+        
+        // Verify current password
+        const isCurrentPasswordValid = await doctor.comparePassword(currentPassword);
+        if (!isCurrentPasswordValid) {
+          return res.status(401).json({
+            success: false,
+            message: 'Current password is incorrect'
+          });
+        }
+        
+        // Check if new password is different from current
+        const isSamePassword = await doctor.comparePassword(newPassword);
+        if (isSamePassword) {
+          return res.status(400).json({
+            success: false,
+            message: 'New password must be different from current password'
+          });
+        }
+        
+        // ✅ MANUAL HASHING - Generate salt and hash password
+        console.log('🔐 Manually hashing password (fallback method)...');
+        const salt = await bcryptjs.genSalt(12);
+        const hashedPassword = await bcryptjs.hash(newPassword, salt);
+        
+        console.log('🔍 Password hash check (fallback):', {
+          originalLength: newPassword.length,
+          hashedLength: hashedPassword.length,
+          startsWithBcrypt: hashedPassword.startsWith('$2'),
+          hashSample: hashedPassword.substring(0, 20) + '...'
+        });
+        
+        // Update password directly (bypass pre-save hook to avoid double hashing)
+        await User.updateOne(
+          { _id: doctorId },
+          { 
+            $set: { 
+              password: hashedPassword,
+              updatedAt: new Date()
+            }
+          }
+        );
+        
+        // Get updated doctor without password
+        updatedDoctor = await User.findById(doctorId).select('-password');
+        
+        if (updatedDoctor) {
+          console.log('✅ Password updated via default database with manual hashing');
+        }
+        
+      } catch (defaultError) {
+        console.error('Default database update failed:', defaultError.message);
+      }
+    }
+    
+    if (!updatedDoctor) {
+      return res.status(500).json({
         success: false,
-        message: 'Doctor not found'
+        message: 'Failed to update password'
       });
     }
     
-    // ✅ Use the schema's comparePassword method
-    const isCurrentPasswordValid = await doctor.comparePassword(currentPassword);
-    if (!isCurrentPasswordValid) {
-      return res.status(401).json({
-        success: false,
-        message: 'Current password is incorrect'
-      });
-    }
-    
-    // Check if new password is different from current
-    const isSamePassword = await doctor.comparePassword(newPassword);
-    if (isSamePassword) {
-      return res.status(400).json({
-        success: false,
-        message: 'New password must be different from current password'
-      });
-    }
-    
-    // ✅ Set new password - pre-save hook will automatically hash it
-    doctor.password = newPassword;
-    doctor.updatedAt = new Date();
-    await doctor.save(); // This will trigger the pre-save hook to hash the password
-    
-    console.log(`✅ Password updated and hashed successfully for doctor ${doctorId}`);
+    console.log(`✅ Password updated and manually hashed successfully for doctor ${doctorId}`);
     
     return res.status(200).json({
       success: true,

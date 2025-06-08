@@ -1,4 +1,4 @@
-// client/src/components/doctors/dashboard/DoctorDashboard.jsx - WITH MODAL AND MEETING LINKS
+// client/src/components/doctors/dashboard/DoctorDashboard.jsx - COMPLETE FIXED VERSION
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFeatureControl } from '../../hooks/useFeatureControl';
@@ -452,6 +452,7 @@ const DoctorDashboard = () => {
            date.getFullYear() === today.getFullYear();
   };
 
+  // ✅ FIXED: Complete renderCalendar function
   const renderCalendar = () => {
     const { currentDate, viewMode } = calendarState;
     const isMonthView = viewMode === 'month';
@@ -473,10 +474,6 @@ const DoctorDashboard = () => {
               <button className="month-nav-button prev" onClick={goToPreviousPeriod}>&#10094;</button>
               <button className="month-nav-button next" onClick={goToNextPeriod}>&#10095;</button>
             </div>
-  );
-};
-
-export default DoctorDashboard;
           </div>
           
           {isMonthView ? (
@@ -609,7 +606,7 @@ export default DoctorDashboard;
                     }}
                   >
                     <span className="join-icon">📹</span>
-                    <span>{isActive ? 'Join Now' : 'No Meeting Link'}</span>
+                    <span>{isActive ? 'Join Now' : 'Join Meeting'}</span>
                   </button>
                 ) : (
                   <div className="modal-no-meeting">
