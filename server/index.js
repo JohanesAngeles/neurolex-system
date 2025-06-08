@@ -702,14 +702,16 @@ console.log('🔄 Adding admin-specific mood routes...');
 // Admin mood data access - bypasses tenant middleware
 if (moodRoutes) {
   // Create admin-specific mood endpoint
-  app.get('/api/admin/mood/user/:userId', async (req, res) => {
+  // ✅ DYNAMIC ADMIN MOOD ROUTE - Replace in server/index.js around line 747
+
+app.get('/api/admin/mood/user/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     const { days = 7, limit = 50, page = 1 } = req.query;
     
-    console.log(`🔍 ADMIN: Accessing mood data for user ${userId} across ALL tenants`);
+    console.log(`🔍 ADMIN: Accessing mood data for user ${userId} across ALL tenants (DYNAMIC)`);
     
-    // Check if user has admin token
+    // 1. AUTHENTICATION CHECK
     const token = req.headers.authorization?.replace('Bearer ', '');
     if (!token) {
       return res.status(401).json({
@@ -728,7 +730,7 @@ if (moodRoutes) {
       });
     }
     
-    // Verify admin role
+    // 2. ADMIN ROLE VERIFICATION
     const isAdmin = decoded.role === 'admin' || decoded.id === 'admin_default';
     if (!isAdmin) {
       return res.status(403).json({
@@ -739,159 +741,262 @@ if (moodRoutes) {
     
     console.log(`✅ ADMIN: Access granted to ${decoded.email || decoded.id}`);
     
-    // ✅ SEARCH ACROSS ALL TENANTS using existing imports
-    let allMoodEntries = [];
-    let searchedTenants = [];
+    // 3. BUILD QUERY FILTERS
+    const buildMoodQuery = (userId, days) => {
+      const query = { userId: new mongoose.Types.ObjectId(userId) };
+      
+      if (days && days !== 'all') {
+        const daysAgo = new Date();
+        daysAgo.setDate(daysAgo.getDate() - parseInt(days));
+        query.timestamp = { $gte: daysAgo };
+      }
+      
+      return query;
+    };
     
+    const queryFilters = buildMoodQuery(userId, days);
+    console.log('🔍 ADMIN: Query filters:', queryFilters);
+    
+    // 4. DYNAMIC MULTI-SOURCE DATA AGGREGATION
+    let allMoodEntries = [];
+    let searchedSources = [];
+    let totalSearched = 0;
+    
+    // 4A. PRIMARY SEARCH - Default Database (Always search this first)
+    try {
+      console.log('🔍 ADMIN: Searching primary database...');
+      
+      const primaryMoodEntries = await Mood.find(queryFilters)
+        .sort({ timestamp: -1 })
+        .limit(parseInt(limit) * 2) // Get more for pagination
+        .select('moodRating moodKey moodLabel moodSvgUrl reflection timestamp userId metadata')
+        .lean();
+      
+      console.log(`📊 ADMIN: Found ${primaryMoodEntries.length} mood entries in primary database`);
+      
+      if (primaryMoodEntries.length > 0) {
+        const entriesWithSource = primaryMoodEntries.map(entry => ({
+          ...entry,
+          sourceId: 'primary',
+          sourceName: 'Primary Database',
+          sourceType: 'default'
+        }));
+        
+        allMoodEntries = [...allMoodEntries, ...entriesWithSource];
+        
+        searchedSources.push({
+          sourceId: 'primary',
+          sourceName: 'Primary Database',
+          sourceType: 'default',
+          moodEntriesFound: primaryMoodEntries.length,
+          status: 'success'
+        });
+        
+        console.log(`✅ Primary database: ${primaryMoodEntries.length} entries found`);
+      } else {
+        searchedSources.push({
+          sourceId: 'primary',
+          sourceName: 'Primary Database',
+          sourceType: 'default',
+          moodEntriesFound: 0,
+          status: 'no_data'
+        });
+        console.log(`📊 Primary database: 0 entries found`);
+      }
+      
+      totalSearched++;
+    } catch (primaryError) {
+      console.error('❌ Primary database search failed:', primaryError.message);
+      searchedSources.push({
+        sourceId: 'primary',
+        sourceName: 'Primary Database',
+        sourceType: 'default',
+        moodEntriesFound: 0,
+        status: 'error',
+        error: primaryError.message
+      });
+    }
+    
+    // 4B. DYNAMIC TENANT SEARCH - Uses the WORKING getAllTenants() method
     if (process.env.ENABLE_MULTI_TENANT === 'true' && dbManager) {
       try {
-        console.log('🔍 ADMIN: Multi-tenant search enabled, getting tenants...');
+        console.log('🔍 ADMIN: Multi-tenant search enabled - discovering tenants DYNAMICALLY...');
         
-        // ✅ Use existing connectMaster if available
+        // Initialize master connection if needed
         if (connectMaster) {
           await connectMaster();
         }
         
-        // ✅ Get tenants using existing dbManager
-        const tenantConnections = dbManager.getAllConnections ? dbManager.getAllConnections() : {};
-        const tenantIds = Object.keys(tenantConnections);
+        // ✅ CRITICAL FIX: Use the WORKING getAllTenants() method (from dbManager.js)
+        const activeTenants = await dbManager.getAllTenants();
+        console.log(`🔍 ADMIN: Found ${activeTenants.length} active tenants dynamically`);
+        console.log(`🔍 ADMIN: Active tenants:`, activeTenants.map(t => ({ id: t._id, name: t.name, dbName: t.dbName })));
         
-        console.log(`🔍 ADMIN: Found ${tenantIds.length} tenant connections`);
-        
-        // Search each tenant database
-        for (const tenantId of tenantIds) {
+        // Search each active tenant database dynamically
+        for (const tenant of activeTenants) {
           try {
+            const tenantId = tenant._id.toString();
+            console.log(`🔍 ADMIN: Searching tenant: ${tenant.name} (${tenantId}) - DB: ${tenant.dbName}`);
+            totalSearched++;
+            
+            // Connect to tenant database using the working method
             const tenantConn = await dbManager.connectTenant(tenantId);
             if (!tenantConn) {
-              console.warn(`Could not connect to tenant: ${tenantId}`);
+              console.warn(`⚠️ Could not connect to tenant: ${tenant.name} (${tenantId})`);
+              searchedSources.push({
+                sourceId: tenantId,
+                sourceName: tenant.name,
+                sourceType: 'tenant',
+                moodEntriesFound: 0,
+                status: 'connection_failed',
+                dbName: tenant.dbName
+              });
               continue;
             }
             
-            const Mood = tenantConn.model('Mood');
+            console.log(`✅ ADMIN: Successfully connected to tenant ${tenant.name} (${tenantId})`);
             
-            // Build query for this tenant
-            const queryFilters = {
-              userId: new mongoose.Types.ObjectId(userId)
-            };
+            // Get Mood model for this tenant
+            const TenantMood = tenantConn.model('Mood');
             
-            // Add date filter if specified
-            if (days && days !== 'all') {
-              const daysAgo = new Date();
-              daysAgo.setDate(daysAgo.getDate() - parseInt(days));
-              queryFilters.timestamp = { $gte: daysAgo };
-            }
-            
-            // Get mood entries from this tenant
-            const tenantMoodEntries = await Mood.find(queryFilters)
+            // Search mood data in this tenant using the same query
+            const tenantMoodEntries = await TenantMood.find(queryFilters)
               .sort({ timestamp: -1 })
               .limit(parseInt(limit))
               .select('moodRating moodKey moodLabel moodSvgUrl reflection timestamp userId metadata')
               .lean();
             
-            // Add tenant info to each entry
-            const entriesWithTenant = tenantMoodEntries.map(entry => ({
-              ...entry,
-              tenantId: tenantId,
-              tenantName: `Tenant ${tenantId}`
-            }));
-            
-            allMoodEntries = [...allMoodEntries, ...entriesWithTenant];
+            console.log(`📊 ADMIN: Found ${tenantMoodEntries.length} mood entries in tenant ${tenant.name}`);
             
             if (tenantMoodEntries.length > 0) {
-              searchedTenants.push({
-                tenantId: tenantId,
-                tenantName: `Tenant ${tenantId}`,
-                moodEntriesFound: tenantMoodEntries.length
+              // Add tenant metadata to each entry
+              const entriesWithTenant = tenantMoodEntries.map(entry => ({
+                ...entry,
+                sourceId: tenantId,
+                sourceName: tenant.name,
+                sourceType: 'tenant',
+                dbName: tenant.dbName
+              }));
+              
+              allMoodEntries = [...allMoodEntries, ...entriesWithTenant];
+              
+              searchedSources.push({
+                sourceId: tenantId,
+                sourceName: tenant.name,
+                sourceType: 'tenant',
+                moodEntriesFound: tenantMoodEntries.length,
+                status: 'success',
+                dbName: tenant.dbName
               });
-              console.log(`✅ Found ${tenantMoodEntries.length} mood entries in tenant: ${tenantId}`);
+              
+              console.log(`✅ Tenant ${tenant.name}: ${tenantMoodEntries.length} entries found`);
+            } else {
+              searchedSources.push({
+                sourceId: tenantId,
+                sourceName: tenant.name,
+                sourceType: 'tenant',
+                moodEntriesFound: 0,
+                status: 'no_data',
+                dbName: tenant.dbName
+              });
+              console.log(`📊 Tenant ${tenant.name}: 0 entries found`);
             }
             
           } catch (tenantError) {
-            console.error(`Error searching tenant ${tenantId}:`, tenantError.message);
+            console.error(`❌ Error searching tenant ${tenant.name}:`, tenantError.message);
+            searchedSources.push({
+              sourceId: tenant._id.toString(),
+              sourceName: tenant.name,
+              sourceType: 'tenant',
+              moodEntriesFound: 0,
+              status: 'error',
+              error: tenantError.message,
+              dbName: tenant.dbName
+            });
             continue;
           }
         }
-      } catch (error) {
-        console.error('Error in multi-tenant mood search:', error);
-      }
-    }
-    
-    // ✅ ALWAYS search default database as well
-    try {
-      console.log('🔍 ADMIN: Searching default database for mood data');
-      
-      const queryFilters = {
-        userId: new mongoose.Types.ObjectId(userId)
-      };
-      
-      if (days && days !== 'all') {
-        const daysAgo = new Date();
-        daysAgo.setDate(daysAgo.getDate() - parseInt(days));
-        queryFilters.timestamp = { $gte: daysAgo };
-      }
-      
-      const defaultMoodEntries = await Mood.find(queryFilters)
-        .sort({ timestamp: -1 })
-        .limit(parseInt(limit))
-        .select('moodRating moodKey moodLabel moodSvgUrl reflection timestamp userId metadata')
-        .lean();
-      
-      if (defaultMoodEntries.length > 0) {
-        const entriesWithDefault = defaultMoodEntries.map(entry => ({
-          ...entry,
-          tenantId: 'default',
-          tenantName: 'Default Database'
-        }));
         
-        allMoodEntries = [...allMoodEntries, ...entriesWithDefault];
-        
-        searchedTenants.push({
-          tenantId: 'default',
-          tenantName: 'Default Database',
-          moodEntriesFound: defaultMoodEntries.length
+      } catch (multiTenantError) {
+        console.error('❌ Multi-tenant search failed:', multiTenantError.message);
+        searchedSources.push({
+          sourceId: 'multi_tenant_system',
+          sourceName: 'Multi-Tenant Discovery',
+          sourceType: 'system',
+          moodEntriesFound: 0,
+          status: 'system_error',
+          error: multiTenantError.message
         });
-        
-        console.log(`✅ Found ${defaultMoodEntries.length} mood entries in default database`);
       }
-    } catch (defaultError) {
-      console.error('Error searching default database:', defaultError);
+    } else {
+      console.log('ℹ️ ADMIN: Multi-tenant mode disabled or dbManager unavailable');
     }
     
+    // 5. DATA PROCESSING & PAGINATION
     // Sort all entries by timestamp (most recent first)
     allMoodEntries.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
     
     // Apply pagination to combined results
     const startIndex = (parseInt(page) - 1) * parseInt(limit);
-    const paginatedEntries = allMoodEntries.slice(startIndex, startIndex + parseInt(limit));
+    const endIndex = startIndex + parseInt(limit);
+    const paginatedEntries = allMoodEntries.slice(startIndex, endIndex);
     
-    console.log(`📊 ADMIN: Total mood entries found: ${allMoodEntries.length}`);
-    console.log(`📋 ADMIN: Returning ${paginatedEntries.length} entries for page ${page}`);
-    console.log(`🏢 ADMIN: Searched tenants:`, searchedTenants);
-    
-    // Return response
-    res.status(200).json({
+    // 6. RESPONSE PREPARATION
+    const responseData = {
       success: true,
       data: paginatedEntries,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(allMoodEntries.length / parseInt(limit)),
         totalEntries: allMoodEntries.length,
-        limit: parseInt(limit)
+        limit: parseInt(limit),
+        hasNextPage: endIndex < allMoodEntries.length,
+        hasPrevPage: startIndex > 0
       },
       searchInfo: {
-        searchedTenants,
-        totalTenantsSearched: searchedTenants.length,
-        multiTenantEnabled: process.env.ENABLE_MULTI_TENANT === 'true'
+        searchedSources,
+        totalSourcesSearched: totalSearched,
+        successfulSources: searchedSources.filter(s => s.status === 'success').length,
+        multiTenantEnabled: process.env.ENABLE_MULTI_TENANT === 'true',
+        queryFilters,
+        searchTimestamp: new Date().toISOString(),
+        discoveryMethod: 'dynamic_getAllTenants'
       },
-      message: `Retrieved ${paginatedEntries.length} mood entries from ${searchedTenants.length} data sources`
-    });
+      summary: {
+        totalEntriesFound: allMoodEntries.length,
+        entriesReturned: paginatedEntries.length,
+        sourcesWithData: searchedSources.filter(s => s.moodEntriesFound > 0).length,
+        dateRange: days === 'all' ? 'All time' : `Last ${days} days`,
+        tenantsDiscovered: searchedSources.filter(s => s.sourceType === 'tenant').length
+      }
+    };
+    
+    // 7. LOGGING & RESPONSE
+    console.log(`📊 ADMIN DYNAMIC MOOD SEARCH COMPLETE:`);
+    console.log(`   Total entries found: ${allMoodEntries.length}`);
+    console.log(`   Entries returned: ${paginatedEntries.length}`);
+    console.log(`   Sources searched: ${totalSearched}`);
+    console.log(`   Successful sources: ${searchedSources.filter(s => s.status === 'success').length}`);
+    console.log(`   Tenants discovered: ${searchedSources.filter(s => s.sourceType === 'tenant').length}`);
+    console.log(`   Page: ${page}/${Math.ceil(allMoodEntries.length / parseInt(limit))}`);
+    
+    if (allMoodEntries.length === 0) {
+      console.log(`⚠️ ADMIN: No mood data found for user ${userId} in any data source`);
+      responseData.message = `No mood data found for user ${userId} across ${totalSearched} data sources`;
+    } else {
+      responseData.message = `Retrieved ${paginatedEntries.length} mood entries from ${searchedSources.filter(s => s.moodEntriesFound > 0).length} data sources`;
+    }
+    
+    res.status(200).json(responseData);
     
   } catch (error) {
-    console.error('❌ ADMIN: Error getting mood data:', error);
+    console.error('❌ ADMIN: Critical error in dynamic mood data retrieval:', error);
     res.status(500).json({
       success: false,
       message: 'Server error occurred while retrieving mood data',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
+      timestamp: new Date().toISOString(),
+      endpoint: `/api/admin/mood/user/${req.params.userId}`
     });
   }
 });
