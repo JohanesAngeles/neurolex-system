@@ -1,4 +1,4 @@
-// client/src/components/doctors/dashboard/DoctorDashboard.jsx - FIXED INFINITE LOOP
+// client/src/components/doctors/dashboard/DoctorDashboard.jsx - COMPLETE UPDATED VERSION
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFeatureControl } from '../../hooks/useFeatureControl';
@@ -9,11 +9,12 @@ import doctorService from '../../services/doctorService';
 import '../../styles/components/doctor/DoctorDashboard.css';
 
 const DoctorDashboard = () => {
-  // ✅ NEW: Add dynamic feature control
+  // ✅ Feature control and tenant context
   const featureControl = useFeatureControl();
   const { currentTenant, getThemeStyles, platformName } = useTenant();
   const theme = getThemeStyles();
   
+  // ✅ Existing state
   const [stats, setStats] = useState({
     totalPatients: 0,
     totalAppointments: 0,
@@ -28,9 +29,25 @@ const DoctorDashboard = () => {
     lastName: ''
   });
   const [todayAppointments, setTodayAppointments] = useState([]);
+  
+  // ✅ NEW: Modal state for appointment details
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
+  
   const navigate = useNavigate();
 
-  // ✅ ENHANCED: Function to handle joining video meeting with feature check
+  // ✅ NEW: Modal handler functions
+  const handleViewDetails = (appointment) => {
+    setSelectedAppointment(appointment);
+    setShowAppointmentModal(true);
+  };
+
+  const closeAppointmentModal = () => {
+    setShowAppointmentModal(false);
+    setSelectedAppointment(null);
+  };
+
+  // ✅ Enhanced function to handle joining video meeting with feature check
   const handleJoinMeeting = (appointment) => {
     // Check if Care/Report feature is enabled (appointments functionality)
     if (!featureControl.isFeatureEnabled('Care / Report')) {
@@ -90,7 +107,7 @@ const DoctorDashboard = () => {
     }
   };
 
-  // Keep existing functions unchanged
+  // ✅ Keep existing functions unchanged
   const isSessionActive = (appointment) => {
     if (!appointment.appointmentDate) return false;
     
@@ -158,9 +175,9 @@ const DoctorDashboard = () => {
     }));
   };
 
-  // 🔧 FIXED: useEffect with proper dependencies to prevent infinite loop
+  // ✅ Fixed: useEffect with proper dependencies to prevent infinite loop
   useEffect(() => {
-    // ✅ ENHANCED: Fetch dashboard data with feature-based filtering
+    // Enhanced: Fetch dashboard data with feature-based filtering
     const fetchDashboardData = async () => {
       try {
         console.log('🔍 Fetching dashboard data with feature control...');
@@ -181,7 +198,7 @@ const DoctorDashboard = () => {
           setDoctorInfo({ firstName: 'Doctor', lastName: '' });
         }
         
-        // ✅ ENHANCED: Fetch appointments only if Care/Report feature is enabled
+        // Enhanced: Fetch appointments only if Care/Report feature is enabled
         if (featureControl.isFeatureEnabled && featureControl.isFeatureEnabled('Care / Report')) {
           try {
             console.log('🔍 Fetching appointments (feature enabled)...');
@@ -216,7 +233,7 @@ const DoctorDashboard = () => {
           setStats(prevStats => ({ ...prevStats, totalAppointments: 0 }));
         }
         
-        // ✅ ENHANCED: Fetch patients only if User Profiles feature is enabled
+        // Enhanced: Fetch patients only if User Profiles feature is enabled
         if (featureControl.isFeatureEnabled && featureControl.isFeatureEnabled('User Profiles')) {
           try {
             const patientsResponse = await doctorService.getPatients();
@@ -237,7 +254,7 @@ const DoctorDashboard = () => {
           setStats(prevStats => ({ ...prevStats, totalPatients: 0 }));
         }
         
-        // ✅ ENHANCED: Fetch journal entries only if Journal Entries feature is enabled
+        // Enhanced: Fetch journal entries only if Journal Entries feature is enabled
         if (featureControl.isFeatureEnabled && featureControl.isFeatureEnabled('Journal Entries')) {
           try {
             const entriesResponse = await doctorService.getJournalEntries({
@@ -262,7 +279,7 @@ const DoctorDashboard = () => {
           setStats(prevStats => ({ ...prevStats, pendingEntries: 0 }));
         }
         
-        // ✅ ENHANCED: Messages only if Notifications feature is enabled
+        // Enhanced: Messages only if Notifications feature is enabled
         if (featureControl.isFeatureEnabled && featureControl.isFeatureEnabled('Notifications')) {
           // Implement message fetching when ready
           setStats(prevStats => ({ ...prevStats, newMessages: 0 }));
@@ -288,13 +305,13 @@ const DoctorDashboard = () => {
       }
     };
     
-    // 🔧 CRITICAL FIX: Only fetch data once when component mounts
+    // Critical FIX: Only fetch data once when component mounts
     if (featureControl.isFeatureEnabled) {
       fetchDashboardData();
     }
-  }, []); // 🔧 EMPTY DEPENDENCY ARRAY - RUNS ONLY ONCE!
+  }, []); // Empty dependency array - runs only once!
 
-  // Keep existing calendar functions unchanged
+  // ✅ Keep existing calendar functions unchanged
   const [calendarState, setCalendarState] = useState({
     currentDate: new Date(),
     viewMode: 'week',
@@ -517,7 +534,7 @@ const DoctorDashboard = () => {
     );
   };
 
-  // ✅ ENHANCED: StatCard with feature-based styling and conditional rendering
+  // ✅ Enhanced: StatCard with feature-based styling and conditional rendering
   const StatCard = ({ title, value, subtitle, feature, onClick }) => {
     const isFeatureEnabled = feature ? (featureControl.isFeatureEnabled && featureControl.isFeatureEnabled(feature)) : true;
     
@@ -540,110 +557,153 @@ const DoctorDashboard = () => {
     );
   };
 
-  // ✅ ENHANCED: Today's appointments with feature wrapper
+  // ✅ COMPLETELY NEW: Enhanced Today's appointments with clean design and modal
   const renderTodayAppointments = () => {
     return (
-      <FeatureWrapper feature="Care / Report" showMessage={true}>
-        <div className="todays-appointments">
-          <div className="today-appointment-header">
-            <h3 className="section-title">
-              Today's Appointments
-            </h3>
-            <p className="appointments-count">
-              {todayAppointments.length} appointment{todayAppointments.length !== 1 ? 's' : ''} today
-            </p>
-          </div>
-          
-          {todayAppointments.length === 0 ? (
-            <div className="no-appointments">
-              <p>🗓️ No appointments scheduled for today</p>
-              <p className="no-appointments-subtitle">Enjoy your free time!</p>
+      <>
+        <FeatureWrapper feature="Care / Report" showMessage={true}>
+          <div className="todays-appointments">
+            <div className="today-appointment-header">
+              <h3 className="section-title">
+                Today's Appointments
+              </h3>
+              <p className="appointments-count">
+                {todayAppointments.length} appointment{todayAppointments.length !== 1 ? 's' : ''} today
+              </p>
             </div>
-          ) : (
-            todayAppointments.map((appointment, index) => {
-              const sessionStatus = getSessionStatus(appointment);
-              const isActive = isSessionActive(appointment);
-              
-              return (
-                <div key={appointment.id || index} className="today-appointment-card">
-                  <div className="today-appointment-patient">
-                    <div className="patient-avatar">
-                      {appointment.patientName.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="patient-info">
-                      <h4 className="patient-name-label">{appointment.patientName}</h4>
-                      <p className="patient-type-label">{appointment.appointmentType}</p>
-                      <div 
-                        className="session-status" 
-                        data-status={sessionStatus.status.toLowerCase().replace(/\s+/g, '-')}
-                      >
-                        🎥 {sessionStatus.status}
+            
+            {todayAppointments.length === 0 ? (
+              <div className="no-appointments">
+                <p>🗓️ No appointments scheduled for today</p>
+                <p className="no-appointments-subtitle">Enjoy your free time!</p>
+              </div>
+            ) : (
+              todayAppointments.map((appointment, index) => {
+                return (
+                  <div key={appointment.id || index} className="today-appointment-card-fixed">
+                    {/* Patient Section - Clean Design */}
+                    <div className="today-appointment-patient-fixed">
+                      <div className="patient-avatar-fixed">
+                        {appointment.patientName.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="patient-info-fixed">
+                        <h4 className="patient-name-fixed">{appointment.patientName}</h4>
+                        <p className="patient-type-fixed">Patient</p>
                       </div>
                     </div>
-                  </div>
-                  
-                  <div className="appointment-meta">
-                    <div className="appointment-date-time">
-                      <div className="meta-group">
-                        <span className="meta-icon">📅</span>
-                        <span>Today</span>
-                      </div>
-                      <div className="meta-group">
-                        <span className="meta-icon">🕛</span>
-                        <span>{appointment.time}</span>
-                      </div>
-                      <div className="meta-group">
-                        <span className="meta-icon">⏱️</span>
-                        <span>{appointment.duration} min</span>
-                      </div>
-                      {appointment.meetingLink && (
-                        <div className="meta-group">
-                          <span className="meta-icon">📹</span>
-                          <span>{appointment.meetingType === 'jitsi' ? 'Jitsi Meet' : 'Video Call'}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="appointment-actions">
-                    {appointment.meetingLink ? (
-                      <button 
-                        className={`join-meeting-button ${isActive ? 'active' : ''}`}
-                        onClick={() => handleJoinMeeting(appointment)}
-                      >
-                        {isActive ? '🔴 Join Now' : '📹 Join Meeting'}
-                      </button>
-                    ) : (
-                      <button className="join-meeting-button disabled" disabled>
-                        📹 No Meeting Link
-                      </button>
-                    )}
                     
-                    <button 
-                      className="view-details-button"
-                      onClick={() => navigate(`/doctor/appointments/${appointment.id}`)}
-                    >
-                      View Details
-                    </button>
+                    {/* Date and Time Section - Simplified */}
+                    <div className="appointment-datetime-fixed">
+                      <div className="datetime-item">
+                        <div className="datetime-label">📅 Today</div>
+                      </div>
+                      <div className="datetime-item">
+                        <div className="datetime-label">🕛 {appointment.time}</div>
+                      </div>
+                    </div>
+                    
+                    {/* Action Button - Single View Details */}
+                    <div className="appointment-actions-fixed">
+                      <button 
+                        className="view-details-button-fixed"
+                        onClick={() => handleViewDetails(appointment)}
+                      >
+                        View Details
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+            
+            {todayAppointments.some(appt => appt.meetingLink) && (
+              <div className="meeting-instructions">
+                <h4>📋 {platformName} Video Session Instructions:</h4>
+                <ul>
+                  <li>• Click "View Details" to see appointment information and join video sessions</li>
+                  <li>• Both you and your patient will join the same room</li>
+                  <li>• No account registration required for Jitsi Meet</li>
+                  <li>• Ensure good internet connection and test audio/video</li>
+                </ul>
+              </div>
+            )}
+          </div>
+        </FeatureWrapper>
+
+        {/* ✅ NEW: Enhanced Appointment Details Modal */}
+        {showAppointmentModal && selectedAppointment && (
+          <div className="modal-overlay-fixed" onClick={closeAppointmentModal}>
+            <div className="modal-content-fixed" onClick={(e) => e.stopPropagation()}>
+              {/* Modal Header */}
+              <div className="modal-header-fixed">
+                <h2 className="modal-title-fixed">Appointment Details</h2>
+                <button 
+                  className="modal-close-fixed"
+                  onClick={closeAppointmentModal}
+                >
+                  ×
+                </button>
+              </div>
+              
+              {/* Modal Body */}
+              <div className="modal-body-fixed">
+                {/* Patient Information */}
+                <div className="modal-patient-section">
+                  <div className="modal-patient-avatar">
+                    {selectedAppointment.patientName.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <h3 className="modal-patient-name">{selectedAppointment.patientName}</h3>
+                    <p className="modal-patient-type">Patient • {selectedAppointment.appointmentType}</p>
                   </div>
                 </div>
-              );
-            })
-          )}
-          
-          {todayAppointments.some(appt => appt.meetingLink) && (
-            <div className="meeting-instructions">
-              <h4>📋 {platformName} Video Session Instructions:</h4>
-              <ul>
-                <li>• Click "Join Meeting" to start the video session</li>
-                <li>• Both you and your patient will join the same room</li>
-                <li>• No account registration required for Jitsi Meet</li>
-                <li>• Ensure good internet connection and test audio/video</li>
-              </ul>
+                
+                {/* Meeting Section */}
+                <div className="modal-meeting-section">
+                  {/* Meeting Time Display */}
+                  <div className="modal-meeting-time">
+                    <div className="meeting-date-text">
+                      📅 Today
+                    </div>
+                    <div className="meeting-time-text">
+                      🕛 {selectedAppointment.time}
+                    </div>
+                    <div className="meeting-duration-text">
+                      ⏱️ {selectedAppointment.duration} min
+                    </div>
+                  </div>
+                  
+                  {/* Join Meeting Button or No Meeting Message */}
+                  {selectedAppointment.meetingLink ? (
+                    <button 
+                      className={`modal-join-button ${isSessionActive(selectedAppointment) ? 'active' : ''}`}
+                      onClick={() => handleJoinMeeting(selectedAppointment)}
+                    >
+                      <span className="join-icon">📹</span>
+                      {isSessionActive(selectedAppointment) ? 'Join Meeting Now' : 'Join Video Session'}
+                    </button>
+                  ) : (
+                    <div className="modal-no-meeting">
+                      <span className="no-meeting-icon">📹</span>
+                      No meeting link available
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Modal Footer */}
+              <div className="modal-footer-fixed">
+                <button 
+                  className="modal-close-button"
+                  onClick={closeAppointmentModal}
+                >
+                  Close
+                </button>
+              </div>
             </div>
-          )}
-        </div>
-      </FeatureWrapper>
+          </div>
+        )}
+      </>
     );
   };
 
@@ -659,7 +719,7 @@ const DoctorDashboard = () => {
 
   return (
     <div className="dashboard-wrapper">
-      {/* ✅ ENHANCED: Header with tenant branding */}
+      {/* ✅ Enhanced: Header with tenant branding */}
       <div className="dashboard-header">
         <div className="welcome-message">
           <h1 className="welcome-title">
@@ -685,11 +745,10 @@ const DoctorDashboard = () => {
         </div>
       </div>
       
-      {/* ✅ ENHANCED: Overview section with feature-based stats */}
       {/* Divider above Patient and Appointment Overview */}
       <div className="section-divider overview-divider"></div>
 
-{/* ✅ ENHANCED: Overview section with feature-based stats */}
+      {/* ✅ Enhanced: Overview section with feature-based stats */}
       <div className="overview-section">
         <div className="section-header">
           <h2 className="section-title">
@@ -740,12 +799,11 @@ const DoctorDashboard = () => {
         </div>
       </div>
       
-      {/* ✅ ENHANCED: Main content with feature wrappers */}
       {/* Divider above calendar and appointments */}
-<div className="section-divider calendar-divider"></div>
+      <div className="section-divider calendar-divider"></div>
 
-{/* ✅ ENHANCED: Main content with feature wrappers */}
-<div className="main-content">
+      {/* ✅ Enhanced: Main content with feature wrappers */}
+      <div className="main-content">
         <div className="calendar-section">
           {renderCalendar()}
         </div>

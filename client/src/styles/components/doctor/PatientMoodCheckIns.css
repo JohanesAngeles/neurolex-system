@@ -42,10 +42,7 @@
   padding: 0;
   margin: 0;
   background: #ffffff;
-  min-height: 100vh;
   width: 100%;
-  overflow-y: auto; /* enables vertical scrolling */
-  overflow-x: hidden; /* optional: prevents horizontal scrolling */
 }
 
 
