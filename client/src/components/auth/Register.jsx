@@ -226,8 +226,6 @@ const Register = () => {
   return (
     <AuthLayout>
       <form className="auth-form" onSubmit={handleSubmit}>
-        <h2 className="form-title">Create Your Account</h2>
-        <p className="form-subtitle">Sign up to start your mental health journey</p>
         
         {/* Clinic selection dropdown - only show if multi-tenant is enabled */}
         {showTenantSelector && (
@@ -365,37 +363,6 @@ const Register = () => {
         <button type="submit" className="auth-button" disabled={loading}>
           {loading ? 'Signing Up...' : 'Sign Up'}
         </button>
-        
-        {/* Google Authentication */}
-        <div className="divider">
-          <span>OR</span>
-        </div>
-        
-        <div className="google-auth">
-          <GoogleLogin
-            onSuccess={handleGoogleSuccess}
-            onError={handleGoogleFailure}
-            type="icon" 
-          />
-          <span>Sign up with Google</span>
-        </div>
-
-        <div className="auth-link">
-          Already have an account? <Link to="/login">Sign In</Link>
-        </div>
-        
-        {/* Professional Registration Link */}
-        <div className="professional-registration">
-          <div className="divider">
-            <span>For Healthcare Professionals</span>
-          </div>
-          <div className="professional-info">
-            <p>Are you a mental health professional looking to join our network?</p>
-            <Link to="/doctor-register" className="professional-link">
-              Register as a Professional
-            </Link>
-          </div>
-        </div>
       </form>
       
       {/* Terms of Use Modal */}

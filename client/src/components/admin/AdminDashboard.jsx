@@ -1,4 +1,4 @@
-// client/src/components/admin/AdminDashboard.jsx - UPDATED WITH MODAL
+// client/src/components/admin/AdminDashboard.jsx - UPDATED WITH FIGMA DESIGN
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -7,13 +7,11 @@ import DoctorDetailsModal from './DoctorDetailsModal';
 import adminService from '../../services/adminService';
 import '../../styles/components/admin/AdminDashboard.css';
 
-// FIXED: Use correct API URL
 const API_URL = process.env.REACT_APP_API_URL || '/api';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
   
-  // FIXED: Remove admin context dependency and use direct state
   const [dashboardData, setDashboardData] = useState({
     totalUsers: 0,
     totalProfessionals: 0,
@@ -26,11 +24,9 @@ const AdminDashboard = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 10;
   
-  // Modal state
   const [selectedDoctorId, setSelectedDoctorId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
-  // FIXED: Setup axios with admin token
   useEffect(() => {
     const adminToken = localStorage.getItem('adminToken');
     if (adminToken) {
@@ -38,7 +34,6 @@ const AdminDashboard = () => {
     }
   }, []);
   
-  // Fetch dashboard data
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
@@ -48,7 +43,6 @@ const AdminDashboard = () => {
           return;
         }
         
-        // Fetch dashboard statistics
         const response = await axios.get(`${API_URL}/admin/dashboard`, {
           headers: {
             'Authorization': `Bearer ${adminToken}`
@@ -65,14 +59,12 @@ const AdminDashboard = () => {
         }
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
-        // Don't show error toast for dashboard stats, just use defaults
       }
     };
     
     fetchDashboardData();
   }, [navigate]);
   
-  // Fetch pending doctors
   useEffect(() => {
     const fetchPendingDoctors = async () => {
       try {
@@ -91,7 +83,6 @@ const AdminDashboard = () => {
         
         if (response.data.success && response.data.data) {
           setPendingDoctors(response.data.data);
-          // Update pending count in dashboard
           setDashboardData(prev => ({
             ...prev,
             pendingVerifications: response.data.data.length
@@ -116,24 +107,15 @@ const AdminDashboard = () => {
     fetchPendingDoctors();
   }, [navigate]);
   
-  // Handle admin logout
   const handleAdminLogout = () => {
-    // Clear all admin tokens
     localStorage.removeItem('adminToken');
     localStorage.removeItem('adminUser');
     localStorage.removeItem('adminTokenExpiry');
-    
-    // Also clear axios default header
     delete axios.defaults.headers.common['Authorization'];
-    
-    // Show success message
     toast.success('Logged out successfully');
-    
-    // Navigate to admin login
     navigate('/admin/login');
   };
   
-  // Modal handlers
   const handleViewDoctor = (id) => {
     setSelectedDoctorId(id);
     setIsModalOpen(true);
@@ -145,10 +127,7 @@ const AdminDashboard = () => {
   };
   
   const handleModalApprove = (doctorId) => {
-    // Remove the doctor from the pending list
     setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== doctorId));
-    
-    // Update dashboard count
     setDashboardData(prev => ({
       ...prev,
       pendingVerifications: Math.max(0, prev.pendingVerifications - 1)
@@ -156,10 +135,7 @@ const AdminDashboard = () => {
   };
   
   const handleModalReject = (doctorId) => {
-    // Remove the doctor from the pending list
     setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== doctorId));
-    
-    // Update dashboard count
     setDashboardData(prev => ({
       ...prev,
       pendingVerifications: Math.max(0, prev.pendingVerifications - 1)
@@ -167,73 +143,62 @@ const AdminDashboard = () => {
   };
   
   const handleApproveDoctor = async (id) => {
-
-
     console.log('🔴 DASHBOARD - NOT WORKING:');
     console.log('  doctorId from parameter:', id);
     console.log('  doctorId type:', typeof id);
     console.log('  URL path:', window.location.pathname);
 
-  try {
-    console.log('🔍 Dashboard approving doctor:', id);
-    
-    // ✅ EXACT COPY from working DoctorVerification page
-    await adminService.verifyDoctor(id, {
-      verificationStatus: 'approved',  // EXACT same field name
-      verificationNotes: 'Approved from dashboard',  // EXACT same field name
-      rejectionReason: ''  // EXACT same field name
-    });
-    
-    console.log('✅ Dashboard approval SUCCESS');
-    toast.success('Doctor approved successfully!');
-    
-    // Remove from pending list
-    setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== id));
-    
-    // Update dashboard count
-    setDashboardData(prev => ({
-      ...prev,
-      pendingVerifications: Math.max(0, prev.pendingVerifications - 1)
-    }));
-  } catch (err) {
-    console.error('❌ Dashboard approval ERROR:', err);
-    // EXACT same error handling as working page
-    const errorMessage = err.response?.data?.message || 'Verification process failed. Please try again.';
-    toast.error(errorMessage);
-  }
-};
+    try {
+      console.log('🔍 Dashboard approving doctor:', id);
+      
+      await adminService.verifyDoctor(id, {
+        verificationStatus: 'approved',
+        verificationNotes: 'Approved from dashboard',
+        rejectionReason: ''
+      });
+      
+      console.log('✅ Dashboard approval SUCCESS');
+      toast.success('Doctor approved successfully!');
+      
+      setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== id));
+      
+      setDashboardData(prev => ({
+        ...prev,
+        pendingVerifications: Math.max(0, prev.pendingVerifications - 1)
+      }));
+    } catch (err) {
+      console.error('❌ Dashboard approval ERROR:', err);
+      const errorMessage = err.response?.data?.message || 'Verification process failed. Please try again.';
+      toast.error(errorMessage);
+    }
+  };
 
-const handleRejectDoctor = async (id) => {
-  try {
-    console.log('🔍 Dashboard rejecting doctor:', id);
-    
-    // ✅ EXACT COPY from working DoctorVerification page
-    await adminService.verifyDoctor(id, {
-      verificationStatus: 'rejected',  // EXACT same field name
-      verificationNotes: 'Rejected from dashboard',  // EXACT same field name
-      rejectionReason: 'Application rejected by admin'  // EXACT same field name
-    });
-    
-    console.log('✅ Dashboard rejection SUCCESS');
-    toast.success('Doctor rejected successfully!');
-    
-    // Remove from pending list
-    setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== id));
-    
-    // Update dashboard count
-    setDashboardData(prev => ({
-      ...prev,
-      pendingVerifications: Math.max(0, prev.pendingVerifications - 1)
-    }));
-  } catch (err) {
-    console.error('❌ Dashboard rejection ERROR:', err);
-    // EXACT same error handling as working page
-    const errorMessage = err.response?.data?.message || 'Verification process failed. Please try again.';
-    toast.error(errorMessage);
-  }
-};
+  const handleRejectDoctor = async (id) => {
+    try {
+      console.log('🔍 Dashboard rejecting doctor:', id);
+      
+      await adminService.verifyDoctor(id, {
+        verificationStatus: 'rejected',
+        verificationNotes: 'Rejected from dashboard',
+        rejectionReason: 'Application rejected by admin'
+      });
+      
+      console.log('✅ Dashboard rejection SUCCESS');
+      toast.success('Doctor rejected successfully!');
+      
+      setPendingDoctors(prevDoctors => prevDoctors.filter(doctor => doctor._id !== id));
+      
+      setDashboardData(prev => ({
+        ...prev,
+        pendingVerifications: Math.max(0, prev.pendingVerifications - 1)
+      }));
+    } catch (err) {
+      console.error('❌ Dashboard rejection ERROR:', err);
+      const errorMessage = err.response?.data?.message || 'Verification process failed. Please try again.';
+      toast.error(errorMessage);
+    }
+  };
   
-  // Helper functions
   const formatDate = (dateString) => {
     try {
       return new Date(dateString).toLocaleDateString('en-US', {
@@ -246,7 +211,6 @@ const handleRejectDoctor = async (id) => {
     }
   };
   
-  // Pagination
   const indexOfLastDoctor = currentPage * rowsPerPage;
   const indexOfFirstDoctor = indexOfLastDoctor - rowsPerPage;
   const currentDoctors = pendingDoctors.slice(indexOfFirstDoctor, indexOfLastDoctor);
@@ -257,12 +221,10 @@ const handleRejectDoctor = async (id) => {
   
   return (
     <div className="dashboard">
-      {/* Dashboard header */}
       <div className="dashboard-header">
         <h1 className="dashboard-title">Admin Dashboard</h1>
       </div>
       
-      {/* Stats cards */}
       <div className="stats-container">
         <div className="stat-card">
           <p className="stat-label">Total Users</p>
@@ -293,16 +255,11 @@ const handleRejectDoctor = async (id) => {
         </div>
       </div>
       
-      {/* Divider */}
-      <div className="admin-dashboard-divider"></div>
-      
-      {/* Doctor Applications */}
       <div className="dashboard-section">
+        <div className="admin-dashboard-divider"></div>
         <h2 className="admin-section-title">Doctor Applications Under Review</h2>
         
-        {/* Custom Table */}
         <div className="custom-table">
-          {/* Table Header */}
           <div className="table-row header-row">
             <div className="table-cell">Name</div>
             <div className="table-cell">Email</div>
@@ -311,7 +268,6 @@ const handleRejectDoctor = async (id) => {
             <div className="table-cell">Actions</div>
           </div>
           
-          {/* Table Body */}
           {loading ? (
             <div className="table-row loading-row">
               <div className="table-cell" style={{ gridColumn: '1 / -1' }}>
@@ -346,16 +302,13 @@ const handleRejectDoctor = async (id) => {
                 <div className="table-cell">{formatDate(doctor.createdAt)}</div>
                 <div className="table-cell">
                   <div className="action-buttons">
-                   {pendingDoctors.length > 0 && (
-          <div className="view-all">
-            <button 
-              onClick={() => navigate('/admin/professionals')}
-              className="view-all-link"
-            >
-              View All Applications
-            </button>
-          </div>
-        )}
+                    <button 
+                      className="btn-icon"
+                      onClick={() => handleViewDoctor(doctor._id)}
+                      title="View Doctor Details"
+                    >
+                      <div className="view-icon"></div>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -363,7 +316,6 @@ const handleRejectDoctor = async (id) => {
           )}
         </div>
         
-        {/* Pagination */}
         {totalPages > 1 && (
           <div className="pagination">
             <button 
@@ -396,9 +348,18 @@ const handleRejectDoctor = async (id) => {
           </div>
         )}
         
+        {pendingDoctors.length > 0 && (
+          <div className="view-all">
+            <button 
+              onClick={() => navigate('/admin/professionals')}
+              className="view-all-link"
+            >
+              View All Applications
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Doctor Details Modal */}
       <DoctorDetailsModal
         doctorId={selectedDoctorId}
         isOpen={isModalOpen}

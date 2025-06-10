@@ -278,11 +278,8 @@ const Login = () => {
         >
           {isLoading ? 'Signing in...' : 'Sign In'}
         </button>
-        
-        <div className="auth-link">
-          <p>Don't have an account? <Link to="/register">Sign Up</Link></p>
-        </div>
       </form>
+   
     </AuthLayout>
   );
 };

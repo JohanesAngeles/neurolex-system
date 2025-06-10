@@ -7,7 +7,7 @@ import {
 } from '@mui/material';
 import { toast } from 'react-toastify';
 import adminService from '../../services/adminService';
-import AddDoctorModal from './AddDoctorModal'; // 🆕 NEW IMPORT
+import AddDoctorModal from './AddDoctorModal';
 import '../../styles/components/admin/AdminLayout.css';
 import '../../styles/components/admin/UserManagement.css';
 import '../../styles/components/admin/ProfessionalVerification.css';
@@ -70,8 +70,8 @@ const ProfessionalVerification = () => {
   // Modals
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showVerifyModal, setShowVerifyModal] = useState(false);
-  const [showAddDoctorModal, setShowAddDoctorModal] = useState(false); // 🆕 NEW STATE
-  const [showDeleteModal, setShowDeleteModal] = useState(false); // 🆕 DELETE STATE
+  const [showAddDoctorModal, setShowAddDoctorModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [approving, setApproving] = useState(false);
   
   // Form fields
@@ -80,7 +80,7 @@ const ProfessionalVerification = () => {
   const [rejectionReason, setRejectionReason] = useState('');
   const [formError, setFormError] = useState('');
   
-  // 🆕 DELETE STATES
+  // DELETE STATES
   const [doctorToDelete, setDoctorToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
   
@@ -249,7 +249,7 @@ const ProfessionalVerification = () => {
     }
   };
 
-  // 🆕 DELETE DOCTOR FUNCTIONS
+  // DELETE DOCTOR FUNCTIONS
   const openDeleteModal = (doctor) => {
     console.log('🗑️ Opening delete modal for doctor:', doctor);
     setDoctorToDelete(doctor);
@@ -340,13 +340,13 @@ const ProfessionalVerification = () => {
     setCurrentApprovedPage(pageNumber);
   };
   
-  // 🆕 UPDATED: Handle add new doctor
+  // Handle add new doctor
   const handleAddDoctor = () => {
     console.log('Opening Add Doctor modal');
     setShowAddDoctorModal(true);
   };
 
-  // 🆕 NEW: Handle when a doctor is successfully added
+  // Handle when a doctor is successfully added
   const handleDoctorAdded = () => {
     console.log('Doctor added successfully, refreshing data...');
     loadData(); // Refresh the data to show the new doctor
@@ -363,206 +363,240 @@ const ProfessionalVerification = () => {
   
   return (
     <div className="professional-verification">
-      <div className="user-management-header">
-        <h1>Doctor Verification Dashboard</h1>
-        <p>Easily verify, manage, and monitor all mental health professionals in the system.</p>
+      <div className="pv-dashboard-header">
+        <h1 className="pv-dashboard-title">Doctor Verification Dashboard</h1>
+        <p className="pv-dashboard-subtitle">Easily verify, manage, and monitor all mental health professionals in the system.</p>
       </div>
 
-      {/* MUI Tab Panel */}
-      <Box sx={{ width: '100%', mb: 4 }}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs 
-            value={tabValue} 
-            onChange={handleTabChange}
-            aria-label="doctor verification tabs"
-            sx={{
-              '& .MuiTab-root': {
-                textTransform: 'uppercase',
-                fontFamily: '"IBM Plex Mono", monospace',
-                fontWeight: 600,
-                fontSize: '14px',
-                color: '#6C6C6C',
-                padding: '8px 16px',
-                minWidth: 'auto',
-                marginRight: '20px'
-              },
-              '& .Mui-selected': {
-                color: '#5B8C7E',
-              },
-              '& .MuiTabs-indicator': {
-                backgroundColor: '#5B8C7E',
-                height: '2px'
-              }
-            }}
+      {/* Doctor Application Under Review Section */}
+      <div className="pv-dashboard-section">
+        <h2 className="pv-admin-section-title">Doctor Application Under Review</h2>
+        
+        {/* Tab Navigation */}
+        <div className="pv-tab-navigation">
+          <button 
+            className={`pv-tab-button ${tabValue === 0 ? 'active' : ''}`}
+            onClick={(e) => handleTabChange(e, 0)}
           >
-            <Tab label={`Pending (${pendingDoctors.length})`} {...a11yProps(0)} />
-            <Tab label={`Rejected (${rejectedDoctors.length})`} {...a11yProps(1)} />
-          </Tabs>
-        </Box>
+            PENDING ({pendingDoctors.length})
+          </button>
+          <button 
+            className={`pv-tab-button ${tabValue === 1 ? 'active' : ''}`}
+            onClick={(e) => handleTabChange(e, 1)}
+          >
+            REJECTED ({rejectedDoctors.length})
+          </button>
+        </div>
         
-        {/* Pending Tab Panel */}
-        <TabPanel value={tabValue} index={0}>
-          {pendingDoctors.length === 0 ? (
-            <Alert severity="info" sx={{ my: 2 }}>
-              No pending verifications at this time
-            </Alert>
-          ) : (
-            <div className="table-container">
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Specialization</th>
-                    <th>Registration Date</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pendingDoctors.map(doctor => (
-                    <tr key={doctor._id}>
-                      <td data-label="Name">
-                        <div className="user-name-cell">
-                          <div className="user-avatar">
-                            {doctor.profilePicture ? (
-                              <img src={doctor.profilePicture} alt={`${doctor.firstName} ${doctor.lastName}`} />
-                            ) : (
-                              <div className="user-initials">
-                                {doctor.firstName?.[0]}{doctor.lastName?.[0]}
-                              </div>
-                            )}
-                          </div>
-                          <div className="user-info">
-                            <div className="user-fullname">
-                              {doctor.firstName} {doctor.lastName}
+        {/* Tab Content */}
+        {tabValue === 0 && (
+          <div className="pv-tab-content">
+            {pendingDoctors.length === 0 ? (
+              <div className="pv-no-data-message">
+                No pending doctor applications
+              </div>
+            ) : (
+              <div className="pv-custom-table">
+                <div className="pv-table-row pv-header-row">
+                  <div className="pv-table-cell">Name</div>
+                  <div className="pv-table-cell">Email</div>
+                  <div className="pv-table-cell">Specialization</div>
+                  <div className="pv-table-cell">Registration Date</div>
+                  <div className="pv-table-cell">Actions</div>
+                </div>
+                
+                {pendingDoctors.map((doctor, index) => (
+                  <div 
+                    key={doctor._id} 
+                    className={`pv-table-row ${index % 2 === 0 ? 'pv-odd-row' : 'pv-even-row'}`}
+                  >
+                    <div className="pv-table-cell">
+                      <div className="pv-user-name-cell">
+                        <div className="pv-user-avatar">
+                          {doctor.profilePicture ? (
+                            <img src={doctor.profilePicture} alt={`${doctor.firstName} ${doctor.lastName}`} />
+                          ) : (
+                            <div className="pv-user-initials">
+                              {doctor.firstName?.[0]}{doctor.lastName?.[0]}
                             </div>
+                          )}
+                        </div>
+                        <div className="pv-user-info">
+                          <div className="pv-user-fullname">
+                            {doctor.firstName} {doctor.lastName}
                           </div>
                         </div>
-                      </td>
-                      <td data-label="Email">{doctor.email}</td>
-                      <td data-label="Specialization">{doctor.specialization || 'Not specified'}</td>
-                      <td data-label="Registration Date">{formatDate(doctor.createdAt)}</td>
-                      <td data-label="Actions">
-                        <div className="action-icons">
-                          <img 
-                            src={EyeIcon} 
-                            className="action-icon view" 
-                            onClick={() => viewDoctorDetails(doctor._id, doctor.tenantId)} 
-                            title="View Doctor" 
-                            alt="View"
-                          />
-                          <img 
-                            src={CheckCircleIcon} 
-                            className="action-icon edit" 
-                            onClick={() => openVerifyModal(doctor)} 
-                            title="Verify Doctor" 
-                            alt="Verify"
-                          />
-                        </div>
-                      </td>
-                    </tr>
+                      </div>
+                    </div>
+                    <div className="pv-table-cell">{doctor.email}</div>
+                    <div className="pv-table-cell">{doctor.specialization || 'Not specified'}</div>
+                    <div className="pv-table-cell">{formatDate(doctor.createdAt)}</div>
+                    <div className="pv-table-cell">
+                      <div className="pv-action-buttons">
+                        <button 
+                          className="pv-btn-icon view"
+                          onClick={() => viewDoctorDetails(doctor._id, doctor.tenantId)}
+                          title="View Doctor Details"
+                        >
+                          <div className="pv-view-icon"></div>
+                        </button>
+                        <button 
+                          className="pv-btn-icon approve"
+                          onClick={() => openVerifyModal(doctor)}
+                          title="Verify Doctor"
+                        >
+                          <div className="pv-approve-icon"></div>
+                        </button>
+                        <button 
+                          className="pv-btn-icon reject"
+                          onClick={() => openVerifyModal(doctor)}
+                          title="Reject Doctor"
+                        >
+                          <div className="pv-reject-icon"></div>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {tabTotalPages > 1 && (
+              <div className="pv-pagination">
+                <button 
+                  className="pv-page-nav prev"
+                  onClick={() => paginateTab(currentTabPage - 1)}
+                  disabled={currentTabPage === 1}
+                >
+                  &lt;
+                </button>
+                
+                <div className="pv-page-numbers">
+                  {[...Array(tabTotalPages)].map((_, index) => (
+                    <button
+                      key={index}
+                      className={`pv-page-number ${currentTabPage === index + 1 ? 'active' : ''}`}
+                      onClick={() => paginateTab(index + 1)}
+                    >
+                      {index + 1}
+                    </button>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          
-          {tabTotalPages > 1 && (
-            <Stack spacing={2} sx={{ mt: 3, display: 'flex', alignItems: 'center' }}>
-              <Pagination 
-                count={tabTotalPages} 
-                page={currentTabPage} 
-                onChange={(e, page) => paginateTab(page)}
-                color="primary"
-              />
-            </Stack>
-          )}
-        </TabPanel>
+                </div>
+                
+                <button 
+                  className="pv-page-nav next"
+                  onClick={() => paginateTab(currentTabPage + 1)}
+                  disabled={currentTabPage === tabTotalPages}
+                >
+                  &gt;
+                </button>
+              </div>
+            )}
+          </div>
+        )}
         
-        {/* Rejected Tab Panel */}
-        <TabPanel value={tabValue} index={1}>
-          {rejectedDoctors.length === 0 ? (
-            <Alert severity="info" sx={{ my: 2 }}>
-              No rejected doctors found
-            </Alert>
-          ) : (
-            <div className="table-container">
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Specialization</th>
-                    <th>Rejection Date</th>
-                    <th>Reason</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rejectedDoctors.map(doctor => (
-                    <tr key={doctor._id}>
-                      <td data-label="Name">
-                        <div className="user-name-cell">
-                          <div className="user-avatar">
-                            {doctor.profilePicture ? (
-                              <img src={doctor.profilePicture} alt={`${doctor.firstName} ${doctor.lastName}`} />
-                            ) : (
-                              <div className="user-initials">
-                                {doctor.firstName?.[0]}{doctor.lastName?.[0]}
-                              </div>
-                            )}
-                          </div>
-                          <div className="user-info">
-                            <div className="user-fullname">
-                              {doctor.firstName} {doctor.lastName}
+        {tabValue === 1 && (
+          <div className="pv-tab-content">
+            {rejectedDoctors.length === 0 ? (
+              <div className="pv-no-data-message">
+                No rejected doctors found
+              </div>
+            ) : (
+              <div className="pv-custom-table">
+                <div className="pv-table-row pv-header-row">
+                  <div className="pv-table-cell">Name</div>
+                  <div className="pv-table-cell">Email</div>
+                  <div className="pv-table-cell">Specialization</div>
+                  <div className="pv-table-cell">Registration Date</div>
+                  <div className="pv-table-cell">Actions</div>
+                </div>
+                
+                {rejectedDoctors.map((doctor, index) => (
+                  <div 
+                    key={doctor._id} 
+                    className={`pv-table-row ${index % 2 === 0 ? 'pv-odd-row' : 'pv-even-row'}`}
+                  >
+                    <div className="pv-table-cell">
+                      <div className="pv-user-name-cell">
+                        <div className="pv-user-avatar">
+                          {doctor.profilePicture ? (
+                            <img src={doctor.profilePicture} alt={`${doctor.firstName} ${doctor.lastName}`} />
+                          ) : (
+                            <div className="pv-user-initials">
+                              {doctor.firstName?.[0]}{doctor.lastName?.[0]}
                             </div>
+                          )}
+                        </div>
+                        <div className="pv-user-info">
+                          <div className="pv-user-fullname">
+                            {doctor.firstName} {doctor.lastName}
                           </div>
                         </div>
-                      </td>
-                      <td data-label="Email">{doctor.email}</td>
-                      <td data-label="Specialization">{doctor.specialization || 'Not specified'}</td>
-                      <td data-label="Rejection Date">{formatDate(doctor.verificationDate)}</td>
-                      <td data-label="Reason">{doctor.rejectionReason || 'Not specified'}</td>
-                      <td data-label="Actions">
-                        <div className="action-icons">
-                          <img 
-                            src={EyeIcon} 
-                            className="action-icon view" 
-                            onClick={() => viewDoctorDetails(doctor._id, doctor.tenantId)} 
-                            title="View Doctor" 
-                            alt="View"
-                          />
-                        </div>
-                      </td>
-                    </tr>
+                      </div>
+                    </div>
+                    <div className="pv-table-cell">{doctor.email}</div>
+                    <div className="pv-table-cell">{doctor.specialization || 'Not specified'}</div>
+                    <div className="pv-table-cell">{formatDate(doctor.verificationDate)}</div>
+                    <div className="pv-table-cell">
+                      <div className="pv-action-buttons">
+                        <button 
+                          className="pv-btn-icon view"
+                          onClick={() => viewDoctorDetails(doctor._id, doctor.tenantId)}
+                          title="View Doctor Details"
+                        >
+                          <div className="pv-view-icon"></div>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {tabTotalPages > 1 && (
+              <div className="pv-pagination">
+                <button 
+                  className="pv-page-nav prev"
+                  onClick={() => paginateTab(currentTabPage - 1)}
+                  disabled={currentTabPage === 1}
+                >
+                  &lt;
+                </button>
+                
+                <div className="pv-page-numbers">
+                  {[...Array(tabTotalPages)].map((_, index) => (
+                    <button
+                      key={index}
+                      className={`pv-page-number ${currentTabPage === index + 1 ? 'active' : ''}`}
+                      onClick={() => paginateTab(index + 1)}
+                    >
+                      {index + 1}
+                    </button>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          
-          {tabTotalPages > 1 && (
-            <Stack spacing={2} sx={{ mt: 3, display: 'flex', alignItems: 'center' }}>
-              <Pagination 
-                count={tabTotalPages} 
-                page={currentTabPage} 
-                onChange={(e, page) => paginateTab(page)}
-                color="primary"
-              />
-            </Stack>
-          )}
-        </TabPanel>
-      </Box>
+                </div>
+                
+                <button 
+                  className="pv-page-nav next"
+                  onClick={() => paginateTab(currentTabPage + 1)}
+                  disabled={currentTabPage === tabTotalPages}
+                >
+                  &gt;
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
       
       {/* Registered Mental Health Professionals Section */}
-      <div className="registered-professionals-section">
-        <h2 className="section-title">Registered Mental Health Professionals</h2>
+      <div className="pv-registered-professionals-section">
+        <h2 className="pv-admin-section-title">Registered Mental Health Professionals</h2>
         
         {/* Search and Filter Bar */}
-        <div className="admin-actions-bar">
-          <div className="top-actions-row">
-            <div className="search-box">
-              <img src={SearchIcon} alt="Search" className="search-icon" />
+        <div className="pv-admin-actions-bar">
+          <div className="pv-top-actions-row">
+            <div className="pv-search-box">
+              <img src={SearchIcon} alt="Search" className="pv-search-icon" />
               <input 
                 type="text" 
                 placeholder="Search professionals by name or email" 
@@ -571,14 +605,14 @@ const ProfessionalVerification = () => {
               />
             </div>
           
-            <button className="Add-Patient-Button" onClick={handleAddDoctor}>
+            <button className="pv-Add-Patient-Button" onClick={handleAddDoctor}>
               Add a Doctor
             </button>
           </div>
           
-          <div className="bottom-actions-row">
-            <div className="filter-box">
-              <div className="filter-item">
+          <div className="pv-bottom-actions-row">
+            <div className="pv-filter-box">
+              <div className="pv-filter-item">
                 <label htmlFor="status-filter">Status:</label>
                 <select 
                   id="status-filter" 
@@ -591,7 +625,7 @@ const ProfessionalVerification = () => {
                 </select>
               </div>
               
-              <div className="filter-item">
+              <div className="pv-filter-item">
                 <label htmlFor="specialization-filter">Specialization:</label>
                 <select 
                   id="specialization-filter" 
@@ -610,102 +644,111 @@ const ProfessionalVerification = () => {
         
         {/* Approved Doctors Table */}
         {approvedDoctors.length === 0 ? (
-          <Alert severity="info" sx={{ my: 2 }}>
+          <div className="pv-no-data-message">
             No approved doctors found
-          </Alert>
+          </div>
         ) : (
-          <div className="table-container">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Specialization</th>
-                  <th>Verification Date</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {approvedDoctors.map(doctor => (
-                  <tr key={doctor._id}>
-                    <td data-label="Name">
-                      <div className="user-name-cell">
-                        <div className="user-avatar">
-                          {doctor.profilePicture ? (
-                            <img src={doctor.profilePicture} alt={`${doctor.firstName} ${doctor.lastName}`} />
-                          ) : (
-                            <div className="user-initials">
-                              {doctor.firstName?.[0]}{doctor.lastName?.[0]}
-                            </div>
-                          )}
+          <div className="pv-custom-table">
+            <div className="pv-table-row pv-header-row">
+              <div className="pv-table-cell">Name</div>
+              <div className="pv-table-cell">Email</div>
+              <div className="pv-table-cell">Specialization</div>
+              <div className="pv-table-cell">Verification Date</div>
+              <div className="pv-table-cell">Status</div>
+              <div className="pv-table-cell">Actions</div>
+            </div>
+            
+            {approvedDoctors.map((doctor, index) => (
+              <div 
+                key={doctor._id} 
+                className={`pv-table-row ${index % 2 === 0 ? 'pv-odd-row' : 'pv-even-row'}`}
+              >
+                <div className="pv-table-cell">
+                  <div className="pv-user-name-cell">
+                    <div className="pv-user-avatar">
+                      {doctor.profilePicture ? (
+                        <img src={doctor.profilePicture} alt={`${doctor.firstName} ${doctor.lastName}`} />
+                      ) : (
+                        <div className="pv-user-initials">
+                          {doctor.firstName?.[0]}{doctor.lastName?.[0]}
                         </div>
-                        <div className="user-info">
-                          <div className="user-fullname">
-                            {doctor.firstName} {doctor.lastName}
-                          </div>
-                        </div>
+                      )}
+                    </div>
+                    <div className="pv-user-info">
+                      <div className="pv-user-fullname">
+                        {doctor.firstName} {doctor.lastName}
                       </div>
-                    </td>
-                    <td data-label="Email">{doctor.email}</td>
-                    <td data-label="Specialization">{doctor.specialization || 'Not specified'}</td>
-                    <td data-label="Verification Date">{formatDate(doctor.verificationDate)}</td>
-                    <td data-label="Status">
-                      <span className={`status-badge ${doctor.accountStatus || 'active'}`}>
-                        {doctor.accountStatus === 'inactive' ? (
-                          <>
-                            <img src={XCircleIcon} alt="Inactive" className="status-icon" /> Inactive
-                          </>
-                        ) : (
-                          <>
-                            <img src={CheckCircleIcon} alt="Active" className="status-icon" /> Active
-                          </>
-                        )}
-                      </span>
-                    </td>
-                    <td data-label="Actions">
-                      <div className="action-icons">
-                        <img 
-                          src={EyeIcon} 
-                          className="action-icon view" 
-                          onClick={() => viewDoctorDetails(doctor._id, doctor.tenantId)} 
-                          title="View Doctor" 
-                          alt="View"
-                        />
-                        <img 
-                          src={EditIcon} 
-                          className="action-icon edit" 
-                          onClick={() => handleEditDoctor(doctor._id, doctor.tenantId)}
-                          title="Edit Doctor" 
-                          alt="Edit"
-                          style={{ cursor: 'pointer' }}
-                        />
-                        <img 
-                          src={TrashIcon} 
-                          className="action-icon delete" 
-                          onClick={() => openDeleteModal(doctor)}
-                          title="Delete Doctor" 
-                          alt="Delete"
-                          style={{ cursor: 'pointer' }}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  </div>
+                </div>
+                <div className="pv-table-cell">{doctor.email}</div>
+                <div className="pv-table-cell">{doctor.specialization || 'Not specified'}</div>
+                <div className="pv-table-cell">{formatDate(doctor.verificationDate)}</div>
+                <div className="pv-table-cell">
+                  <span className={`pv-status-badge ${doctor.accountStatus || 'active'}`}>
+                    {doctor.accountStatus === 'inactive' ? 'INACTIVE' : 'ACTIVE'}
+                  </span>
+                </div>
+                <div className="pv-table-cell">
+                  <div className="pv-action-buttons">
+                    <button 
+                      className="pv-btn-icon view"
+                      onClick={() => viewDoctorDetails(doctor._id, doctor.tenantId)}
+                      title="View Doctor Details"
+                    >
+                      <div className="pv-view-icon"></div>
+                    </button>
+                    <button 
+                      className="pv-btn-icon edit"
+                      onClick={() => handleEditDoctor(doctor._id, doctor.tenantId)}
+                      title="Edit Doctor"
+                    >
+                      <div className="pv-edit-icon"></div>
+                    </button>
+                    <button 
+                      className="pv-btn-icon delete"
+                      onClick={() => openDeleteModal(doctor)}
+                      title="Delete Doctor"
+                    >
+                      <div className="pv-delete-icon"></div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
         
         {approvedTotalPages > 1 && (
-          <Stack spacing={2} sx={{ mt: 3, display: 'flex', alignItems: 'center' }}>
-            <Pagination 
-              count={approvedTotalPages} 
-              page={currentApprovedPage} 
-              onChange={(e, page) => paginateApproved(page)}
-              color="primary"
-            />
-          </Stack>
+          <div className="pv-pagination">
+            <button 
+              className="pv-page-nav prev"
+              onClick={() => paginateApproved(currentApprovedPage - 1)}
+              disabled={currentApprovedPage === 1}
+            >
+              &lt;
+            </button>
+            
+            <div className="pv-page-numbers">
+              {[...Array(approvedTotalPages)].map((_, index) => (
+                <button
+                  key={index}
+                  className={`pv-page-number ${currentApprovedPage === index + 1 ? 'active' : ''}`}
+                  onClick={() => paginateApproved(index + 1)}
+                >
+                  {index + 1}
+                </button>
+              ))}
+            </div>
+            
+            <button 
+              className="pv-page-nav next"
+              onClick={() => paginateApproved(currentApprovedPage + 1)}
+              disabled={currentApprovedPage === approvedTotalPages}
+            >
+              &gt;
+            </button>
+          </div>
         )}
       </div>
       
@@ -792,7 +835,7 @@ const ProfessionalVerification = () => {
         </DialogActions>
       </Dialog>
 
-      {/* 🆕 Delete Confirmation Dialog */}
+      {/* Delete Confirmation Dialog */}
       <Dialog
         open={showDeleteModal}
         onClose={closeDeleteModal}
@@ -879,7 +922,7 @@ const ProfessionalVerification = () => {
         </DialogActions>
       </Dialog>
 
-      {/* 🆕 Add Doctor Modal */}
+      {/* Add Doctor Modal */}
       <AddDoctorModal
         isOpen={showAddDoctorModal}
         onClose={() => setShowAddDoctorModal(false)}

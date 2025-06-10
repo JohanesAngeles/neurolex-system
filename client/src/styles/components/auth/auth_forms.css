@@ -61,20 +61,16 @@
     margin-top: 3px;
   }
   
-  .checkbox-group label {
-    font-size: 0.9rem;
-    line-height: 1.4;
-  }
-  
   /* Link styles */
   .link {
-    color: #4caf50;
+    margin-top: 50px !important;
+    color: #548170;
     text-decoration: underline;
     cursor: pointer;
   }
   
   .link:hover {
-    color: #388e3c;
+    color: #548170;
   }
   
   .google-auth {
@@ -169,7 +165,7 @@
   .button-link {
     display: inline-block;
     padding: 10px 25px;
-    background-color: #4caf50;
+    background-color: #000000;
     color: white;
     border-radius: 5px;
     text-decoration: none;
@@ -194,6 +190,4 @@
   text-decoration: underline;
 }
 
-.auth-link {
-  padding-top: 20px;
-}
+

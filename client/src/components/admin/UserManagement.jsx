@@ -234,21 +234,21 @@ const PatientManagement = () => {
     switch (status) {
       case 'active':
         return (
-          <span className="status-badge active">
-            <img src={CheckCircleIcon} alt="Active" className="status-icon" /> Active
+          <span className="pm-status-badge pm-active">
+            <img src={CheckCircleIcon} alt="Active" className="pm-status-icon" /> Active
           </span>
         );
       case 'pending':
-        return <span className="status-badge pending">Pending</span>;
+        return <span className="pm-status-badge pm-pending">Pending</span>;
       case 'inactive':
       case 'suspended':
         return (
-          <span className="status-badge inactive">
-            <img src={XCircleIcon} alt="Inactive" className="status-icon" /> Inactive
+          <span className="pm-status-badge pm-inactive">
+            <img src={XCircleIcon} alt="Inactive" className="pm-status-icon" /> Inactive
           </span>
         );
       default:
-        return <span className="status-badge">{status || 'Unknown'}</span>;
+        return <span className="pm-status-badge">{status || 'Unknown'}</span>;
     }
   };
 
@@ -289,24 +289,7 @@ const PatientManagement = () => {
         {/* Bottom row with filters and export button */}
         <div className="bottom-actions-row">
           <div className="filter-box">
-            {/* Tenant filter */}
-            <div className="filter-item">
-              <label htmlFor="tenant-filter">Clinic:</label>
-              <select 
-                id="tenant-filter" 
-                value={tenantFilter} 
-                onChange={(e) => setTenantFilter(e.target.value)}
-              >
-                <option value="All">All Clinics</option>
-                {tenants.map(tenant => (
-                  <option key={tenant._id} value={tenant._id}>
-                    {tenant.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            {/* Other filters */}
+            {/* Status filter */}
             <div className="filter-item">
               <label htmlFor="status-filter">Status:</label>
               <select 
@@ -346,106 +329,110 @@ const PatientManagement = () => {
         </div>
       </div>
 
-      {/* Patients table */}
+      {/* Patients table using custom table structure like dashboard */}
       {patients.length === 0 ? (
         <div className="empty-state">
           <h3>No patients found</h3>
           <p>Try adjusting your search or filters, or add a new patient.</p>
         </div>
       ) : (
-        <div className="table-container">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Registration Date</th>
-                <th>Clinic</th>
-                <th>Account Status</th>
-                <th>Assigned Doctor</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {patients.map(patient => (
-                <tr key={`${patient._id}-${patient.tenantId}`}>
-                  <td data-label="Name">
-                    <div className="user-name-cell">
-                      <div className="user-avatar">
-                        {patient.profilePicture ? (
-                          <img src={patient.profilePicture} alt={`${patient.firstName} ${patient.lastName}`} />
-                        ) : (
-                          <div className="user-initials">
-                            {patient.firstName?.[0]}{patient.lastName?.[0]}
-                          </div>
-                        )}
+        <div className="pm-custom-table">
+          <div className="pm-table-row pm-header-row">
+            <div className="pm-table-cell">Name</div>
+            <div className="pm-table-cell">Email</div>
+            <div className="pm-table-cell">Registration Date</div>
+            <div className="pm-table-cell">Account Status</div>
+            <div className="pm-table-cell">Assigned Mental Health Professional</div>
+            <div className="pm-table-cell">Actions</div>
+          </div>
+          
+          {patients.map((patient, index) => (
+            <div 
+              key={`${patient._id}-${patient.tenantId}`}
+              className={`pm-table-row ${index % 2 === 0 ? 'pm-odd-row' : 'pm-even-row'}`}
+            >
+              <div className="pm-table-cell">
+                <div className="pm-user-name-cell">
+                  <div className="pm-user-avatar">
+                    {patient.profilePicture ? (
+                      <img src={patient.profilePicture} alt={`${patient.firstName} ${patient.lastName}`} />
+                    ) : (
+                      <div className="pm-user-initials">
+                        {patient.firstName?.[0]}{patient.lastName?.[0]}
                       </div>
-                      <div className="user-info">
-                        <div className="user-fullname">
-                          {patient.firstName} {patient.lastName}
-                        </div>
-                      </div>
+                    )}
+                  </div>
+                  <div className="pm-user-info">
+                    <div className="pm-user-fullname">
+                      {patient.firstName} {patient.lastName}
                     </div>
-                  </td>
-                  <td data-label="Email">{patient.email}</td>
-                  <td data-label="Registration Date">{formatDate(patient.createdAt)}</td>
-                  <td data-label="Clinic">{getTenantName(patient.tenantId)}</td>
-                  <td data-label="Account Status">{getStatusBadge(patient.accountStatus)}</td>
-                  <td data-label="Assigned Doctor">{patient.primaryDoctor || 'Not assigned'}</td>
-                  <td data-label="Actions">
-                    <div className="action-icons">
-                      <img 
-                        src={EyeIcon} 
-                        className="action-icon view" 
-                        onClick={() => handleViewPatient(patient._id, patient.tenantId)} 
-                        title="View Patient" 
-                        alt="View"
-                      />
-                      <img 
-                        src={EditIcon} 
-                        className="action-icon edit" 
-                        onClick={() => handleEditPatient(patient._id, patient.tenantId)} 
-                        title="Edit Patient" 
-                        alt="Edit"
-                      />
-                      <img 
-                        src={TrashIcon} 
-                        className="action-icon delete" 
-                        onClick={() => handleDeletePatient(
-                          patient._id, 
-                          patient.tenantId, 
-                          `${patient.firstName} ${patient.lastName}`,
-                          patient.email
-                        )} 
-                        title="Delete Patient" 
-                        alt="Delete"
-                      />
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                </div>
+              </div>
+              <div className="pm-table-cell">{patient.email}</div>
+              <div className="pm-table-cell">{formatDate(patient.createdAt)}</div>
+              <div className="pm-table-cell">{getStatusBadge(patient.accountStatus)}</div>
+              <div className="pm-table-cell">{patient.primaryDoctor || 'Not assigned'}</div>
+              <div className="pm-table-cell">
+                <div className="pm-action-buttons">
+                  <button 
+                    className="pm-btn-icon"
+                    onClick={() => handleViewPatient(patient._id, patient.tenantId)} 
+                    title="View Patient"
+                  >
+                    <img src={EyeIcon} alt="View" className="pm-action-icon pm-view" />
+                  </button>
+                  <button 
+                    className="pm-btn-icon"
+                    onClick={() => handleEditPatient(patient._id, patient.tenantId)} 
+                    title="Edit Patient"
+                  >
+                    <img src={EditIcon} alt="Edit" className="pm-action-icon pm-edit" />
+                  </button>
+                  <button 
+                    className="pm-btn-icon"
+                    onClick={() => handleDeletePatient(
+                      patient._id, 
+                      patient.tenantId, 
+                      `${patient.firstName} ${patient.lastName}`,
+                      patient.email
+                    )} 
+                    title="Delete Patient"
+                  >
+                    <img src={TrashIcon} alt="Delete" className="pm-action-icon pm-delete" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="pagination">
+        <div className="pm-pagination">
           <button 
-            className="pagination-button" 
+            className="pm-page-nav" 
             onClick={() => paginate(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}
           >
             &laquo; Previous
           </button>
           
-          <div className="pagination-info">
-            Page {currentPage} of {totalPages}
+          <div className="pm-page-numbers">
+            {[...Array(totalPages)].map((_, index) => (
+              <button
+                key={index}
+                className={`pm-page-number ${currentPage === index + 1 ? 'active' : ''}`}
+                onClick={() => paginate(index + 1)}
+              >
+                {index + 1}
+              </button>
+            ))}
           </div>
           
           <button 
-            className="pagination-button" 
+            className="pm-page-nav" 
             onClick={() => paginate(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage === totalPages}
           >
